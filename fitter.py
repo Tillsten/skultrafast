@@ -376,6 +376,24 @@ class Fitter(object):
         return mo
 
 
+def plot_das(fitter,plot_fastest=False,plot_coh=False,normed=False):
+    fitter.last_para[2:]=np.sort(fitter.last_para[2:])
+    fitter.res(fitter.last_para)
+    if plot_coh or not fitter.model_coh:
+        ulim=fitter.num_exponentials
+    else:
+        ulim=-4
+    
+    if plot_fastest:
+        llim=0
+    else:
+        llim=1
+    print llim, ulim
+    dat_to_plot= fitter.c.T[:,llim:ulim]
+    if normed: dat_to_plot=dat_to_plot/np.abs(dat_to_plot).max(0)
+    plot(fitter.wl,dat_to_plot,lw=2)
+    autoscale(1,tight=1)
+    legend(np.round(fitter.last_para[2+llim:],2))
 
     
 
