@@ -63,12 +63,13 @@ def loader_func(name):
     num_list=[i[i.find('dat')+3:-4] for i in files]
     #print num_list
     endname=max(zip(map(int,num_list),files))[1]
-    #print endname
+    print 'Loading: '+endname
     a=np.load(endname)
     files=glob.glob(name+'*'+'_0_'+'*dat.npy')
     #print files
     wls=[]
-    for i in files:    
+    for i in files:   
+        print 'Loading: '+i
         tmp=np.load(i)
         t,w=tmp[1:,0],tmp[0,1:]
         wls.append(w)
@@ -84,8 +85,7 @@ def concate_data(wls,dat):
     dat=dat[:,idx,:]
     return w,dat
     
-t,w,dat=loader_func('tmp\\br_py2_ex_590_senk2')
-w,dat=concate_data(w,dat)
+
 
 def get_abs(s, lim):
     z = zeros(s.shape[1], dtype = 'int')

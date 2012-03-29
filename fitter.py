@@ -2,9 +2,9 @@
 from __future__ import division
 import numpy as np
 from scipy.special import erfc #errorfunction
-from scipy.optimize import leastsq#, fmin_bfgs  #lm function
+from scipy.optimize import leastsq,brentq,bisect#, fmin_bfgs  #lm function
 from scipy.stats import f #fisher
-from scipy.linalg import qr
+from scipy.linalg import qr, lstsq
 import scipy.sparse.linalg as li
 #from scipy import optimize as opt
 #import openopt as oo
@@ -136,7 +136,7 @@ class Fitter(object):
         para has the following form:
         [xc,w,tau_1,...tau_n]"""
         self.build_xvec(para,fixed)
-        self.c=np.linalg.lstsq(self.x_vec,self.data)[0]
+        self.c=lstsq(self.x_vec,self.data)[0]
         self.m=np.dot(self.c.T,self.x_vec.T)
         
 #    def modelf(self,para,fixed=None):
@@ -189,8 +189,7 @@ class Fitter(object):
                 para.insert(i,j)
         self.last_para=para
         para=np.array(para)
-        #for i in xrange(self.num_exponentials):
-            #self.x_vec[:,i]=fold_exp(self.t,para[1],para[0],(para[i+2]))
+       
         if self.model_coh:
             self.x_vec[:,-4:]=_coh_gaussian(self.t,para[1],para[0])
 
@@ -250,20 +249,21 @@ class Fitter(object):
         import cma
         
         out=cma.fmin(self.res_sum,x0,2,verb_log=0,verb_disp=50,
-                     restarts=restarts,tolfun=1e-6,tolfacupx=1e9)
+                     restarts=restarts,tolfun=1e-6,tolfacupx=1e9,
+                     args=fixed)
         for pi in (out[0]):
             print "{0: .3f} +- {1:.4f}".format(pi,np.exp(pi))
 
         return out
 
-    def chi_search(self,best,step_frac=1e-3, ignore_last=True):        
+    def chi_search(self,best, fixed=None, step_frac=1e-3, ignore_last=True):        
         S0=self.res_sum(best)
         def f_compare(para):
             """Returns the F-Value for two given parameter sets"""            
             P=self.num_exponentials
             N=(self.t.size-P)*(self.data.shape[1])
             return f.cdf((N-P)/P*(self.res_sum(para)-S0)/S0,P,N-P)
-        
+        if fixed==None: fixed=[]
         a=best.copy()
         
         l_arr=[]
@@ -280,34 +280,78 @@ class Fitter(object):
             step=val*step_frac
             #step=max(step,0.05)
             ret=0
+            sigmas=[0.997,0.95,0.68]
+            def prob_func(val,prob,a):                
+                new_p=list(leastsq(self.res,a,[(i,val)]+fixed)[0])                
+                a[:]=new_p[:]
+                new_p.insert(i,val)     
+                ret=f_compare(new_p)
+                #               
+                return prob-ret
+                
+            def gen_ubound(val):
+                while prob_func(val,0.999,a)>0:
+                    val=val*1.1
+                return val
+            def gen_lbound(val):
+                while prob_func(val,0.999,a)>0:
+                    val=val*0.9
+                return val
+            uoval=gen_ubound(oval)
+            loval=gen_lbound(oval)
             
+            for prob in sigmas:
+                fs=lambda x: prob_func(x,prob,a)
+                try:
+                    
+                    uoval2,r=brentq(fs,oval,uoval,
+                             disp=True,rtol=0.0001,
+                             full_output=True)
+                    
+                    loval2,r2=brentq(fs,loval,oval,
+                             disp=True,rtol=0.0001,
+                             full_output=True)
+                    l.append([prob,loval2,uoval2])
+                    #print prob, 'res',fs(uoval),fs(oval)                    
+                    print l[-1]
+                except:
+                    #print prob, 'schief',fs(uoval),fs(oval)
+                    print "ging was schief"
+                
+            l_arr.append(l)
             #subplot(4,2,i+1)
-            l.append((val,ret))    
-            while ret<0.99:        
-                val+=step        
-                new_p=list(leastsq(self.varpro,a,[(i,val)])[0])
-                new_p.insert(i,val)        
-                ret=f_compare(new_p)
-                l.append((val,ret))
-                print i, val,ret
-                print np.round(new_p,2)
-                
-            ret=0
-            val=oval
-            while ret<0.99:        
-                val-=step        
-                new_p=list(leastsq(self.varpro,a,[(i,val)])[0])
-                new_p.insert(i,val)        
-                ret=f_compare(new_p)
-                l.append((val,ret))
-                print i, val,ret
-                print np.round(new_p,2)
-
-                
-            tmp=np.array(l)     
-            arg=np.argsort(tmp[:,0],0)
-            tmp=tmp[arg,:]
-            l_arr.append(tmp)
+            #l.append((val,ret))    
+            
+#            while ret<0.99:        
+#                val+=step        
+#                new_p=list(leastsq(self.res,a,[(i,val)])[0])
+#                a=new_p[:]
+#                new_p.insert(i,val)      
+#                
+#                ret=f_compare(new_p)
+#                l.append((val,ret))
+#                print i, val,ret
+#                print np.round(new_p,2)
+#            
+#            a=list(best)
+#            val=a.pop(i)
+#            ret=0
+#            val=oval
+#            while ret<0.99:        
+#                val-=step        
+#                new_p=list(leastsq(self.res,a,[(i,val)])[0])
+#                a=new_p[:]
+#                new_p.insert(i,val)        
+#                ret=f_compare(new_p)
+#                l.append((val,ret))
+#                print i, val,ret
+#                print np.round(new_p,2)
+#
+#                
+#            tmp=np.array(l)     
+#            arg=np.argsort(tmp[:,0],0)
+#            tmp=tmp[arg,:]
+#            l_arr.append(tmp)
         return l_arr
         
     
@@ -331,6 +375,9 @@ class Fitter(object):
       
         return mo
 
+
+
+    
 
 if __name__=='__main__':
     t=np.linspace(-1,30,500)
