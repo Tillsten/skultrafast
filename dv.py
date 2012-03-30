@@ -148,13 +148,13 @@ def spec_plt(g,plt):
     plt.plot(g.wl,para,lw=2)
     plt.plot(g.wl,senk)
     
-def interpol(r,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):    
-    t_array=np.tile(t.reshape(t.size,1),(1,r.shape[1]))
-    r_new=zeros((new_t.size,r.shape[1]))
-    for i in range(r.shape[1]):
+def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):    
+    t_array=np.tile(t.reshape(t.size,1),(1,dat.shape[1]))
+    dat_new=zeros((new_t.size,dat.shape[1]))
+    for i in range(dat.shape[1]):
         t_array[:,i]-=time_zero[i]-shift
-        r_new[:,i]=interp(new_t,t_array[:,i],r[:,i])
-    return r_new
+        dat_new[:,i]=interp(new_t,t_array[:,i],dat[:,i])
+    return dat_new
 
 def interpol_sm(r,t,re,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000]),s=None):    
     t_array=np.tile(t.reshape(t.size,1),(1,r.shape[1]))

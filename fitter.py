@@ -256,7 +256,7 @@ class Fitter(object):
 
         return out
 
-    def chi_search(self,best, fixed=None, step_frac=1e-3, ignore_last=True):        
+    def chi_search(self,best, fixed=None, step_frac=1e-3, ignore_last=False):        
         S0=self.res_sum(best)
         def f_compare(para):
             """Returns the F-Value for two given parameter sets"""            
@@ -304,14 +304,14 @@ class Fitter(object):
                 fs=lambda x: prob_func(x,prob,a)
                 try:
                     
-                    uoval2,r=brentq(fs,oval,uoval,
+                    uoval,r=brentq(fs,oval,uoval,
                              disp=True,rtol=0.0001,
                              full_output=True)
                     
-                    loval2,r2=brentq(fs,loval,oval,
+                    loval,r2=brentq(fs,loval,oval,
                              disp=True,rtol=0.0001,
                              full_output=True)
-                    l.append([prob,loval2,uoval2])
+                    l.append([prob,loval,uoval])
                     #print prob, 'res',fs(uoval),fs(oval)                    
                     print l[-1]
                 except:
@@ -391,38 +391,61 @@ def plot_das(fitter,plot_fastest=False,plot_coh=False,normed=False):
     print llim, ulim
     dat_to_plot= fitter.c.T[:,llim:ulim]
     if normed: dat_to_plot=dat_to_plot/np.abs(dat_to_plot).max(0)
-    plot(fitter.wl,dat_to_plot,lw=2)
-    autoscale(1,tight=1)
-    legend(np.round(fitter.last_para[2+llim:],2))
+    plt.plot(fitter.wl,dat_to_plot,lw=2)
+    plt.autoscale(1,tight=1)
+    plt.legend(np.round(fitter.last_para[2+llim:],2))
 
+
+def plot_diagnostic(fitter):
+    residuals=fitter.data-fitter.m.T
+    u,s,v=np.linalg.svd(residuals)
+    plt.subplot2grid((3,3),(0,0),2,3).imshow(residuals,aspect='auto')
+    plt.subplot2grid((3,3),(2,0)).plot(u[:,0])
+    plt.subplot2grid((3,3),(2,1)).plot(v.T[:,0])
+    ax=plt.subplot2grid((3,3),(2,2))
+    ax.stem(range(1,11),s[:10])
+    ax.set_xlim(0,12)
     
+def plot_spectra(fitter,tp=None,num_spec=8):
+    t=fitter.t
+    tmin,tmax=t.min(),t.max()
+    if tp==None: tp=np.logspace(np.log10(0.100),np.log10(tmax),num=num_spec)
+    tp=np.round(tp,2)
+    specs=dv.interpol(fitter.data,t,np.zeros(fitter.data.shape[1]),0,tp)
+    plt.plot(fitter.wl,specs.T)
+    plt.legend(tp,ncol=2)
+    plt.autoscale(1,tight=1)
+
 
 if __name__=='__main__':
     t=np.linspace(-1,30,500)
     coef=np.zeros((2,400))
     coef[0,:]=-np.arange(400)
-    coef[1,:]=np.arange(-200,200)**2/200.
+    coef[1,:]=np.arange(-200,200)**2/100.
     
     g=Fitter(np.arange(400),t, 0,2,False)
-    g.build_xvec([0.1,0.3,8,16])
+    g.build_xvec([0.1,0.3,5,16])
     dat=np.dot(g.x_vec,coef)
     
-    dat+=2*(np.random.random(dat.shape)-0.5)
-    dat=dat*(1+(np.random.random(dat.shape)-0.5)*0.10)
-    g=Fitter(np.arange(400),t,dat,2,False)
-    x0=[0.5,0.2,3,10]
+    dat+=10*(np.random.random(dat.shape)-0.5)
+    dat=dat*(1+(np.random.random(dat.shape)-0.5)*0.20)
+    g=Fitter(np.arange(400),t,dat,1,False)
+    x0=[0.5,0.2,20]
     #a=g.start_pymc(x0)
     #a=g.start_cmafit(x0)
-    a=g.start_fit(x0)
-    ar=g.chi_search(a[0])
+    #a=g.start_fit(x0)
+    #ar=g.chi_search(a[0])
     import matplotlib.pyplot as plt
     #
-    def plotxy(a):
-        plt.plot(a[:,0],a[:,1])
-    #
-    for i in range(len(a[0])-1):
-        plt.subplot(2,2,i+1)
-        plotxy(ar[i])
-    plt.tight_layout()
+##    def plotxy(a):
+##        plt.plot(a[:,0],a[:,1])
+##    #
+##    for i in range(len(a[0])-1):
+##        plt.subplot(2,2,i+1)
+##        plotxy(ar[i])
+    #plt.tight_layout()
+    #plot_das(g,1)
+    #plot_diagnostic(g)
+    plot_spectra(g)
     plt.show()
     #best=leastsq(g.varpro,x0, full_output=True)
