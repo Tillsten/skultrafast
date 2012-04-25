@@ -129,6 +129,7 @@ class Fitter(object):
         #self.one=np.identity(t.size)
         self.last_spec=None
         self.bound=bound
+        self.weights=1.
 
     def model(self,para,fixed=None):
         """ Returns the fit for given psystemeqarameters.
@@ -199,7 +200,7 @@ class Fitter(object):
     def res(self,para,fixed=None):
         """Return the residuals for given parameters."""
         self.model(para,fixed)
-        return (self.data-self.m.T).flatten()
+        return ((self.data-self.m.T)/self.weights).flatten()
 
     def res_sum(self,para,fixed=None):
         """Returns the squared sum of the residuals for given parameters"""
@@ -235,15 +236,20 @@ class Fitter(object):
         """
         if fixed!=None:
             print 'isFIxed', fixed
-            best=leastsq(self.varpro,x0,fixed, full_output=True,**kwargs)
+            best=leastsq(self.res,x0,fixed, full_output=True,**kwargs)
         else:
-            best=leastsq(self.varpro,x0, full_output=True,**kwargs)
+            best=leastsq(self.res,x0, full_output=True,**kwargs)
         print 'Chi^2:  ', (self.res(best[0],fixed)**2).sum()
-        p,c=dv.calc_error(best)
-        for (pi,ci) in zip(p,c):
-            print "{0: .3f} +- {1:.4f}".format(pi,ci)
-
-        return p,c,best
+        try:
+            p,c=dv.calc_error(best)        
+            for (pi,ci) in zip(p,c):
+                print "{0: .3f} +- {1:.4f}".format(pi,ci)
+            return p,c,best
+        except TypeError:
+            for pi in best[0]:
+                print "{0: .3f}".format(pi)
+            return best[0]                
+                
 
     def start_cmafit(self,x0,fixed=None,restarts=2):
         import cma
@@ -376,10 +382,13 @@ class Fitter(object):
         return mo
 
 
+unitdict={'x': ' nm', 'y': ' ps', 'z': '$\\Delta$oD'}
+import matplotlib.pyplot as plt
+
 def plot_das(fitter,plot_fastest=False,plot_coh=False,normed=False):
     fitter.last_para[2:]=np.sort(fitter.last_para[2:])
     fitter.res(fitter.last_para)
-    if plot_coh or not fitter.model_coh:
+    if plot_coh and fitter.model_coh:
         ulim=fitter.num_exponentials
     else:
         ulim=-4
@@ -394,9 +403,10 @@ def plot_das(fitter,plot_fastest=False,plot_coh=False,normed=False):
     plt.plot(fitter.wl,dat_to_plot,lw=2)
     plt.autoscale(1,tight=1)
     plt.legend(np.round(fitter.last_para[2+llim:],2))
+    plt.xlabel(unitdict['x'])
+    plt.ylabel(unitdict['z'])
 
-
-def plot_diagnostic(fitter):
+def plot_diagnostic(fitter):   
     residuals=fitter.data-fitter.m.T
     u,s,v=np.linalg.svd(residuals)
     plt.subplot2grid((3,3),(0,0),2,3).imshow(residuals,aspect='auto')
@@ -415,8 +425,24 @@ def plot_spectra(fitter,tp=None,num_spec=8):
     plt.plot(fitter.wl,specs.T)
     plt.legend(tp,ncol=2)
     plt.autoscale(1,tight=1)
+    plt.xlabel(unitdict['x'])
+    plt.ylabel(unitdict['z'])
 
-
+    
+def plot_transients(fitter,wls, plot_fit=True,scale='linear'):
+    wls=np.array(wls)
+    idx=np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]),1)
+    plt.plot(fitter.t, fitter.data[:,idx],'^')
+    plt.legend([unicode(i)+u' '+unitdict['x'] for i in np.round(fitter.wl[idx])])
+    if plot_fit and hasattr(fitter,'m'):
+        plt.plot(fitter.t,fitter.m.T[:,idx],'k')
+    plt.autoscale(1,tight=1)
+    plt.xlabel(unitdict['y'])
+    plt.ylabel(unitdict['z'])
+    if scale!='linear':
+        plt.xscale(scale)
+        
+    
 if __name__=='__main__':
     t=np.linspace(-1,30,500)
     coef=np.zeros((2,400))
@@ -429,11 +455,11 @@ if __name__=='__main__':
     
     dat+=10*(np.random.random(dat.shape)-0.5)
     dat=dat*(1+(np.random.random(dat.shape)-0.5)*0.20)
-    g=Fitter(np.arange(400),t,dat,1,False)
-    x0=[0.5,0.2,20]
+    g=Fitter(np.arange(400),t,dat,2,False)
+    x0=[0.5,0.2,4,20]
     #a=g.start_pymc(x0)
     #a=g.start_cmafit(x0)
-    #a=g.start_fit(x0)
+    a=g.start_fit(x0)
     #ar=g.chi_search(a[0])
     import matplotlib.pyplot as plt
     #
@@ -445,7 +471,9 @@ if __name__=='__main__':
 ##        plotxy(ar[i])
     #plt.tight_layout()
     #plot_das(g,1)
-    #plot_diagnostic(g)
-    plot_spectra(g)
+    plot_diagnostic(g)
+    #plot_spectra(g)
+    #wls=[30,70,100]
+    #plot_transients(g,wls)
     plt.show()
     #best=leastsq(g.varpro,x0, full_output=True)
