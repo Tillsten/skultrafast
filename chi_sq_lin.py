@@ -5,16 +5,16 @@ import matplotlib.pyplot as plt
 
 def fix_para(fit_func,idx,val):
     """
-    Given a function, an index and a value it returns a 
-    function without the parameter and idx and fixes the 
+    Given a function, an index and a value it returns a
+    function without the parameter and idx and fixes the
     missing parameter the val.
     So it is a functools.partial for list-takinge functions.
     """
-    def fixed_func(a): 
+    def fixed_func(a):
         try:
             a=list(a)
         except:
-            a=[a]                
+            a=[a]
         a.insert(idx,val)
         return fit_func(a)
     return fixed_func
@@ -22,63 +22,63 @@ def fix_para(fit_func,idx,val):
 def sumsq(a):
     """Squares and sums an array"""
     return (a**2).sum()
-    
+
 def f_compare(fit_func,para,best_chi,num_points):
-    """Returns th[3,5.,-5,15.]e probalitiy for two given parameter sets"""            
+    """Returns th[3,5.,-5,15.]e probalitiy for two given parameter sets"""
     P=len(para)
     N=(num_points-P)
     return f.cdf((N-P)/P*(sumsq(fit_func(para))-best_chi)/best_chi,P,N-P)
 
-    
-def chi_search(fit_func,best,step_frac=1e-2,max_iter=1000,verbose=False):  
+
+def chi_search(fit_func,best,step_frac=1e-2,max_iter=1000,verbose=False):
     """
     For given function and found optimum the function calculates
     confindance intervals for every parameter via model
-    comparsion. 
+    comparsion.
     """
-      
-    best_res=fit_func(best)    
+
+    best_res=fit_func(best)
     S0=sumsq(best_res)
-    local_f_compare=lambda para: f_compare(fit_func, para, S0, best_res.size)        
+    local_f_compare=lambda para: f_compare(fit_func, para, S0, best_res.size)
     list_of_arrays=[]
-    for i in range(len(best)):             
+    for i in range(len(best)):
 
         hist=[]
         x0=list(best)
         val=x0.pop(i)
         org_val=val.copy()
         step=val*step_frac
-        ret=0                        
-        hist.append([val,ret]+list(best))            
+        ret=0
+        hist.append([val,ret]+list(best))
 
         def do_step(x0):
             fixed_func=fix_para(fit_func,i,val)
-            new_para=list(leastsq(fixed_func,x0)[0])            
+            new_para=list(leastsq(fixed_func,x0)[0])
             x0_new=new_para[:]
-            new_para.insert(i,val)        
+            new_para.insert(i,val)
             ret=local_f_compare(new_para)
             hist.append([val,ret]+new_para)
             return ret, x0_new
-        
+
         iteration=0
-        while ret<0.99 and iteration<max_iter:                    
-            val+=step   
-            ret,x0=do_step(x0)       
+        while ret<0.99 and iteration<max_iter:
+            val+=step
+            ret,x0=do_step(x0)
             iteration=iteration+1
-            if verbose: 
+            if verbose:
                 print i, val,ret
-            
+
         ret=0
         val=org_val
         x0=list(best)
         val=x0.pop(i)
 
         iteration=0
-        while ret<0.99 and iteration<max_iter:        
-            val-=step   
+        while ret<0.99 and iteration<max_iter:
+            val-=step
             ret,x0=do_step(x0)
             iteration=iteration+1
-            if verbose: 
+            if verbose:
                 print i, val,ret
 
         hist_array=np.array(hist)
@@ -86,7 +86,7 @@ def chi_search(fit_func,best,step_frac=1e-2,max_iter=1000,verbose=False):
         hist_array=hist_array[idx,:]
         list_of_arrays.append(hist_array)
     return list_of_arrays
-    
+
 def plot2c(a,true_val):
     """Helper function for plottion"""
     plt.plot(a[:,0],a[:,1])
@@ -99,14 +99,14 @@ def plot2c(a,true_val):
 
 def calc_error(args):
     """Function to calculate the errors from the estimated covariance matrix.
-    
-    Takes the output from leastsq with full_output=1 as argument.    
+
+    Takes the output from leastsq with full_output=1 as argument.
     """
     p, cov, info, mesg, success = args
     chisq = sum(info["fvec"] * info["fvec"])
     dof = len(info["fvec"]) - len(p)
     sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof) for i in range(len(p))])
-    return p, sigma   
+    return p, sigma
 
 if __name__=='__main__':
     #Generate test data
@@ -118,7 +118,7 @@ if __name__=='__main__':
     #The residual function to fit.
     def linear_fit(p):
         return (p[0]*x+p[1])-yn
-    
+
     #Fit it
     out=leastsq(linear_fit,(2,2),full_output=1)
     #Calc error from cov. matrix
@@ -131,7 +131,7 @@ if __name__=='__main__':
     plt.xlim(0,10)
     plt.xlabel('x')
     plt.ylabel('y')
-    
+
     #Using our method
     b=chi_search(linear_fit,out[0])
     #Display results
@@ -145,8 +145,8 @@ if __name__=='__main__':
     plt.hlines(0.68,p[1]-s[1],p[1]+s[1],lw=2)
     plt.xlabel('b')
     plt.ylabel('probabilty')
-    
-    
+
+
     #Show prob(a,b) surface:
     plt.subplot(224)
     S0=sumsq(linear_fit(out[0]))
