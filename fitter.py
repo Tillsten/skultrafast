@@ -11,7 +11,7 @@ import scipy.sparse.linalg as li
 import dv
 import lmfit
 sq2=np.sqrt(2)
-
+BASE_WL=550.
 
 def _fold_exp(tt,w,tz,tau):
     """
@@ -34,10 +34,10 @@ def _fold_exp(tt,w,tz,tau):
        Folded Exponentials for given tau's.
 
 """
-
+    ws=w
     k=1/(tau[:,None])
     t=tt+tz
-    y=np.exp(k*(w*w*k/(4.0)-t))/(w*np.sqrt(2*np.pi))*0.5*erfc(-t/w+w*k/(2.0))
+    y=np.exp(k*(ws*ws*k/(4.0)-t))/(ws*np.sqrt(2*np.pi))*0.5*erfc(-t/ws+ws*k/(2.0))
     return y
 
 def _exp(tt,w,tz,tau):
@@ -85,7 +85,7 @@ def _coh_gaussian(t,w,tz):
         each in its own coulumn.
 
     """
-    w=w*sq2
+    w=w/sq2
     tt=t+tz
     y=np.tile(np.exp(-0.5*(tt/w)**2)/(w*np.sqrt(2*np.pi)),(4,1)).T
     y[:,1]*=(-tt/w**2)
@@ -115,10 +115,12 @@ class Fitter(object):
 
 
     """
-    def __init__(self,wl,t,data,num_exponentials,model_coh=False,bound=1000.):
+    def __init__(self,wl,t,data,num_exponentials,
+                 model_coh=False,model_disp=0,bound=1000.):
         self.t=t
         self.wl=wl
         self.model_coh=model_coh
+        self.model_disp=model_disp
         if model_coh:
             self.x_vec=np.zeros((self.t.size,num_exponentials+4))
         else:
@@ -129,12 +131,21 @@ class Fitter(object):
         self.last_spec=None
         self.bound=bound
         self.weights=1.
-
+        if model_disp:
+            self.org=data[:]
+            self.minwl=np.min(wl)
+        
     def model(self,para,fixed=None):
         """ Returns the fit for given psystemeqarameters.
 
         para has the following form:
-        [xc,w,tau_1,...tau_n]"""
+        [xc,w,tau_1,...tau_n]"""        
+        self.last_para=para
+        if self.model_disp:
+            if para[:self.model_disp]!=self.used_disp:
+                self.tn=np.poly1d(para[:self.model_disp]+[0])(self.wl-self.minwl)
+                self.data=dv.interpol(self.org,self.t,self.tn,1., self.t)
+            para=para[self.model_disp:]
         self.build_xvec(para,fixed)
         self.c=lstsq(self.x_vec,self.data)[0]
         self.m=np.dot(self.c.T,self.x_vec.T)
@@ -155,7 +166,7 @@ class Fitter(object):
 #        self.m=self.x_vec.dot(r).T
 
 
-    def con_model(self,para,fixed=None):
+    def constrained_model(self,para,fixed=None):
         self.last_para=para
         #print para
         self.build_xvec(para,fixed)
@@ -179,15 +190,13 @@ class Fitter(object):
     def build_xvec(self,para,fixed=None):
         """Build the base (the folded functions) for given parameters.
 
-        Parameters
-        ----------
         """
 
         if fixed:
             para=list(para)
             for (i,j) in fixed:
                 para.insert(i,j)
-        self.last_para=para
+
         para=np.array(para)
 
         if self.model_coh:
@@ -252,10 +261,13 @@ class Fitter(object):
 
     def start_lmfit(self,x0,fixed_names=[]):        
         p=lmfit.Parameters()
+        for i in range(self.model_disp):
+            p.add('p'+str(i),x0[i])                       
+        x0=x0[self.model_disp:]
         p.add('x0',x0[0])
         p.add('w',x0[1],min=0)
         for i,tau in enumerate(x0[2:]):
-            p.add('t'+str(i),tau,vary=True,min=0)
+            p.add('t'+str(i),tau,vary=True,min=0.2)
         
         for k in fixed_names:
             p[k].vary=False
@@ -321,9 +333,9 @@ def my_f(N, P, chi, old_chi, Nfix=1., lin_dof=800):
 
 
 if __name__=='__main__':
-    t=np.linspace(-1,30,500)
+
     coef=np.zeros((2,400))
-    coef[0,:]=-np.arange(400)
+    coef[0,:]=-np.arange(-300,100)**2/100.
     coef[1,:]=np.arange(-200,200)**2/100.
 
     g=Fitter(np.arange(400),t, 0,2,False)
@@ -332,14 +344,15 @@ if __name__=='__main__':
 
     dat+=10*(np.random.random(dat.shape)-0.5)
     dat=dat*(1+(np.random.random(dat.shape)-0.5)*0.20)
-    g=Fitter(np.arange(400),t,dat,2,False)
-    x0=[0.5,0.2,4,20]
-    #a=g.start_pymc(x0)
-    #a=g.start_cmafit(x0)
+    g=Fitter(np.arange(400),t,dat,2,False,True)
+    x0=[0.0, 0.0, 0.0,0.5,0.2,4,20]
+#    #a=g.start_pymc(x0)
+#    #a=g.start_cmafit(x0)
     a=g.start_lmfit(x0)
     a.leastsq()
-    #ar=g.chi_search(a[0])
-    import matplotlib.pyplot as plt
+    lmfit.printfuncs.report_errors(a.params)
+#    #ar=g.chi_search(a[0])
+#    import matplotlib.pyplot as plt
     #
 ##    def plotxy(a):
 ##        plt.plot(a[:,0],a[:,1])
@@ -355,3 +368,4 @@ if __name__=='__main__':
     #plot_transients(g,wls)
     #plt.show()
     #best=leastsq(g.varpro,x0, full_output=True)
+    

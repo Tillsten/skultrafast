@@ -65,8 +65,8 @@ def loader_func(name):
     endname=max(zip(map(int,num_list),files))[1]
     print 'Loading: '+endname
     a=np.load(endname)
-    files=glob.glob(name+'*'+'_0_'+'*dat.npy')
-    #print files
+    files=glob.glob(name+'*'+'_?_'+'*dat.npy')
+    print files
     wls=[]
     for i in files:   
         print 'Loading: '+i
@@ -137,16 +137,6 @@ def poly_time_abs_r(k, t,w, level = -1, up = 2000, low = -1000):
     print p
     return(np.poly1d(p)(arange(k.shape[0])))
 
-def spec_plt(g,plt):
-    plt.xlabel(u'Wellenlänge  /  nm')
-    plt.ylabel(u'Absorptionsdifferenz / mOD')
-    plt.gcf().set_figheight(4.5)
-    plt.gcf().set_figwidth(7)
-    grid()
-    para=g.a.T[:g.a[0].T.size/2]
-    senk=g.a.T[g.a[0].T.size/2:]
-    plt.plot(g.wl,para,lw=2)
-    plt.plot(g.wl,senk)
     
 def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):    
     t_array=np.tile(t.reshape(t.size,1),(1,dat.shape[1]))
