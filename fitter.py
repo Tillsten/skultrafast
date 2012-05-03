@@ -134,6 +134,7 @@ class Fitter(object):
         if model_disp:
             self.org=data[:]
             self.minwl=np.min(wl)
+            self.used_disp=np.zeros(model_disp)
         
     def model(self,para,fixed=None):
         """ Returns the fit for given psystemeqarameters.
@@ -141,10 +142,13 @@ class Fitter(object):
         para has the following form:
         [xc,w,tau_1,...tau_n]"""        
         self.last_para=para
+    
         if self.model_disp:
-            if para[:self.model_disp]!=self.used_disp:
+            if  np.any(para[:self.model_disp]!=self.used_disp):
                 self.tn=np.poly1d(para[:self.model_disp]+[0])(self.wl-self.minwl)
                 self.data=dv.interpol(self.org,self.t,self.tn,1., self.t)
+                self.used_disp[:]=para[:self.model_disp]
+
             para=para[self.model_disp:]
         self.build_xvec(para,fixed)
         self.c=lstsq(self.x_vec,self.data)[0]
@@ -267,7 +271,7 @@ class Fitter(object):
         p.add('x0',x0[0])
         p.add('w',x0[1],min=0)
         for i,tau in enumerate(x0[2:]):
-            p.add('t'+str(i),tau,vary=True,min=0.2)
+            p.add('t'+str(i),tau,vary=True,min=0.5)
         
         for k in fixed_names:
             p[k].vary=False

@@ -103,10 +103,13 @@ def get_zeros(s, low_lim = -0.5):
     return z
     
     
-def subtract_background(sig, k = 10):
-    c = np.mean(sig[0:k, :], axis = 0)    
-    return sig - np.resize(c, sig.shape)
-
+def subtract_background(dat, t, tn, offset=0.3):
+    for i in range(dat.shape[1]):       
+        mask=(t-tn[i])<-offset
+        corr=dat[mask,i].mean()
+        dat[:,i]-=corr        
+    return dat
+    
 def process(name):
     (t, w, s, se, r, re) = testload(name)
     r = calc_od(r)
@@ -114,20 +117,21 @@ def process(name):
     
     return t, w, r
 
-def poly_time(k, t, level = 0.25, up = 2000, low = -500,w=np.arange(400)):    
+def poly_time(k, t, level = 0.25, up = 2000, low = -500,w=np.arange(400),deg=2):    
     k = t[get_zeros(k, level)]
     m = np.ma.masked_array(k, np.logical_or(k<low, k>up))    
     masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), 2)
-    return(np.poly1d(p)(np.arange(k.shape[0])))
+    p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
+    return(np.poly1d(p)(np.arange(k.shape[0]))),p
     
-def poly_time_abs(k, t, level = -1, up = 2000, low = -1000,w=arange(400)):    
+def poly_time_abs(k, t, level = -1, up = 2000, low = -1000,w=arange(400), deg=2):    
     k = t[np.argmin(abs(k)<level,0)]
     m = np.ma.masked_array(k, np.logical_or(k<low, k>up))    
     masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), 3)
+    p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
     print p
-    return(np.poly1d(p)(w))
+    return(np.poly1d(p)(w)),p
+    
 
 def poly_time_abs_r(k, t,w, level = -1, up = 2000, low = -1000):    
     k = t[get_abs(k, level)]
