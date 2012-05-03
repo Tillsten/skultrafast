@@ -59,10 +59,10 @@ def plot_spectra(fitter,tp=None,num_spec=8,loc=4,use_m=False):
 def plot_transients(fitter,wls, plot_fit=True,scale='linear'):
     wls=np.array(wls)
     idx=np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]),1)
-    plt.plot(fitter.t, fitter.data[:,idx],'^')
+    plt.plot(fitter.t+fitter.last_para[fitter.model_disp], fitter.data[:,idx],'^')
     plt.legend([unicode(i)+u' '+unitdict['x'] for i in np.round(fitter.wl[idx])])
     if plot_fit and hasattr(fitter,'m'):
-        plt.plot(fitter.t,fitter.m.T[:,idx],'k')
+        plt.plot(fitter.t+fitter.last_para[fitter.model_disp],fitter.m.T[:,idx],'k')
     plt.autoscale(1,tight=1)
     plt.xlabel(unitdict['y'])
     plt.ylabel(unitdict['z'])
