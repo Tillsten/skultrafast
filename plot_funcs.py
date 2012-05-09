@@ -1,5 +1,6 @@
 # -*- coding: utf-8 *-*
 unitdict={'x': ' nm', 'y': ' ps', 'z': '$\\Delta$OD'}
+title=""
 import matplotlib.pyplot as plt
 import numpy as np
 import dv
@@ -22,16 +23,20 @@ def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     if normed: dat_to_plot=dat_to_plot/np.abs(dat_to_plot).max(0)
     plt.plot(fitter.wl,dat_to_plot,lw=2)
     plt.autoscale(1,tight=1)
-    plt.axhline(0,color='k')
+    plt.axhline(0,color='grey',zorder=-10,ls='--')
     leg=np.round(fitter.last_para[2+llim+fitter.model_disp:],2)
     plt.legend([str(i)+ unitdict['y'] for i in leg])
     plt.xlabel(unitdict['x'])
     plt.ylabel(unitdict['z'])
+    if title:
+        plt.title(title)
 
 def plot_diagnostic(fitter):
     residuals=fitter.data-fitter.m.T
     u,s,v=np.linalg.svd(residuals)
-    plt.subplot2grid((3,3),(0,0),2,3).imshow(residuals,aspect='auto')
+    normed_res=residuals/np.std(residuals,0)
+    plt.subplot2grid((3,3),(0,0),2,3).imshow(normed_res,vmin=-5,
+                                             vmax=5,aspect='auto')
     plt.subplot2grid((3,3),(2,0)).plot(u[:,:2])
     plt.subplot2grid((3,3),(2,1)).plot(fitter.wl,v.T[:,:2])
     ax=plt.subplot2grid((3,3),(2,2))
@@ -49,11 +54,14 @@ def plot_spectra(fitter,tp=None,num_spec=8,loc=4,use_m=False):
     else:
         data_used=fitter.data
     specs=dv.interpol(data_used,fitter.t,np.zeros(fitter.data.shape[1]),t0,tp)
-    plt.plot(fitter.wl,specs.T)
-    plt.legend(tp,ncol=2,loc=loc)
+    plt.plot(fitter.wl,specs.T)    
+    plt.legend([unicode(i)+u' '+unitdict['y'] for i in np.round(tp,2)],ncol=2,loc=loc)
+    plt.axhline(0,color='grey',zorder=-10,ls='--')
     plt.autoscale(1,tight=1)
     plt.xlabel(unitdict['x'])
     plt.ylabel(unitdict['z'])
+    if title:
+        plt.title(title)
 
 
 def plot_transients(fitter,wls, plot_fit=True,scale='linear'):
@@ -68,6 +76,8 @@ def plot_transients(fitter,wls, plot_fit=True,scale='linear'):
     plt.ylabel(unitdict['z'])
     if scale!='linear':
         plt.xscale(scale)
+    if title:
+        plt.title(title)
 
 def plot_residuals(fitter,wls,scale='linear'):
     wls=np.array(wls)
@@ -79,3 +89,5 @@ def plot_residuals(fitter,wls,scale='linear'):
     plt.ylabel(unitdict['z'])
     if scale!='linear':
         plt.xscale(scale)
+    if title:
+        plt.title(title)
