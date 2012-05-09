@@ -263,7 +263,7 @@ class Fitter(object):
             return best[0]
 
 
-    def start_lmfit(self,x0,fixed_names=[]):        
+    def start_lmfit(self,x0,fixed_names=[],lower_bound=0.3):        
         p=lmfit.Parameters()
         for i in range(self.model_disp):
             p.add('p'+str(i),x0[i])                       
@@ -271,7 +271,7 @@ class Fitter(object):
         p.add('x0',x0[0])
         p.add('w',x0[1],min=0)
         for i,tau in enumerate(x0[2:]):
-            p.add('t'+str(i),tau,vary=True,min=0.5)
+            p.add('t'+str(i),tau,vary=True,min=lower_bound)
         
         for k in fixed_names:
             p[k].vary=False
