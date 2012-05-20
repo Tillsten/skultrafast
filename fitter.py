@@ -91,7 +91,7 @@ def _coh_gaussian(t,w,tz):
     y[:,1]*=(-tt/w**2)
     y[:,2]*=(tt**2/w**4-1/w**2)
     y[:,3]*=(-tt**3/w**6+3*tt/w**4)
-    #y/=np.max(np.abs(y),0)
+    y/=np.max(np.abs(y),0)
     return y
 
 class Fitter(object):
@@ -105,8 +105,6 @@ class Fitter(object):
         Array containing the time-coordinates
     data :  ndarry(N,M)
         The data to fit.
-    num_exponentials : int
-        Number of exponentials to fit.
     model_coh : bool
         If to model coherent artefacts at the time zero, defaults to False
     bounds : float
@@ -115,18 +113,14 @@ class Fitter(object):
 
 
     """
-    def __init__(self,wl,t,data,num_exponentials,
+    def __init__(self,wl,t,data,
                  model_coh=False,model_disp=0,bound=1000.):
         self.t=t
         self.wl=wl
         self.model_coh=model_coh
         self.model_disp=model_disp
-        if model_coh:
-            self.x_vec=np.zeros((self.t.size,num_exponentials+4))
-        else:
-            self.x_vec=np.zeros((self.t.size,num_exponentials))
         self.data=data
-        self.num_exponentials=num_exponentials
+        
         #self.one=np.identity(t.size)
         self.last_spec=None
         self.bound=bound
@@ -195,18 +189,23 @@ class Fitter(object):
         """Build the base (the folded functions) for given parameters.
 
         """
-
         if fixed:
             para=list(para)
             for (i,j) in fixed:
                 para.insert(i,j)
 
         para=np.array(para)
-
+        self.num_exponentials=para.size-2
         if self.model_coh:
+            self.x_vec=np.zeros((self.t.size,self.num_exponentials+4))
             self.x_vec[:,-4:]=_coh_gaussian(self.t,para[1],para[0])
+            self.x_vec[:,:-4]=_fold_exp(self.t,para[1],para[0],(para[2:])).T
+        else:
+            self.x_vec=_fold_exp(self.t,para[1],para[0],(para[2:])).T
+                        
+           
 
-        self.x_vec[:,:self.num_exponentials]=_fold_exp(self.t,para[1],para[0],(para[2:])).T
+        
         self.x_vec=np.nan_to_num(self.x_vec)
 
     def res(self,para,fixed=None):
@@ -341,15 +340,15 @@ if __name__=='__main__':
     coef=np.zeros((2,400))
     coef[0,:]=-np.arange(-300,100)**2/100.
     coef[1,:]=np.arange(-200,200)**2/100.
-
-    g=Fitter(np.arange(400),t, 0,2,False)
+    t=np.linspace(0,30,300)
+    g=Fitter(np.arange(400),t, 0,False)
     g.build_xvec([0.1,0.3,5,16])
     dat=np.dot(g.x_vec,coef)
 
     dat+=10*(np.random.random(dat.shape)-0.5)
     dat=dat*(1+(np.random.random(dat.shape)-0.5)*0.20)
-    g=Fitter(np.arange(400),t,dat,2,False,True)
-    x0=[0.0, 0.0, 0.0,0.5,0.2,4,20]
+    g=Fitter(np.arange(400),t,dat,2,False,False)
+    x0=[0.5,0.2,4,20]
 #    #a=g.start_pymc(x0)
 #    #a=g.start_cmafit(x0)
     a=g.start_lmfit(x0)
