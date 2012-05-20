@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 from traits.etsconfig.api import ETSConfig
-ETSConfig.toolkit = 'wx'
+ETSConfig.toolkit = 'qt4'
 
 # ETS imports (non-chaco)
 from enable.component_editor import ComponentEditor
@@ -99,7 +99,7 @@ class Data(HasTraits):
         name=str(round(self.times[y],2))
         self.spectrum_plotter.add_ydata(name,yd)
         
-    def _on_reset_plotters_fired(self):        
+    def _reset_plotters_fired(self):        
         self.spectrum_plotter.delete_ydata()
         self.transients_plotter.delete_ydata()
         
@@ -166,36 +166,30 @@ class DASPlotter(HasTraits):
                     
 from lmtraits import AllParameter
 
-class MainWindow(HasTraits):
+
+class FitterWindow(HasTraits):
     fitter=Instance(Fitter)
-    data=Instance(Data)
-    
     para=Instance(AllParameter)
-    dasplotter=Instance(DASPlotter)
-    traits_view= View(HGroup(UItem('@data',show_label=False, width=0.7), 
-                             VGroup(Item('@para',show_label=False,height=0.3,width=0.3),
-                                    Item('@dasplotter',show_label=False,width=0.3))))
-           
-    def _data_default(self):        
-        t,w,d=self.fitter.t, self.fitter.wl, self.fitter.data
-        data=Data(wavelengths=w,times=t,data=d)        
-        return data
+    dasplotter=Instance(MultiPlotter)
     
     def _dasplotter_default(self):
-        return DASPlotter(wavelengths=self.fitter.wl)
+        return MultiPlotter(xaxis=self.fitter.wl)
     
     def _para_default(self):
         para=AllParameter()        
         return para    
-    
+        
     @on_trait_change('para:apply_paras')
     def calc_res(self):
         print "calc"
         print self.para.to_array()
         self.fitter.res(self.para.to_array())
-        print np.abs(self.fitter.c[:-4].max())
-        self.dasplotter.show_das([i for i in self.fitter.c])
-        
+        self.dasplotter.delete_ydata()
+        tau=[str(round(i.value,2)) for i in self.para.paras[2:]]
+        spec=[i for i in self.fitter.c[:-4]]       
+        for i in zip(tau,spec):
+            self.dasplotter.add_ydata(*i)
+            
     @on_trait_change('para:start_fit')
     def start_fit(self):
         a=self.fitter.start_lmfit(self.para.to_array())
@@ -204,11 +198,39 @@ class MainWindow(HasTraits):
         self.para.from_lmparas(a.params)
         self.calc_res()
         
+    
+    traits_view=View(VGroup(Item('@para',show_label=False,height=300,width=0.3),
+                                    Item('@dasplotter',show_label=False,width=0.3)
+                                    ),resizable=True)
+
+class MainWindow(HasTraits):
+    fitter=Instance(Fitter)
+    data=Instance(Data)
+    fitwin=Instance(FitterWindow)
+    
+    traits_view= View(VGroup(Item('@data',show_label=False, width=0.7), 
+                             Item('fitwin',width=0.3)
+                             ),resizable=True
+                      )
+           
+    def _data_default(self):        
+        t,w,d=self.fitter.t, self.fitter.wl, self.fitter.data
+        data=Data(wavelengths=w,times=t,data=d)        
+        return data
+    
+    def _fitwin_default(self):
+        return FitterWindow(fitter=self.fitter)    
+
+
+from scipy import ndimage
+
+
 a=np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
 t=a[1:,0]
 w=a[0,1:]
 d=a[1:,1:]
-f=Fitter(w,t,d,1)
+df=ndimage.gaussian_filter(d,(2,7))
+f=Fitter(w,t,df,1)
 #d=Data(wavelengths=w,times=t,data=d)
 m=MainWindow(fitter=f)
 m.configure_traits()
