@@ -11,17 +11,14 @@ from enable.component_editor import ComponentEditor
 from enable.api import BaseTool
 from traits.api import HasTraits, Instance, Int, List, Str, Enum, \
         on_trait_change, Any, DelegatesTo, Array,  Button, Float, Bool
+       
 from traitsui.api import Item, View, HSplit, HGroup,\
-        EnumEditor, Group, UItem, VGroup, TableEditor,\
-        TabularEditor
-from traitsui.table_column import ObjectColumn
+        EnumEditor, Group, UItem, VGroup
+
 # Chaco imports
-from chaco.api import ArrayPlotData, Plot, PlotAxis, \
-        ScatterInspectorOverlay, jet, GridDataSource, GridMapper, \
-        DataRange2D, ImageData, CMapImagePlot, DataRange1D
+from chaco.api import ArrayPlotData, Plot
 import chaco.api as dc
-from chaco.scales.api import CalendarScaleSystem
-from chaco.scales_tick_generator import ScalesTickGenerator
+
 from chaco.example_support import COLOR_PALETTE
 from chaco.tools.api import PanTool, ZoomTool, RangeSelection, \
         RangeSelectionOverlay, LegendTool
@@ -29,11 +26,10 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection, \
 
 
 from multiplotter import MultiPlotter 
-
-
+from fitter import Fitter
           
 
-class Data(HasTraits):
+class Data(HasTraits):    
     wavelengths=Array()
     times=Array()
     data=Array(shape=(times.size,wavelengths.size))
@@ -42,6 +38,7 @@ class Data(HasTraits):
     
     spectrum_plotter=Instance(MultiPlotter)
     transients_plotter=Instance(MultiPlotter)
+    reset_plotters=Button('Reset Plotters')    
     
     v_container=Instance(dc.VPlotContainer)
     h_container=Instance(dc.HPlotContainer)
@@ -83,11 +80,14 @@ class Data(HasTraits):
         con=dc.HPlotContainer(self.plot,self.v_container)
         return con
     
-    def hover_data(self,x,y):       
-        self.transients_plotter.ytemp=self.data[:,x]
-        self.transients_plotter.plot.title=str(self.wavelengths[x])
-        self.spectrum_plotter.ytemp=self.data[y,:]
-        self.spectrum_plotter.plot.title=str(self.times[y])
+    def hover_data(self,x,y):
+        try:
+            self.transients_plotter.ytemp=self.data[:,x]
+            self.transients_plotter.plot.title=str(self.wavelengths[x])
+            self.spectrum_plotter.ytemp=self.data[y,:]
+            self.spectrum_plotter.plot.title=str(self.times[y])
+        except IndexError:
+            pass
     
     def add_transient(self,x,y):
         y=self.data[:,x]
@@ -99,15 +99,17 @@ class Data(HasTraits):
         name=str(round(self.times[y],2))
         self.spectrum_plotter.add_ydata(name,yd)
         
-    def reset_plotter(self):        
+    def _on_reset_plotters_fired(self):        
         self.spectrum_plotter.delete_ydata()
         self.transients_plotter.delete_ydata()
         
     title='Data'
     size=(600,400)
     traits_view = View(
-                    HGroup(Item('v_container', editor=ComponentEditor(size=size),
-                             show_label=False),
+                    HGroup(
+                            VGroup(Item('v_container', editor=ComponentEditor(size=size),
+                                        show_label=False),
+                                   Item('reset_plotters',show_label=False)),
                              Item('plot',editor=ComponentEditor(size=size),
                                   show_label=False)),
                              
@@ -134,26 +136,79 @@ class ClickTool(BaseTool):
         x,y=self.component.map_data((event.x, event.y))
         self.func_right(x, y)
 
-                    
 
+class DASPlotter(HasTraits):
+    wavelengths=Array    
+    plot=Instance(Plot)
+    das=List(Array)
+    pd=Instance(ArrayPlotData)
+    
+    def _pd_default(self):
+        pd=ArrayPlotData(x=self.wavelengths)
+        return pd
+        
+    def _plot_default(self):
+        plot=Plot(self.pd)        
+        plot.tools.append(PanTool(plot, drag_button='right'))        
+        zoom = ZoomTool(component=plot, tool_mode="box", always_on=True)
+        plot.overlays.append(zoom)          
+        return plot
+
+
+    def show_das(self,l):
+        self.das=l
+        for i in range(len(l)):
+            self.pd.set_data(str(i),l[i])
+            self.plot.plot(('x',str(i)),name=str(i),color=COLOR_PALETTE[i])
+        self.plot.request_redraw()
+            
+    traits_view=View(Item('plot',editor=ComponentEditor()))
+                    
+from lmtraits import AllParameter
 
 class MainWindow(HasTraits):
+    fitter=Instance(Fitter)
     data=Instance(Data)
-    do_calc=Button("Reset Plotters")
     
-    traits_view= View(VGroup(UItem('@data'), Item('do_calc')))
+    para=Instance(AllParameter)
+    dasplotter=Instance(DASPlotter)
+    traits_view= View(HGroup(UItem('@data',show_label=False, width=0.7), 
+                             VGroup(Item('@para',show_label=False,height=0.3,width=0.3),
+                                    Item('@dasplotter',show_label=False,width=0.3))))
+           
+    def _data_default(self):        
+        t,w,d=self.fitter.t, self.fitter.wl, self.fitter.data
+        data=Data(wavelengths=w,times=t,data=d)        
+        return data
     
-    def _on_data_changed(self):
-        self.traits_view=traits_view= View(VGroup(Item('@data'), Item('do_calc')))
+    def _dasplotter_default(self):
+        return DASPlotter(wavelengths=self.fitter.wl)
     
-    def _do_calc_fired(self):   
-        self.data.reset_plotter()
-
-#    
-#a=np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
-#t=a[1:,0]
-#w=a[0,1:]
-#d=a[2:,2:]
+    def _para_default(self):
+        para=AllParameter()        
+        return para    
+    
+    @on_trait_change('para:apply_paras')
+    def calc_res(self):
+        print "calc"
+        print self.para.to_array()
+        self.fitter.res(self.para.to_array())
+        print np.abs(self.fitter.c[:-4].max())
+        self.dasplotter.show_das([i for i in self.fitter.c])
+        
+    @on_trait_change('para:start_fit')
+    def start_fit(self):
+        a=self.fitter.start_lmfit(self.para.to_array())
+        a.params=self.para.to_lmparas()
+        a.leastsq()
+        self.para.from_lmparas(a.params)
+        self.calc_res()
+        
+a=np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
+t=a[1:,0]
+w=a[0,1:]
+d=a[1:,1:]
+f=Fitter(w,t,d,1)
 #d=Data(wavelengths=w,times=t,data=d)
-#m=MainWindow(data=d)
-#m.configure_traits()
+m=MainWindow(fitter=f)
+m.configure_traits()
