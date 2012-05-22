@@ -55,9 +55,7 @@ class AllParameter(HasTraits):
         p=Parameter(name=name,value=10**(len(self.paras)-2),min=0)
         self.paras.append(p)
     
-    @on_trait_change('paras[]')
-    def _apply_para_fired(self):
-        pass
+
         
     def from_lmparas(self,lmparams):
         self.paras=[]
@@ -93,5 +91,6 @@ if __name__=='__main__':
     
     pa=AllParameter()
     pa.from_lmparas(p)
+    pa.paras[0].value=5.
     pa.configure_traits()
 

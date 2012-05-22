@@ -12,22 +12,15 @@ import time
 
 # ETS imports (non-chaco)
 from enable.component_editor import ComponentEditor
-from enable.api import BaseTool
-from traits.api import HasTraits, Instance, Int, List, Str, Enum, \
-        on_trait_change, Any, DelegatesTo, Array,  Button, Property 
-from traitsui.api import Item, View, HSplit, HGroup,\
-        EnumEditor, Group, UItem, VGroup
+from traits.api import HasTraits, Instance, Int, List, Str, 
+from traitsui.api import Item, View
 
 # Chaco imports
-from chaco.api import ArrayPlotData, Plot, PlotAxis, \
-        ScatterInspectorOverlay, jet, GridDataSource, GridMapper, \
-        DataRange2D, ImageData, CMapImagePlot, DataRange1D
-import chaco.api as dc
-from chaco.scales.api import CalendarScaleSystem
-from chaco.scales_tick_generator import ScalesTickGenerator
+from chaco.api import ArrayPlotData, Plot
+
+
 from chaco.example_support import COLOR_PALETTE
-from chaco.tools.api import PanTool, ZoomTool, RangeSelection, \
-        RangeSelectionOverlay, LegendTool
+
 from chaco.default_colors import palette11 as COLOR_PALETTE
 #from enthought.chaco.example_support import COLOR_PALETTE
 

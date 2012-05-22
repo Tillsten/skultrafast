@@ -1,5 +1,3 @@
-
-from numpy import linspace, random, zeros, arange, cumprod
 import numpy as np
 import time
 
@@ -47,7 +45,7 @@ class Data(HasTraits):
         mp=MultiPlotter(xaxis=self.wavelengths)
         mp.xlabel="nm"
         mp.ylabel="OD"
-        return mp 
+        return MultiPlotter(xaxis=self.fitter.wl)
         
     def _transients_plotter_default(self):
         mp=MultiPlotter(xaxis=self.times)
@@ -136,34 +134,7 @@ class ClickTool(BaseTool):
         x,y=self.component.map_data((event.x, event.y))
         self.func_right(x, y)
 
-
-class DASPlotter(HasTraits):
-    wavelengths=Array    
-    plot=Instance(Plot)
-    das=List(Array)
-    pd=Instance(ArrayPlotData)
-    
-    def _pd_default(self):
-        pd=ArrayPlotData(x=self.wavelengths)
-        return pd
-        
-    def _plot_default(self):
-        plot=Plot(self.pd)        
-        plot.tools.append(PanTool(plot, drag_button='right'))        
-        zoom = ZoomTool(component=plot, tool_mode="box", always_on=True)
-        plot.overlays.append(zoom)          
-        return plot
-
-
-    def show_das(self,l):
-        self.das=l
-        for i in range(len(l)):
-            self.pd.set_data(str(i),l[i])
-            self.plot.plot(('x',str(i)),name=str(i),color=COLOR_PALETTE[i])
-        self.plot.request_redraw()
-            
-    traits_view=View(Item('plot',editor=ComponentEditor()))
-                    
+                   
 from lmtraits import AllParameter
 
 
@@ -173,13 +144,16 @@ class FitterWindow(HasTraits):
     dasplotter=Instance(MultiPlotter)
     
     def _dasplotter_default(self):
-        return MultiPlotter(xaxis=self.fitter.wl)
+        mp=MultiPlotter(xaxis=self.fitter.wl)
+        mp.xlabel="nm"
+        mp.ylabel="OD"
+        return mp 
     
     def _para_default(self):
         para=AllParameter()        
         return para    
-        
-    @on_trait_change('para:apply_paras')
+    
+    @on_trait_change('para:apply_paras,para:paras:value')
     def calc_res(self):
         print "calc"
         print self.para.to_array()
@@ -197,12 +171,22 @@ class FitterWindow(HasTraits):
         a.leastsq()
         self.para.from_lmparas(a.params)
         self.calc_res()
-        
     
     traits_view=View(VGroup(Item('@para',show_label=False,height=300,width=0.3),
-                                    Item('@dasplotter',show_label=False,width=0.3)
-                                    ),resizable=True)
+                            Item('@dasplotter',show_label=False,width=0.3)
+                            ),resizable=True)
 
+
+
+class ZeroCorrection(HasTraits):
+    method=Enum(['Max', 'Abs', 'First Peak'])
+    method_para=Float
+    upper_lim=Float
+    lower_lim=Float
+    poly_degrees=Int(min=1,max=4)
+    
+    
+    
 class MainWindow(HasTraits):
     fitter=Instance(Fitter)
     data=Instance(Data)
@@ -219,9 +203,8 @@ class MainWindow(HasTraits):
         return data
     
     def _fitwin_default(self):
-        return FitterWindow(fitter=self.fitter)    
-
-
+        return FitterWindow(fitter=self.fitter)
+        
 from scipy import ndimage
 
 
