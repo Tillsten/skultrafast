@@ -45,7 +45,7 @@ class Data(HasTraits):
         mp=MultiPlotter(xaxis=self.wavelengths)
         mp.xlabel="nm"
         mp.ylabel="OD"
-        return MultiPlotter(xaxis=self.fitter.wl)
+        return MultiPlotter(xaxis=self.wavelengths)
         
     def _transients_plotter_default(self):
         mp=MultiPlotter(xaxis=self.times)
@@ -153,7 +153,7 @@ class FitterWindow(HasTraits):
         para=AllParameter()        
         return para    
     
-    @on_trait_change('para:apply_paras,para:paras:value')
+    @on_trait_change('para:paras:value')
     def calc_res(self):
         print "calc"
         print self.para.to_array()
@@ -172,7 +172,7 @@ class FitterWindow(HasTraits):
         self.para.from_lmparas(a.params)
         self.calc_res()
     
-    traits_view=View(VGroup(Item('@para',show_label=False,height=300,width=0.3),
+    traits_view=View(HGroup(Item('@para',show_label=False,height=300,width=0.7),
                             Item('@dasplotter',show_label=False,width=0.3)
                             ),resizable=True)
 
@@ -213,7 +213,7 @@ t=a[1:,0]
 w=a[0,1:]
 d=a[1:,1:]
 df=ndimage.gaussian_filter(d,(2,7))
-f=Fitter(w,t,df,1)
+f=Fitter(w,t,d,1)
 #d=Data(wavelengths=w,times=t,data=d)
 m=MainWindow(fitter=f)
 m.configure_traits()
