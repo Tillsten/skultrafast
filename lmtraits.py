@@ -22,7 +22,7 @@ class Parameter(HasTraits):
 class AllParameter(HasTraits):    
     paras=List(Parameter)
     add_para=Button('Add')
-    apply_paras=Button('Apply')
+    remove_para=Button('Remove')
     start_fit=Button('Fit')
     
     tb=TableEditor(auto_size=True)        
@@ -33,17 +33,17 @@ class AllParameter(HasTraits):
           ObjectColumn(name='max')]
     tb.columns=cols
     tb.row_factory=Parameter
+    
     tmp=HGroup(Item('add_para', show_label=False),
-               Item('apply_paras', show_label=False),
+               Item('remove_para', show_label=False),
                Item('start_fit', show_label=False))
+    
     traits_view=View(VGroup(Item('paras', editor=tb, show_label=False),
                             tmp
                            ),
                      resizable = True,
                      width = .15,
                      height = .2)
-                     
-
     def _paras_default(self):
         p1=Parameter(name='x0',value=0.)
         p2=Parameter(name='w',value=0.1,min=0)
@@ -55,7 +55,8 @@ class AllParameter(HasTraits):
         p=Parameter(name=name,value=10**(len(self.paras)-2),min=0)
         self.paras.append(p)
     
-
+    def _remove_para_fired(self):
+        self.paras.pop()
         
     def from_lmparas(self,lmparams):
         self.paras=[]
