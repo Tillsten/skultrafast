@@ -34,14 +34,15 @@ def _fold_exp(tt,w,tz,tau):
        Folded Exponentials for given tau's.
 
 """
-    ws=w
-    k=1/(tau[:,None])
-    t=tt+tz    
+    ws = w
+    k = 1 / (tau[:, None])
+    t = tt + tz
     y=np.exp(k*(ws*ws*k/(4.0)-t))/(ws*np.sqrt(2*np.pi))*0.5*erfc(-t/ws+ws*k/(2.0))
-    y/=np.max(np.abs(y),0)
+    y /= np.max(np.abs(y), 0)
     return y
 
-def _exp(tt,w,tz,tau):
+
+def _exp(tt, w, tz, tau):
     """
     Returns the values of the exponentials for given parameters.
 
@@ -62,12 +63,12 @@ def _exp(tt,w,tz,tau):
        Exponentials for given tau's.
 
     """
-    t=tt+tz
-    y=np.exp(-t/(tau[:,None]))
+    t = tt+tz
+    y = np.exp(-t/(tau[:, None]))
     return y
 
 
-def _coh_gaussian(t,w,tz):
+def _coh_gaussian(t, w, tz):
     """Models artefacts proptional to a gaussian and it's derivates
 
     Parameters
@@ -86,8 +87,8 @@ def _coh_gaussian(t,w,tz):
         each in its own coulumn.
 
     """
-    w=w/sq2
-    tt=t+tz
+    w = w / sq2
+    tt = t + tz
     y=np.tile(np.exp(-0.5*(tt/w)**2)/(w*np.sqrt(2*np.pi)),(4,1)).T
     y[:,1]*=(-tt/w**2)
     y[:,2]*=(tt**2/w**4-1/w**2)
@@ -121,7 +122,7 @@ class Fitter(object):
         self.model_coh=model_coh
         self.model_disp=model_disp
         self.data=data
-        
+
         #self.one=np.identity(t.size)
         self.last_spec=None
         self.bound=bound
@@ -130,14 +131,14 @@ class Fitter(object):
             self.org=data[:]
             self.minwl=np.min(wl)
             self.used_disp=np.zeros(model_disp)
-        
+
     def model(self,para,fixed=None):
         """ Returns the fit for given psystemeqarameters.
 
         para has the following form:
-        [xc,w,tau_1,...tau_n]"""        
+        [xc,w,tau_1,...tau_n]"""
         self.last_para=para
-    
+
         if self.model_disp:
             if  np.any(para[:self.model_disp]!=self.used_disp):
                 self.tn=np.poly1d(para[:self.model_disp]+[0])(self.wl-self.minwl)
@@ -203,10 +204,10 @@ class Fitter(object):
             self.x_vec[:,:-4]=_fold_exp(self.t,para[1],para[0],(para[2:])).T
         else:
             self.x_vec=_fold_exp(self.t,para[1],para[0],(para[2:])).T
-                        
-           
 
-        
+
+
+
         self.x_vec=np.nan_to_num(self.x_vec)
 
     def res(self,para,fixed=None):
@@ -263,25 +264,25 @@ class Fitter(object):
             return best[0]
 
 
-    def start_lmfit(self,x0,fixed_names=[],lower_bound=0.3):        
+    def start_lmfit(self,x0,fixed_names=[],lower_bound=0.3):
         p=lmfit.Parameters()
         for i in range(self.model_disp):
-            p.add('p'+str(i),x0[i])                       
+            p.add('p'+str(i),x0[i])
         x0=x0[self.model_disp:]
         p.add('x0',x0[0])
         p.add('w',x0[1],min=0)
         for i,tau in enumerate(x0[2:]):
             p.add('t'+str(i),tau,vary=True,min=lower_bound)
-        
+
         for k in fixed_names:
             p[k].vary=False
-        
+
         def res(p):
-            x=[k.value for k in p.values()]            
+            x=[k.value for k in p.values()]
             return self.res(x)
-            
+
         return lmfit.Minimizer(res,p)
-            
+
 
     def start_cmafit(self,x0,fixed=None,restarts=2):
         import cma
@@ -372,4 +373,3 @@ if __name__=='__main__':
     #plot_transients(g,wls)
     #plt.show()
     #best=leastsq(g.varpro,x0, full_output=True)
-    
