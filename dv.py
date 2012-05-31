@@ -65,6 +65,9 @@ def loader_func(name):
     endname=max(zip(map(int,num_list),files))[1]
     print 'Loading: '+endname
     a=np.load(endname)
+    std=endname.replace("dat","std")
+    print 'std:'+ std
+    b=np.load(std)
     files=glob.glob(name+'*'+'_0_'+'*dat.npy')
     #print files
     wls=[]
@@ -73,15 +76,14 @@ def loader_func(name):
         tmp=np.load(i)
         t,w=tmp[1:,0],tmp[0,1:]
         wls.append(w)
-    
-    return t,wls,a
+    print t.shape, a.shape
+    return t,wls,a,b
     
 def concate_data(wls,dat):
     w=np.hstack(tuple(wls))
     idx=np.argsort(w)
     w=w[idx]
-    k=dat.shape
-    dat=dat.reshape(k[0],k[1]*k[2],k[3],order='F')
+    dat=np.hstack([dat[:,:,i,:] for i in range(len(wls))])     
     dat=dat[:,idx,:]
     return w,dat
     
