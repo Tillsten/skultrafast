@@ -3,11 +3,11 @@ from numpy import zeros, loadtxt, ceil, interp, around, arange, floor,log10
 import numpy as np
 from scipy.interpolate import splrep, splev
 def testload(f = 'C:\Users\Tillsten\Documents\weisslicht.dat'):
-    
+
     raw = load_datfile(f)
-    (times, wl, sig, se, ref, re) = read_data(raw)  
+    (times, wl, sig, se, ref, re) = read_data(raw)
     return  (times, wl, sig, se, ref, re)
-    
+
 def load_datfile(datfile):
     # Lade Daten aus vb-Datenfile, f konvertiert die Kommas
     f = lambda  s: float(s.replace(',', '.'))
@@ -17,11 +17,11 @@ def load_datfile(datfile):
 
 
 def find_w(w,x):
-    """needs global w as array. gives idnex to nearest value"""    
+    """needs global w as array. gives idnex to nearest value"""
     idx = (abs(w - x)).argmin()
     return idx
-    
-def read_data(d):    
+
+def read_data(d):
     # Setze Ausgabenarrays und fuelle sie
     num_times = len(d) / (800)
     times = zeros((num_times))
@@ -48,16 +48,16 @@ def first_min(sig, low_lim):
     i = 4
     while (not sig[i - 1] > sig[i] < sig[i + 1]) or sig[i] > low_lim:
         i += 1
-        
+
         if i > sig.shape[0]-2:
             break
     return i
-    
+
 def loader_func(name):
     import glob
-    
 
-    files=glob.glob(name+'*dat?.npy')+glob.glob(name+'*dat??.npy')
+
+    files=glob.glob(name+'_dat?.npy')+glob.glob(name+'_dat??.npy')
     if len(files)==0:
         raise "Name Not Found"
     num_list=[i[i.find('dat')+3:-4] for i in files]
@@ -65,28 +65,26 @@ def loader_func(name):
     endname=max(zip(map(int,num_list),files))[1]
     print 'Loading: '+endname
     a=np.load(endname)
-    std=endname.replace("dat","std")
-    print 'std:'+ std
-    b=np.load(std)
-    files=glob.glob(name+'*'+'_0_'+'*dat.npy')
-    #print files
+    files=glob.glob(name+'-???_0_'+'*dat.npy')
+    print files
     wls=[]
-    for i in files:   
+    for i in files:
         print 'Loading: '+i
         tmp=np.load(i)
         t,w=tmp[1:,0],tmp[0,1:]
         wls.append(w)
-    print t.shape, a.shape
-    return t,wls,a,b
-    
+
+    return t,wls,a
+
 def concate_data(wls,dat):
     w=np.hstack(tuple(wls))
     idx=np.argsort(w)
     w=w[idx]
-    dat=np.hstack([dat[:,:,i,:] for i in range(len(wls))])     
+    k=dat.shape
+    dat=dat.reshape(k[0],k[1]*k[2],k[3],order='F')
     dat=dat[:,idx,:]
     return w,dat
-    
+
 
 
 def get_abs(s, lim):
@@ -97,60 +95,54 @@ def get_abs(s, lim):
             j = j + 1
         if j != s.shape[0] - 1: z[i] = j
     return z
-    
+
 def get_zeros(s, low_lim = -0.5):
     z = zeros(s.shape[1], dtype = 'int')
-    for i in range(s.shape[1]):        
+    for i in range(s.shape[1]):
         z[i] = first_min(s[:, i], low_lim)
     return z
-    
-    
-def subtract_background(sig, k = 10):
-    c = np.mean(sig[0:k, :], axis = 0)    
-    return sig - np.resize(c, sig.shape)
+
+
+def subtract_background(dat, t, tn, offset=0.3):
+    for i in range(dat.shape[1]):
+        mask=(t-tn[i])<-offset
+        corr=dat[mask,i].mean()
+        dat[:,i]-=corr
+    return dat
 
 def process(name):
     (t, w, s, se, r, re) = testload(name)
     r = calc_od(r)
     r = subtract_background(r)
-    
+
     return t, w, r
 
-def poly_time(k, t, level = 0.25, up = 2000, low = -500,w=np.arange(400)):    
+def poly_time(k, t, level = 0.25, up = 2000, low = -500,w=np.arange(400),deg=2):
     k = t[get_zeros(k, level)]
-    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))    
+    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
     masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), 2)
-    return(np.poly1d(p)(np.arange(k.shape[0])))
-    
-def poly_time_abs(k, t, level = -1, up = 2000, low = -1000,w=arange(400)):    
-    k = t[np.argmin(abs(k)<level,0)]
-    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))    
-    masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), 3)
-    print p
-    return(np.poly1d(p)(w))
+    p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
+    return(np.poly1d(p)(np.arange(k.shape[0]))),p
 
-def poly_time_abs_r(k, t,w, level = -1, up = 2000, low = -1000):    
+def poly_time_abs(k, t, level = -1, up = 2000, low = -1000,w=arange(400), deg=2):
+    k = t[np.argmin(abs(k)<level,0)]
+    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
+    masked_range = np.ma.masked_array(w, m.mask)
+    p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
+    print p
+    return(np.poly1d(p)(w)),p
+
+
+def poly_time_abs_r(k, t,w, level = -1, up = 2000, low = -1000):
     k = t[get_abs(k, level)]
-    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))    
+    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
     masked_range = np.ma.masked_array(w, m.mask)
     p = np.polyfit(masked_range.compressed(), m.compressed(), 3)
     print p
     return(np.poly1d(p)(arange(k.shape[0])))
 
-def spec_plt(g,plt):
-    plt.xlabel(u'Wellenlänge  /  nm')
-    plt.ylabel(u'Absorptionsdifferenz / mOD')
-    plt.gcf().set_figheight(4.5)
-    plt.gcf().set_figwidth(7)
-    grid()
-    para=g.a.T[:g.a[0].T.size/2]
-    senk=g.a.T[g.a[0].T.size/2:]
-    plt.plot(g.wl,para,lw=2)
-    plt.plot(g.wl,senk)
-    
-def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):    
+
+def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):
     t_array=np.tile(t.reshape(t.size,1),(1,dat.shape[1]))
     dat_new=zeros((new_t.size,dat.shape[1]))
     for i in range(dat.shape[1]):
@@ -158,7 +150,7 @@ def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500
         dat_new[:,i]=interp(new_t,t_array[:,i],dat[:,i])
     return dat_new
 
-def interpol_sm(r,t,re,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000]),s=None):    
+def interpol_sm(r,t,re,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000]),s=None):
     t_array=np.tile(t.reshape(t.size,1),(1,r.shape[1]))
     r_new=zeros((new_t.size,r.shape[1]))
     for i in range(r.shape[1]):
@@ -180,7 +172,7 @@ def make_legend(p,err,n):
         erri=str(ceil(round(err[i]*10**(-dig[i]),3))*10**(dig[i]))
         l.append('$\\tau_'+str(int(i-1))+'='+val+'\\pm '+erri+' $ps')
     return l
-    
+
 
 def make_legend_noerr(p,err,n):
     dig=np.floor(log10(err))
@@ -190,17 +182,6 @@ def make_legend_noerr(p,err,n):
         erri=str(ceil(round(err[i]*10**(-dig[i]),3))*10**(dig[i]))
         l.append('$\\tau_'+str(int(i-1))+'$='+val+' ps')
     return l
-
-class model:
-    def __init__(self,x):
-        self.x=x
-    def fit(self,data):        
-        x=data
-        return np.polyfit(x[:,0],x[:,1],3)
-    
-    def get_error(self,data,model):        
-        x=data.T
-        return (np.polyval(model,x[0,:])-x[1,:])**2
 
 
 
@@ -296,8 +277,8 @@ def calc_error(args):
 #    rf=re*a
 #    plt.plot(t,  a[:, k], t, rf[:, k]+a[:, k], t,-rf[:, k]+a[:, k] )
 #    plt.show()
-#    
-#        
+#
+#
 def w_rgb(w):
     if w >= 380 and w < 440:
         R = -(w - 440.) / (440. - 350.)
@@ -335,9 +316,111 @@ def w_rgb(w):
         s=1.
     R,G,B=(np.array((R,G,B))*s)**0.8
     return R,G,B
-    
-def equal_color(plots1,plots2):    
+
+def equal_color(plots1,plots2):
     if len(plots1)!=len(plots2):
-        raise Not_same_length
+        raise ValueError
     for (plot1,plot2) in zip(plots1,plots2):
         plot2.set_color(plot1.get_color())
+        
+
+def find_linear_part(t):
+    """
+    Finds the first value of an 1d-array where the difference betweeen
+    consecutively value varys.    
+    """
+    d=np.diff(t)
+    return np.argmin(np.abs(d-d[0])<0.00001)
+
+class PoloynomialLeastSquaredModel:
+    """
+    Model used for ransac, fits data to polynom of specified degree.
+    """
+    def __init__(self, deg):        
+        self.degree=deg
+    
+    def fit(self, data):
+        x=data[:,0]
+        y=data[:,1]
+        return np.polyfit(x, y, self.degree)
+
+    def get_error(self, data, model):
+        x=data[:,0]
+        y=data[:,1]
+        return (y-np.poly1d(model)(x))**2
+
+
+
+
+import ransac
+
+def find_time_zero(d, value, method='abs', polydeg=3, *args):
+    """
+    Fits the dispersion of the timezero-point with a polynom of given
+    degree. Uses the ransac algorithm to fit a approximation won by given
+    method. The default method is to find the first point where the absolute 
+    value is above a given limit.
+    """
+    
+    t=d.t
+    w=d.wl
+    dat=d.data
+
+    
+    if method == 'abs':
+        tn=t[np.argmin((np.abs(dat) < value),0)]
+    
+    ransac_data= np.column_stack((w,tn))    
+    ransac_model = PoloynomialLeastSquaredModel(polydeg)
+    m = ransac.ransac(ransac_data, ransac_model, tn.size*0.2, 500, 0.1, tn.size*0.6)
+    
+    return np.poly1d(m)(w), m
+        
+import numpy as np
+
+def rebin(a, new_shape):
+    """
+Resizes a 2d array by averaging or repeating elements,
+new dimensions must be integral factors of original dimensions
+
+Parameters
+----------
+a : array_like
+Input array.
+new_shape : tuple of int
+Shape of the output array
+
+Returns
+-------
+rebinned_array : ndarray
+If the new shape is smaller of the input array, the data are averaged,
+if the new shape is bigger array elements are repeated
+
+See Also
+--------
+resize : Return a new array with the specified shape.
+
+Examples
+--------
+>>> a = np.array([[0, 1], [2, 3]])
+>>> b = rebin(a, (4, 6)) #upsize
+>>> b
+array([[0, 0, 0, 1, 1, 1],
+[0, 0, 0, 1, 1, 1],
+[2, 2, 2, 3, 3, 3],
+[2, 2, 2, 3, 3, 3]])
+
+>>> c = rebin(b, (2, 3)) #downsize
+>>> c
+array([[ 0. , 0.5, 1. ],
+[ 2. , 2.5, 3. ]])
+
+"""
+    M, N = a.shape
+    m, n = new_shape
+    if m<M:
+        return a.reshape((m,M/m,n,N/n)).mean(3).mean(1)
+    else:
+        return np.repeat(np.repeat(a, m/M, axis=0), n/N, axis=1)
+    
+    
