@@ -57,7 +57,7 @@ def loader_func(name):
     import glob
 
 
-    files=glob.glob(name+'*dat?.npy')+glob.glob(name+'*dat??.npy')
+    files=glob.glob(name+'_dat?.npy')+glob.glob(name+'_dat??.npy')
     if len(files)==0:
         raise "Name Not Found"
     num_list=[i[i.find('dat')+3:-4] for i in files]
@@ -65,7 +65,7 @@ def loader_func(name):
     endname=max(zip(map(int,num_list),files))[1]
     print 'Loading: '+endname
     a=np.load(endname)
-    files=glob.glob(name+'*'+'_?_'+'*dat.npy')
+    files=glob.glob(name+'-???_0_'+'*dat.npy')
     print files
     wls=[]
     for i in files:

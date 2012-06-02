@@ -143,27 +143,34 @@ class FitterWindow(HasTraits):
     fitter=Instance(Fitter)
     para=Instance(AllParameter)
     dasplotter=Instance(MultiPlotter)
-
+    resplotter=Instance(Plot)
     def _dasplotter_default(self):
         mp=MultiPlotter(xaxis=self.fitter.wl)
         mp.xlabel="nm"
         mp.ylabel="OD"
         return mp
-
+        
+    def _resplotter_default(self):
+        res=np.zeros((400,400))
+        self.pd=ArrayPlotData(res=res)
+        p=Plot(self.pd)
+        p.img_plot('res')
+        return p
+        
     def _para_default(self):
         para=AllParameter()
         return para
 
     @on_trait_change('para:paras:value')
     def calc_res(self):
-        print "calc"
-        print self.para.to_array()
         self.fitter.res(self.para.to_array())
         self.dasplotter.delete_ydata()
         tau=[str(round(i.value,2)) for i in self.para.paras[2:]]
         spec=[i for i in self.fitter.c[:-4]]
         for i in zip(tau,spec):
             self.dasplotter.add_ydata(*i)
+        
+        self.pd.set_data('res',self.fitter.m.T-self.fitter.data)
 
     @on_trait_change('para:start_fit')
     def start_fit(self):
@@ -173,7 +180,9 @@ class FitterWindow(HasTraits):
         self.para.from_lmparas(a.params)
         self.calc_res()
 
-    traits_view=View(HGroup(Item('@para',show_label=False,height=300,width=0.7),
+    vg=VGroup(Item('@para',show_label=False,height=300,width=0.7),
+              Item('@resplotter', show_label=False, editor=ComponentEditor()))
+    traits_view=View(HGroup(vg,
                             Item('@dasplotter',show_label=False,width=0.3)
                             ),resizable=True)
 
@@ -309,18 +318,39 @@ from scipy import ndimage
 
 #x=np.linspace(0,20,500)
 #y=np.sin(x/1.2)
+import dv
 
-a=np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
-t=a[1:,0]
-w=a[0,1:]
-d=a[1:,1:]
+#a=np.loadtxt('al_tpfc2_ex620_magic.txt')
 
-#f=FFTTool(x=w[:],y=d[4,:])
+t,wl,a=dv.loader_func('..\\messpy2\\tmp\\fremdprobe_para_400exec')
+wl, d=dv.concate_data(wl,a)
+t/=1000.
+
+#t=a[1:,0]#/1000.
+#w=a[0,1:]
+#d=a[1:,1:]
+import scipy.ndimage as nd
+#d=nd.uniform_filter(d,(3,5))
+#f=FFTTool(x=w[:],y=d[4,:]) 
 #f.configure_traits()
-#df=ndimage.gaussian_filter(d,(2,7))
-f=Fitter(w,t,d,1)
-z=ZeroCorrectionTool(fitter=f)
-z.configure_traits()
-##d=Data(wavelengths=w,times=t,data=d)
-#m=MainWindow(fitter=f)
-#m.configure_traits()
+
+class f:
+    pass
+d=d[...,:].mean(-1)
+d=d[:,50:-50]
+wl=wl[50:-50]
+a=f()
+a.wl=wl
+a.t=t
+
+np.savez('SD5039',[wl,t,d])
+d=ndimage.gaussian_filter(d,(0,4))
+a.data=d
+tn,p=dv.find_time_zero(a,3,polydeg=4)
+d=dv.interpol(d,t,tn,0.4,t)
+
+f=Fitter(wl,t,d,1)
+
+#d=Data(wavelengths=w,times=t,data=d)
+m=MainWindow(fitter=f)
+m.configure_traits()

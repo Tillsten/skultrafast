@@ -46,7 +46,7 @@ class fit_viewer(object):
         if self.norm=='no_norm':           
             self.image_data=self.gfo.data[:]/(np.abs(self.gfo.data[-1,:]))
             self.overview.collections=[]
-            self.ov_plot=self.overview.pcolormesh(self.gfo.w,self.gfo.t,self.image_data,vmax=3,vmin=-3)
+            self.ov_plot=self.overview.pcolormesh(self.gfo.w,self.gfo.t,self.image_data,vmax=2,vmin=-2)
             
             self.norm='abs_norm'
         elif self.norm=='abs_norm':                      
@@ -90,10 +90,13 @@ def make_view(name):
     t,wl,a=loader_func(name)
     wl, dat=concate_data(wl,a)
     c=g()
-    c.w, c.t, c.data=wl, t, dat
+    c.w, c.t, c.data=wl, t, dat[...,:].mean(-1)
     return fit_viewer(c)
     
 
+
+d=make_view('tmp\\fremdprobe_para_400exec_short')
+plt.show()
 #dat=np.load('tmp\\br_py2_ex_590_senk-525_0_dat.npy')
 #
 #w,t=dat[0,1:], dat[1:,0]
