@@ -14,6 +14,9 @@ Contents:
 .. automodule:: fitter
     :members:
     
+.. automodule:: dv
+	:members:
+    
 
 Indices and tables
 ==================
