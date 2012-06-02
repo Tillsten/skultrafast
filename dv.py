@@ -330,7 +330,7 @@ def find_linear_part(t):
     consecutively value varys.    
     """
     d=np.diff(t)
-    return np.argmin(d!=d[0])
+    return np.argmin(np.abs(d-d[0])<0.00001)
 
 class PoloynomialLeastSquaredModel:
     """

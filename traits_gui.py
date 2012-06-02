@@ -24,8 +24,9 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection, \
 
 
 from multiplotter import MultiPlotter
-from fitter import Fitter
 
+from fitter import Fitter
+import dv
 
 class Data(HasTraits):
     wavelengths=Array()
@@ -178,22 +179,34 @@ class FitterWindow(HasTraits):
 
 
 
+
+
+
 class ZeroCorrection(HasTraits):
-    method=Enum(['Max', 'Abs', 'First Peak'])
-    method_para=Float
-    poly_degrees=Int(min=1,max=4)
+    method=Enum(['Max', 'Abs', 'First Peak'],default='Abs')
+    method_para=Float(default=2., label='Value')
+    poly_degrees=Int(min=1,max=5, default=3)
 
 
 class ZeroCorrectionTool(HasTraits):
-    zc=ZeroCorrection
-    
+    zc=Instance(ZeroCorrection)
     fitter=Instance(Fitter)
     plot=Instance(Plot)
-    
-    
+   
+    def _zc_default(self):
+        return ZeroCorrection()
     
     def _plot_default(self):
-        plot=Plot()
+        fitter=self.fitter
+        idx=dv.find_linear_part(fitter.t)        
+        self.pd=ArrayPlotData(wl=fitter.wl, t=fitter.t[:idx], d=fitter.data[:idx,:])
+        plot=Plot(self.pd)
+        plot.img_plot('d')
+        return plot
+        
+    size=((400,400))
+    traits_view=View(Item('plot',editor=ComponentEditor(size=size),
+                                  show_label=False), Item('@zc'))
         
 
 class MainWindow(HasTraits):
@@ -301,10 +314,13 @@ a=np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
 t=a[1:,0]
 w=a[0,1:]
 d=a[1:,1:]
-f=FFTTool(x=w[:],y=d[4,:])
-f.configure_traits()
+
+#f=FFTTool(x=w[:],y=d[4,:])
+#f.configure_traits()
 #df=ndimage.gaussian_filter(d,(2,7))
-#f=Fitter(w,t,d,1)
+f=Fitter(w,t,d,1)
+z=ZeroCorrectionTool(fitter=f)
+z.configure_traits()
 ##d=Data(wavelengths=w,times=t,data=d)
 #m=MainWindow(fitter=f)
 #m.configure_traits()
