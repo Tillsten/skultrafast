@@ -13,7 +13,7 @@ import time
 # ETS imports (non-chaco)
 from enable.component_editor import ComponentEditor
 from enable.api import BaseTool
-from traits.api import HasTraits, Instance, Int, List, Str, Array
+from traits.api import HasTraits, Instance, Int, List, Str, Array, Bool
 from traitsui.api import Item, View
 
 # Chaco imports
@@ -27,7 +27,7 @@ from chaco.example_support import COLOR_PALETTE
 
 from chaco.default_colors import palette11 as COLOR_PALETTE
 #from enthought.chaco.example_support import COLOR_PALETTE
-COLOR_PALETTE=['blue','green','red','cyan','yellow','pink']
+COLOR_PALETTE=['blue','green','red','cyan','yellow', 'lightblue','lightred','pink']
 
 class MultiPlotter(HasTraits):
     plot=Instance(Plot)
@@ -81,12 +81,33 @@ class MultiPlotter(HasTraits):
         
 
     traits_view=View(Item('plot',editor=ComponentEditor(size=(400,400))))
+    
+
+class FitPlotter(MultiPlotter):
+        plot_fit=Bool(default=False)
+        
+        def __init__(self,**kwargs):
+            MultiPlotter.__init__(self,**kwargs)
+            
+            
+        def add_ydata(self,name, y, yfit=None):
+            self.ydata.append(y)
+            self.pd.set_data(name,y)
+            c=COLOR_PALETTE[(len(self.ydata)-1)%len(COLOR_PALETTE)]
+            if yfit:
+                self.pd.set_data(name + '_fit', yfit)
+                self.plot.plot(('x',name), type='scatter', name=name, color=c)
+                self.plot.plot(('x',name+'_fit'), name=name, color=c)
+            else:
+                self.plot.plot(('x',name),name=name,color=c,line_width=3.)
+            self.plot.request_redraw()
+            
 
 
 if __name__=='__main__':
     x=np.linspace(0,10,100)
     y=np.sin(x)         
-    mlp=MultiPlotter(xaxis=x)
+    mlp=FitPlotter(xaxis=x)
     mlp.add_ydata('sin',y)
     
     mlp.xlabel='dsfj'    
