@@ -14,7 +14,7 @@ from traitsui.api import Item, View, HSplit, HGroup,\
         EnumEditor, Group, UItem, VGroup
 
 # Chaco imports
-from chaco.api import ArrayPlotData, Plot
+from chaco.api import ArrayPlotData, Plot, ColorBar
 import chaco.api as dc
 
 from chaco.example_support import COLOR_PALETTE
@@ -23,7 +23,7 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection, \
 
 
 
-from multiplotter import MultiPlotter
+from multiplotter import MultiPlotter, FitPlotter
 
 from fitter import Fitter
 import dv
@@ -32,24 +32,26 @@ class Data(HasTraits):
     wavelengths=Array()
     times=Array()
     data=Array(shape=(times.size,wavelengths.size))
+    has_fit=Bool(default=False)
+    fit_data=Array
     pd=Instance(ArrayPlotData)
     plot=Instance(Plot)
 
-    spectrum_plotter=Instance(MultiPlotter)
-    transients_plotter=Instance(MultiPlotter)
+    spectrum_plotter=Instance(FitPlotter)
+    transients_plotter=Instance(FitPlotter)
     reset_plotters=Button('Reset Plotters')
 
     v_container=Instance(dc.VPlotContainer)
     h_container=Instance(dc.HPlotContainer)
 
     def _spectrum_plotter_default(self):
-        mp=MultiPlotter(xaxis=self.wavelengths)
+        mp=FitPlotter(xaxis=self.wavelengths)
         mp.xlabel="nm"
         mp.ylabel="OD"
-        return MultiPlotter(xaxis=self.wavelengths)
+        return mp
 
     def _transients_plotter_default(self):
-        mp=MultiPlotter(xaxis=self.times)
+        mp=FitPlotter(xaxis=self.times)
         mp.xlabel="ps"
         mp.ylabel="OD"
         return mp
@@ -88,10 +90,13 @@ class Data(HasTraits):
         except IndexError:
             pass
 
-    def add_transient(self,x,y):
+    def add_transient(self,x,y):        
         y=self.data[:,x]
+        if self.has_fit:
+            y_fit=self.fit_data[:, x]
+            
         name=str(round(self.wavelengths[x],2))
-        self.transients_plotter.add_ydata(name,y)
+        self.transients_plotter.add_ydata(name,y, y_fit)
 
     def add_spectrum(self,x,y):
         yd=self.data[y,:]
@@ -144,6 +149,7 @@ class FitterWindow(HasTraits):
     para=Instance(AllParameter)
     dasplotter=Instance(MultiPlotter)
     resplotter=Instance(Plot)
+    
     def _dasplotter_default(self):
         mp=MultiPlotter(xaxis=self.fitter.wl)
         mp.xlabel="nm"
@@ -151,6 +157,17 @@ class FitterWindow(HasTraits):
         return mp
         
     def _resplotter_default(self):
+#        colorbar = ColorBar(index_mapper=dc.LinearMapper(range=colormap.range),
+#                        color_mapper=colormap,
+#                        orientation='v',
+#                        resizable='v',
+#                        width=30,
+#                        padding=20)
+#        colorbar.tools.append(RangeSelection(component=colorbar))
+#        colorbar.overlays.append(RangeSelectionOverlay(component=colorbar,
+#                                                   border_color="white",
+#                                                   alpha=0.8,
+#                                                   fill_color="lightgray"))
         res=np.zeros((400,400))
         self.pd=ArrayPlotData(res=res)
         p=Plot(self.pd)
@@ -211,6 +228,7 @@ class ZeroCorrectionTool(HasTraits):
         self.pd=ArrayPlotData(wl=fitter.wl, t=fitter.t[:idx], d=fitter.data[:idx,:])
         plot=Plot(self.pd)
         plot.img_plot('d')
+        plot.plot(('wl','tn'))        
         return plot
         
     size=((400,400))
@@ -320,15 +338,16 @@ from scipy import ndimage
 #y=np.sin(x/1.2)
 import dv
 
-#a=np.loadtxt('al_tpfc2_ex620_magic.txt')
+a=np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
 
-t,wl,a=dv.loader_func('..\\messpy2\\tmp\\fremdprobe_para_400exec')
-wl, d=dv.concate_data(wl,a)
-t/=1000.
+#t,wl,a=dv.loader_func('..\\messpy2\\tmp\\fremdprobe_para_400exec')
+#wl, d=dv.concate_data(wl,a)
+#t/=1000.
 
-#t=a[1:,0]#/1000.
-#w=a[0,1:]
-#d=a[1:,1:]
+t=a[1:,0]#/1000.
+w=a[0,1:]
+d=a[1:,1:]
+
 import scipy.ndimage as nd
 #d=nd.uniform_filter(d,(3,5))
 #f=FFTTool(x=w[:],y=d[4,:]) 
@@ -336,21 +355,22 @@ import scipy.ndimage as nd
 
 class f:
     pass
-d=d[...,:].mean(-1)
-d=d[:,50:-50]
-wl=wl[50:-50]
+#d=d[...,:].mean(-1)
+d=d[:,:]
+wl=w[:]
+
 a=f()
 a.wl=wl
 a.t=t
 
-np.savez('SD5039',[wl,t,d])
-d=ndimage.gaussian_filter(d,(0,4))
+
+d=ndimage.gaussian_filter(d,(1,4))
 a.data=d
-tn,p=dv.find_time_zero(a,3,polydeg=4)
-d=dv.interpol(d,t,tn,0.4,t)
+#tn,p=dv.find_time_zero(a,3,polydeg=4)
+#d=dv.interpol(d,t,tn,0.4,t)
 
 f=Fitter(wl,t,d,1)
-
-#d=Data(wavelengths=w,times=t,data=d)
+f.weights=np.median(d,0)
+#dData(wavelengths=w,times=t,data=d)
 m=MainWindow(fitter=f)
 m.configure_traits()
