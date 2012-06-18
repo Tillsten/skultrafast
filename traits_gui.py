@@ -91,17 +91,25 @@ class Data(HasTraits):
             pass
 
     def add_transient(self,x,y):        
-        y=self.data[:,x]
-        if self.has_fit:
-            y_fit=self.fit_data[:, x]
-            
         name=str(round(self.wavelengths[x],2))
-        self.transients_plotter.add_ydata(name,y, y_fit)
+        y=self.data[:,x]
+        if self.has_fit:          
+            y_fit=self.fit_data[:, x]
+            self.transients_plotter.add_ydata(name,y, y_fit)
+        else:
+            self.transients_plotter.add_ydata(name,y)
+
+        
 
     def add_spectrum(self,x,y):
-        yd=self.data[y,:]
         name=str(round(self.times[y],2))
-        self.spectrum_plotter.add_ydata(name,yd)
+        y=self.data[x,:]
+        if self.has_fit:            
+            y_fit=self.fit_data[x, :]
+            self.spectrum_plotter.add_ydata(name,y, y_fit)
+        else:
+            self.spectrum_plotter.add_ydata(name,y)
+        
 
     def _reset_plotters_fired(self):
         self.spectrum_plotter.delete_ydata()
@@ -239,6 +247,7 @@ class ZeroCorrectionTool(HasTraits):
 class MainWindow(HasTraits):
     fitter=Instance(Fitter)
     data=Instance(Data)
+    data_fit=Array
     fitwin=Instance(FitterWindow)
 
     traits_view= View(VGroup(Item('@data',show_label=False, width=0.7),
@@ -250,86 +259,21 @@ class MainWindow(HasTraits):
         t,w,d=self.fitter.t, self.fitter.wl, self.fitter.data
         data=Data(wavelengths=w,times=t,data=d)
         return data
+    
+    def _data_fit_default(self):
+        return self.fitter.m.T
+
 
     def _fitwin_default(self):
         return FitterWindow(fitter=self.fitter)
 
-class FFTTool(HasTraits):
-    x=Array
-    y=Array
-    Fs=Float
 
-    data_plot=Any
-    sel_range=Instance(RangeSelection)
-    pd=Instance(ArrayPlotData)
-    pd2=Instance(ArrayPlotData)
-    freq_plot=Instance(Plot)
-    v_container=Instance(dc.VPlotContainer)
-
-    fft_window=Enum(('none','bartlett','blackman','hanning','kaiser'), default='hanning')
-    func=Function(np.ones)
-
-    detrend=Enum(('None','Mean','Linear'))    
-    
-    @on_trait_change('fft_window')
-    def set_window_func(self):
-        if self.fft_window!=None:
-            self.func=eval('np.'+self.fft_window)
-        else:
-            self.func=lambda x: 1.
-
-    def _Fs_default(self):
-        return self.x[1]-self.x[0]
-
-
-    def _pd_default(self):
-        pd=ArrayPlotData(freqs=np.zeros(20),amps=np.zeros(20))
-        return pd
-
-
-    def _pd2_default(self):
-        return ArrayPlotData(x=self.x, y=self.y)
-
-    def _data_plot_default(self):
-        plot=Plot(self.pd2)
-        k=plot.plot(('x','y'))
-        zoom = ZoomTool(component=plot, tool_mode="box", always_on=False)
-        plot.overlays.append(zoom)
+    @on_trait_change('fitwin:para:paras:value')
+    def _data_fit_changed(self):                
+        self.data.has_fit=True
+        self.data.fit_data=self.fitter.m.T
         
-        k[0].active_tool = RangeSelection(k[0], left_button_selects = True)
-        k[0].overlays.append(RangeSelectionOverlay(component=k[0]))
-        self.sel_range=k[0].active_tool
-        return plot
-
-    @on_trait_change('sel_range:selection, fft_window')
-    def calc_fft(self):       
-        new=self.sel_range.selection        
-        if new is None: return
-        m=(self.x<new[1])&(self.x>new[0])
-        n=np.sum(m)
-        if sum(m)>3:
-            d=self.y[m]
-            win=self.func(n)
-            y=np.abs(np.fft.fft(win*(d-d.mean())))
-            x=np.fft.fftfreq(n, self.Fs)[:y.size/2]
-            self.pd.set_data('freqs',x[1:])
-            self.pd.set_data('amps',y[1:y.size/2])
-
-
-    def _freq_plot_default(self):
-        plot=Plot(self.pd)
-        plot.plot(('freqs','amps'))
-        return plot
-
-    def _v_container_default(self):
-        con=dc.VPlotContainer(self.data_plot, self.freq_plot)
-        return con
-
-
-
-    trait_view=View(VGroup(Item('data_plot', editor=ComponentEditor()),
-                           Item('freq_plot', editor=ComponentEditor()),
-                           Item('fft_window'),show_labels=False),resizable=True)
+        
     #traits_view=View(Item('v_container', editor=ComponentEditor()))
 
 from scipy import ndimage
@@ -364,7 +308,7 @@ a.wl=wl
 a.t=t
 
 
-d=ndimage.gaussian_filter(d,(1,4))
+#d=ndimage.gaussian_filter(d,(1,4))
 a.data=d
 #tn,p=dv.find_time_zero(a,3,polydeg=4)
 #d=dv.interpol(d,t,tn,0.4,t)
