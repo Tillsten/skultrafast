@@ -25,9 +25,8 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection, \
 
 from chaco.example_support import COLOR_PALETTE
 
-from chaco.default_colors import palette11 as COLOR_PALETTE
 #from enthought.chaco.example_support import COLOR_PALETTE
-COLOR_PALETTE=['blue','green','red','cyan','yellow', 'lightblue','lightred','pink']
+COLOR_PALETTE=['blue','green','red','cyan','yellow', 'orange','tomato','pink']
 
 class MultiPlotter(HasTraits):
     plot=Instance(Plot)
@@ -51,7 +50,7 @@ class MultiPlotter(HasTraits):
      
     
     def _plot_default(self):
-        plot=Plot(self.pd)        
+        plot=Plot(self.pd)          
         plot.plot(('x','ytemp'),name='cursor')
         plot.legend.visible=True
         plot.tools.append(PanTool(plot, drag_button='right'))        
@@ -65,15 +64,18 @@ class MultiPlotter(HasTraits):
     def delete_ydata(self):
         self.ydata=[]        
         l=[]
+        
         for i in self.plot.plots:
            l.append(i)
+        print l
         for i in l:
             self.plot.delplot(i)
         self.plot.plot(('x','ytemp'),name='cursor')
         
     def add_ydata(self,name, y):
+        if name in self.plot.plots: return
         self.ydata.append(y)
-        self.pd.set_data(name,y)
+        self.pd.set_data(name,y)       
         c=COLOR_PALETTE[(len(self.ydata)-1)%len(COLOR_PALETTE)]
         self.plot.plot(('x',name),name=name,color=c,line_width=3.)
         self.plot.request_redraw()
@@ -85,19 +87,21 @@ class MultiPlotter(HasTraits):
 
 class FitPlotter(MultiPlotter):
         plot_fit=Bool(default=False)
+        ytemp_fit=Array
         
         def __init__(self,**kwargs):
             MultiPlotter.__init__(self,**kwargs)
+            self.pd
             
             
         def add_ydata(self,name, y, yfit=None):
             self.ydata.append(y)
             self.pd.set_data(name,y)
             c=COLOR_PALETTE[(len(self.ydata)-1)%len(COLOR_PALETTE)]
-            if yfit:
+            if not yfit==None:
                 self.pd.set_data(name + '_fit', yfit)
                 self.plot.plot(('x',name), type='scatter', name=name, color=c)
-                self.plot.plot(('x',name+'_fit'), name=name, color=c)
+                self.plot.plot(('x',name+'_fit'), name=name+'_fit', color=c, line_width=3.)
             else:
                 self.plot.plot(('x',name),name=name,color=c,line_width=3.)
             self.plot.request_redraw()
@@ -108,7 +112,7 @@ if __name__=='__main__':
     x=np.linspace(0,10,100)
     y=np.sin(x)         
     mlp=FitPlotter(xaxis=x)
-    mlp.add_ydata('sin',y)
+    mlp.add_ydata('sin',y+np.random.randn(y.size), y)
     
     mlp.xlabel='dsfj'    
     #mlp.delete_ydata()
