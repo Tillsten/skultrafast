@@ -37,7 +37,7 @@ def _fold_exp(tt,w,tz,tau):
     ws = w
     k = 1 / (tau[:, None])
     t = tt + tz
-    y=np.exp(k*(ws*ws*k/(4.0)-t))/(ws*np.sqrt(2*np.pi))*0.5*erfc(-t/ws+ws*k/(2.0))
+    y=np.exp(k*(ws*ws*k/(4.0)-t))*0.5*erfc(-t/ws+ws*k/(2.0))#/(ws*np.sqrt(2*np.pi))
     #y /= np.max(np.abs(y), 0)
     return y
 
@@ -93,7 +93,7 @@ def _coh_gaussian(t, w, tz):
     y[:,1]*=(-tt/w**2)
     y[:,2]*=(tt**2/w**4-1/w**2)
     y[:,3]*=(-tt**3/w**6+3*tt/w**4)
-    y/=np.max(np.abs(y),0)
+    #y/=np.max(np.abs(y),0)
     return y
 
 class Fitter(object):
@@ -205,9 +205,6 @@ class Fitter(object):
         else:
             self.x_vec=_fold_exp(self.t,para[1],para[0],(para[2:])).T
 
-
-
-
         self.x_vec=np.nan_to_num(self.x_vec)
 
     def res(self,para,fixed=None):
@@ -302,18 +299,27 @@ class Fitter(object):
         rs=[(pymc.Uniform('r'+str(i),lower,upper)) for (i,(lower,upper)) in enumerate(bounds)]
         z0=pymc.Uniform('z0',-1,1)
         sig=pymc.Uniform('sig',0,0.15)
-        tau=pymc.Uniform('tau',0,25)
-        tau.value=20
-
+        tau=pymc.Uniform('tau',0,25, size=self.data.shape[1])
+        #tau.value=20*self.data.shape[1]
+                
+        
+        
         H=lambda x: self.model(x)
         @pymc.deterministic
         def mod(z0=z0,sig=sig,rs=rs):
             x=np.array([z0,sig]+rs)
             H(x)
             return self.m.T
-
-        res=pymc.Normal('res',mu=mod, observed=True, tau=tau, value=self.data)
-        mo=pymc.Model(set([z0,sig,res,tau]+rs))
+        
+        l=[]
+        for i in range(self.data.shape[1]):         
+            l.append(pymc.Normal(observed=True,name='res'+str(i),
+                                 value=self.data[:,i], tau=tau[i], mu=mod[:,i]))
+            
+        
+        
+        
+        mo=pymc.Model(set([z0,tau]+rs+l))
 
         return mo
 
@@ -338,7 +344,7 @@ def my_f(N, P, chi, old_chi, Nfix=1., lin_dof=800):
 
 
 if __name__=='__main__':
-
+    import pymc
     coef=np.zeros((2,400))
     coef[0,:]=-np.arange(-300,100)**2/100.
     coef[1,:]=np.arange(-200,200)**2/100.
@@ -351,11 +357,14 @@ if __name__=='__main__':
     dat=dat*(1+(np.random.random(dat.shape)-0.5)*0.20)
     g=Fitter(np.arange(400),t,dat,2,False,False)
     x0=[0.5,0.2,4,20]
-#    #a=g.start_pymc(x0)
+    a=g.start_pymc(x0,[(0.2,20),(0.2,20)])
+    b=pymc.MCMC(a)
+    b.isample(10000,1000)
+    pymc.Matplot.plot(b)
 #    #a=g.start_cmafit(x0)
-    a=g.start_lmfit(x0)
-    a.leastsq()
-    lmfit.printfuncs.report_errors(a.params)
+#    a=g.start_lmfit(x0)
+#    a.leastsq()
+#    lmfit.printfuncs.report_errors(a.params)
 #    #ar=g.chi_search(a[0])
 #    import matplotlib.pyplot as plt
     #
