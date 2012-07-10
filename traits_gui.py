@@ -14,7 +14,7 @@ from traitsui.api import Item, View, HSplit, HGroup,\
         EnumEditor, Group, UItem, VGroup
 
 # Chaco imports
-from chaco.api import ArrayPlotData, Plot, ColorBar
+from chaco.api import ArrayPlotData, Plot, ColorBar, HPlotContainer
 import chaco.api as dc
 
 from chaco.example_support import COLOR_PALETTE
@@ -156,7 +156,7 @@ class FitterWindow(HasTraits):
     fitter=Instance(Fitter)
     para=Instance(AllParameter)
     dasplotter=Instance(MultiPlotter)
-    resplotter=Instance(Plot)
+    resplotter=Instance(HPlotContainer)
     
     def _dasplotter_default(self):
         mp=MultiPlotter(xaxis=self.fitter.wl)
@@ -165,22 +165,31 @@ class FitterWindow(HasTraits):
         return mp
         
     def _resplotter_default(self):
-#        colorbar = ColorBar(index_mapper=dc.LinearMapper(range=colormap.range),
-#                        color_mapper=colormap,
-#                        orientation='v',
-#                        resizable='v',
-#                        width=30,
-#                        padding=20)
-#        colorbar.tools.append(RangeSelection(component=colorbar))
-#        colorbar.overlays.append(RangeSelectionOverlay(component=colorbar,
-#                                                   border_color="white",
-#                                                   alpha=0.8,
-#                                                   fill_color="lightgray"))
         res=np.zeros((400,400))
         self.pd=ArrayPlotData(res=res)
         p=Plot(self.pd)
-        p.img_plot('res')
-        return p
+        img=p.img_plot('res', name="my_plot")
+        my_plot = p.plots["my_plot"][0]
+        colormap=my_plot.color_mapper
+        colorbar = ColorBar(index_mapper=dc.LinearMapper(range=colormap.range),
+                        color_mapper=colormap,
+                        orientation='v',
+                        plot=my_plot,
+                        resizable='v',
+                        width=30,
+                        padding=20)
+                        
+        range_selection = RangeSelection(component=colorbar)
+        colorbar.tools.append(range_selection)
+        colorbar.overlays.append(RangeSelectionOverlay(component=colorbar,
+                                                   border_color="white",
+                                                   alpha=0.8,
+                                                   fill_color="lightgray"))
+        range_selection.listeners.append(my_plot)
+        con=HPlotContainer()
+        con.add(p)
+        con.add(colorbar)
+        return con
         
     def _para_default(self):
         para=AllParameter()
