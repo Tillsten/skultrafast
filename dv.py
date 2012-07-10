@@ -14,7 +14,16 @@ def load_datfile(datfile):
     d = loadtxt(datfile, converters = {0:f, 1:f, 2:f, 3:f})
     return d
 
-
+def binner(n, wl, dat):
+    """ Given wavelengths and data it bins the data into n-wavelenths.
+    """
+    idx=np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
+    binned=np.empty((dat.shape[0], n))
+    binned_wl=np.empty(n)
+    for i in range(n):
+        binned[:,i]=np.mean(dat[:,idx[i]:idx[i+1]],1)
+        binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
+    return binned, binned_wl
 
 def find_w(w,x):
     """needs global w as array. gives idnex to nearest value"""
@@ -424,3 +433,105 @@ array([[ 0. , 0.5, 1. ],
         return np.repeat(np.repeat(a, m/M, axis=0), n/N, axis=1)
     
     
+def efa(dat, n, reverse=False):
+    """ Doing evolving factor analyis.
+    """
+    if reverse: 
+        data=dat[::-1, :]
+    else:
+        data=dat
+        
+    out=np.zeros((data.shape[0], n))
+    for i in range(1, data.shape[0]):
+        sv = np.linalg.svd(data[:i, :])[1]        
+        out[i,:min(i, n)]=sv[:min(i, n)]
+        
+    return out
+    
+from sklearn.decomposition import PCA
+def moving_efa(dat, n, ncols, method='svd'):
+    out=np.zeros((dat.shape[0], n))
+    p=PCA()
+    for i in range(0, dat.shape[0]-n):
+        if method=='svd':
+            sv = np.linalg.svd(dat[i:i+ncols,:])[1][:n]
+        elif method=='pca':
+            p = p.fit(dat[i:i+ncols,:])
+            sv = p.explained_variance_ratio_[:n]
+        out[i,:] = sv
+    return out
+
+from scipy.optimize import nnls 
+
+
+from sklearn.linear_model import Ridge
+r=Ridge(1.0, False)
+
+
+def als(dat, n=5):   
+  
+    u, s, v = np.linalg.svd(dat)
+    u0=u[:n]
+    v0=v.T[:n]    
+    
+    res = np.linalg.lstsq(u0.T,dat)[1].sum()
+    
+    for i in range(2000):
+        if i % 2 == 0:
+            v0 = do_nnls(u0.T, dat)
+            #v0 = v0/v0.max()
+        else:
+            
+            u0, res_n, t , t = np.linalg.lstsq(v0.T, dat.T)
+            ##r.fit(dat.T, v0.T)
+            #u0 = r.coef_[:]
+            res_n = res_n.sum()
+            print res_n
+            if res-res_n < 0.01: 
+                break
+                #
+            else:
+                res = res_n.sum()            
+    return u0.T, v0.T
+
+
+import mls
+def do_nnls(A,b):
+    n = b.shape[1]
+    out = np.zeros((A.shape[1], n))
+    for i in xrange(n):              
+        #mls.bounded_lsq(A.T, b[:,i], np.zeros((A.shape[1],1)), np.ones((A.shape[1],1))).shape
+        out[:,i] =  nnls(A, b[:,i])[0]
+    return out
+    
+
+
+    
+if __name__=='__main__':
+    #a = np.loadtxt('alcor_py2_ex400.txt')
+    a=np.loadtxt('..\\altpfcpy2_620.dat')
+    t = a[1:,0]
+    wl = a[0,1:]
+    a = a[1:, 1:]
+    
+    u, v = als(a[:,:].T)
+    
+    figure(0)
+#    clf()
+    subplot(211)
+    plot(wl,u)
+    subplot(212)
+    plot(t[:],v)
+    #figure(1)
+    #clf()
+    #imshow(a-u.dot(v.T).T)    
+    #o = efa(a, 10)
+    #o2 = efa(a,10,True)
+    #plot(t,log(o),'k')
+    #plot(t,log(o2[::-1,:]),'r')
+    #u, s, v = np.linalg.svd(a[:,:].T)
+    #o = moving_efa(a[:,:].T, 5, 8, 'pca')
+    #lo = log(o)#/log(o[:,0:1])
+    ##hlines(log(s[:8])/log(s[0]), wl.min(), wl.max())
+    #plot(wl, lo)
+    #show()
