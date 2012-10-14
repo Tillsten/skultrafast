@@ -72,12 +72,14 @@ class MultiPlotter(HasTraits):
             self.plot.delplot(i)
         self.plot.plot(('x','ytemp'),name='cursor')
         
-    def add_ydata(self,name, y):
+    def add_ydata(self,name, y, lw=3, c=None):
         if name in self.plot.plots: return
         self.ydata.append(y)
         self.pd.set_data(name,y)       
-        c=COLOR_PALETTE[(len(self.ydata)-1)%len(COLOR_PALETTE)]
-        self.plot.plot(('x',name),name=name,color=c,line_width=3.)
+        if c is None:
+            c=COLOR_PALETTE[(len(self.ydata)-1)%len(COLOR_PALETTE)]
+        
+        self.plot.plot(('x',name),name=name,color=c,line_width=lw)
         self.plot.request_redraw()
 
         
