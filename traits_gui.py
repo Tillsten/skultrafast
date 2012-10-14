@@ -233,7 +233,7 @@ class ZeroCorrection(HasTraits):
 
 class ZeroCorrectionTool(HasTraits):
     zc=Instance(ZeroCorrection)
-    fitter=Instance(Fitter)
+    fitter=Instance(Fitter)#self.setCentralWidget(self.ui)
     plot=Instance(Plot)
    
     def _zc_default(self):

@@ -6,6 +6,8 @@ import numpy as np
 import dv
 
 def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
+    """Plots the decay-asscoiated  """    
+    
     t_slice=fitter.model_disp+2
     fitter.last_para[t_slice:]=np.sort(fitter.last_para[t_slice:])
     fitter.res(fitter.last_para)
