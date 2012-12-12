@@ -8,6 +8,7 @@ from traitsui.api import Item, View, HSplit, HGroup,\
 
 from multiplotter import MultiPlotter
 import numpy as np
+
 class ScanViewer(HasTraits):    
     name = Str
     full_data = Array        
