@@ -128,15 +128,19 @@ class Data(HasTraits):
 
 
 class ClickTool(BaseTool):
-    def __init__(self, func, func_left, func_right, *args):
+    """
+    Simple chaco tool to handle clicks and moving of the cursor on
+    chaco plots.
+    """
+    def __init__(self, func_move, func_left, func_right, *args):
         super(ClickTool, self).__init__(*args)
-        self.func = func
+        self.func_move = func_move
         self.func_left = func_left
         self.func_right = func_right
 
     def normal_mouse_move(self, event):        #
         x, y = self.component.map_data((event.x, event.y))
-        self.func(x, y)
+        self.func_move(x, y)
 
     def normal_left_down(self, event):
         x, y = self.component.map_data((event.x, event.y))
@@ -169,7 +173,8 @@ class FitterWindow(HasTraits):
         img = p.img_plot('res', name="my_plot")
         my_plot = p.plots["my_plot"][0]
         colormap = my_plot.color_mapper
-        colorbar = ColorBar(index_mapper=dc.LinearMapper(range=colormap.range),
+        colorbar = ColorBar(
+            index_mapper=dc.LinearMapper(range=colormap.range),
             color_mapper=colormap,
             orientation='v',
             plot=my_plot,
@@ -212,11 +217,14 @@ class FitterWindow(HasTraits):
         self.para.from_lmparas(a.params)
         self.calc_res()
 
-    vg = VGroup(Item('@para', show_label=False, height=300, width=0.7),
-        Item('@resplotter', show_label=False, editor=ComponentEditor()))
-    traits_view = View(HGroup(vg,
-        Item('@dasplotter', show_label=False, width=0.3)
-    ), resizable=True)
+    vg = VGroup(
+        Item('@para', show_label=False, height=300, width=0.7),
+        Item('@resplotter', show_label=False, editor=ComponentEditor()),
+        )
+    traits_view = View(
+        HGroup(vg,
+           Item('@dasplotter', show_label=False, width=0.3)),
+        resizable=True)
 
 
 class ZeroCorrection(HasTraits):
@@ -227,7 +235,7 @@ class ZeroCorrection(HasTraits):
 
 class ZeroCorrectionTool(HasTraits):
     zc = Instance(ZeroCorrection)
-    fitter = Instance(Fitter)#self.setCentralWidget(self.ui)
+    fitter = Instance(Fitter)
     plot = Instance(Plot)
 
     def _zc_default(self):
@@ -285,15 +293,15 @@ from scipy import ndimage
 #y=np.sin(x/1.2)
 import dv
 
-a = np.loadtxt('..\\al_tpfc2_ex620_magic.txt')
+a = np.loadtxt('..\\alcor_py2_ex400.txt')
 
 #t,wl,a=dv.loader_func('..\\messpy2\\tmp\\fremdprobe_para_400exec')
 #wl, d=dv.concate_data(wl,a)
 #t/=1000.
 
-t = a[1:, 0]#/1000.
+t = a[1:200, 0]#/1000.
 w = a[0, 1:]
-d = a[1:, 1:]
+d = a[1:200, 1:]
 
 import scipy.ndimage as nd
 #d=nd.uniform_filter(d,(3,5))
@@ -309,7 +317,7 @@ wl = w[:]
 
 a = f()
 a.wl = wl
-a.t = t
+a.t = t[:]
 
 
 #d=ndimage.gaussian_filter(d,(1,4))
