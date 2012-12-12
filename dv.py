@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy import zeros, loadtxt, ceil, interp, around, arange, floor,log10
+from numpy import zeros, loadtxt, ceil, interp, around, arange, floor, log10
 import numpy as np
 from scipy.interpolate import splrep, splev
 def testload(f = 'C:\Users\Tillsten\Documents\weisslicht.dat'):
@@ -26,7 +26,7 @@ def binner(n, wl, dat):
     return binned, binned_wl
 
 def find_w(w,x):
-    """needs global w as array. gives idnex to nearest value"""
+    """needs global w as array. gives index to nearest value"""
     idx = (abs(w - x)).argmin()
     return idx
 
