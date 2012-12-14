@@ -2,7 +2,7 @@ import numpy as np
 import time
 
 from traits.etsconfig.api import ETSConfig
-ETSConfig.toolkit = 'qt4'
+ETSConfig.toolkit = 'wx'
 
 # ETS imports (non-chaco)
 from enable.component_editor import ComponentEditor

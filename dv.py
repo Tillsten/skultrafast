@@ -2,17 +2,8 @@
 from numpy import zeros, loadtxt, ceil, interp, around, arange, floor,log10
 import numpy as np
 from scipy.interpolate import splrep, splev
-def testload(f = 'C:\Users\Tillsten\Documents\weisslicht.dat'):
 
-    raw = load_datfile(f)
-    (times, wl, sig, se, ref, re) = read_data(raw)
-    return  (times, wl, sig, se, ref, re)
 
-def load_datfile(datfile):
-    # Lade Daten aus vb-Datenfile, f konvertiert die Kommas
-    f = lambda  s: float(s.replace(',', '.'))
-    d = loadtxt(datfile, converters = {0:f, 1:f, 2:f, 3:f})
-    return d
 
 def binner(n, wl, dat):
     """ Given wavelengths and data it bins the data into n-wavelenths.
@@ -30,26 +21,6 @@ def find_w(w,x):
     idx = (abs(w - x)).argmin()
     return idx
 
-def read_data(d):
-    # Setze Ausgabenarrays und fuelle sie
-    num_times = len(d) / (800)
-    times = zeros((num_times))
-    wl = zeros((400))#
-    for i in range(0, 400):
-        wl[i] = d[i, 1]
-    sig = zeros((num_times, 400))
-    ref = zeros((num_times, 400))
-    sig_err = zeros((num_times, 400))
-    ref_err = zeros((num_times, 400))
-    for i in range(num_times):
-        times[i] = d[i * 800 + 1, 0]
-        for j in range(0, 400):
-            sig[i, j] = d[i * 800 + j, 2]
-            sig_err[i, j] = d[i * 800 + j, 3]
-            ref[i, j] = d[i * 800 + j + 400, 2]
-            ref_err[i, j] = d[i * 800 + j + 400, 3]
-    return (times, wl, sig, sig_err, ref, ref_err)
-
 def calc_od(sig):
     return - 1000 * log10(sig)
 
@@ -61,39 +32,6 @@ def first_min(sig, low_lim):
         if i > sig.shape[0]-2:
             break
     return i
-
-def loader_func(name):
-    import glob
-
-
-    files=glob.glob(name+'_dat?.npy')+glob.glob(name+'_dat??.npy')
-    if len(files)==0:
-        raise "Name Not Found"
-    num_list=[i[i.find('dat')+3:-4] for i in files]
-    #print num_list
-    endname=max(zip(map(int,num_list),files))[1]
-    print 'Loading: '+endname
-    a=np.load(endname)
-    files=glob.glob(name+'-???_0_'+'*dat.npy')
-    print files
-    wls=[]
-    for i in files:
-        print 'Loading: '+i
-        tmp=np.load(i)
-        t,w=tmp[1:,0],tmp[0,1:]
-        wls.append(w)
-
-    return t,wls,a
-
-def concate_data(wls,dat):
-    w=np.hstack(tuple(wls))
-    idx=np.argsort(w)
-    w=w[idx]
-    k=dat.shape
-    dat=dat.reshape(k[0],k[1]*k[2],k[3],order='F')
-    dat=dat[:,idx,:]
-    return w,dat
-
 
 
 def get_abs(s, lim):
@@ -111,20 +49,12 @@ def get_zeros(s, low_lim = -0.5):
         z[i] = first_min(s[:, i], low_lim)
     return z
 
-
 def subtract_background(dat, t, tn, offset=0.3):
     for i in range(dat.shape[1]):
         mask=(t-tn[i])<-offset
         corr=dat[mask,i].mean()
         dat[:,i]-=corr
     return dat
-
-def process(name):
-    (t, w, s, se, r, re) = testload(name)
-    r = calc_od(r)
-    r = subtract_background(r)
-
-    return t, w, r
 
 def poly_time(k, t, level = 0.25, up = 2000, low = -500,w=np.arange(400),deg=2):
     k = t[get_zeros(k, level)]
@@ -138,18 +68,14 @@ def poly_time_abs(k, t, level = -1, up = 2000, low = -1000,w=arange(400), deg=2)
     m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
     masked_range = np.ma.masked_array(w, m.mask)
     p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
-    print p
     return(np.poly1d(p)(w)),p
-
 
 def poly_time_abs_r(k, t,w, level = -1, up = 2000, low = -1000):
     k = t[get_abs(k, level)]
     m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
     masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), 3)
-    print p
+    p = np.polyfit(masked_range.compressed(), m.compressed(), 3)    
     return(np.poly1d(p)(arange(k.shape[0])))
-
 
 def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):
     t_array=np.tile(t.reshape(t.size,1),(1,dat.shape[1]))
@@ -169,30 +95,8 @@ def interpol_sm(r,t,re,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,
         r_new[:,i]=splev(new_t,k)
     return r_new
 
-
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
-
-def make_legend(p,err,n):
-    dig=np.floor(log10(err))
-    l=[]
-    for i in range(2,n+2):
-        val=str(around(p[i],-int(dig[i])))
-        erri=str(ceil(round(err[i]*10**(-dig[i]),3))*10**(dig[i]))
-        l.append('$\\tau_'+str(int(i-1))+'='+val+'\\pm '+erri+' $ps')
-    return l
-
-
-def make_legend_noerr(p,err,n):
-    dig=np.floor(log10(err))
-    l=[]
-    for i in range(2,n+2):
-        val=str(around(p[i],-int(dig[i])))
-        erri=str(ceil(round(err[i]*10**(-dig[i]),3))*10**(dig[i]))
-        l.append('$\\tau_'+str(int(i-1))+'$='+val+' ps')
-    return l
-
-
 
 def savitzky_golay(y, window_size, order, deriv=0):
     r"""Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
@@ -264,31 +168,20 @@ def savitzky_golay(y, window_size, order, deriv=0):
     return np.convolve( m, y, mode='valid')
 
 def calc_error(args):
+    """
+    Calculates the error from a leastsq fit infodict.    
+    """
     p, cov, info, mesg, success = args
     chisq = sum(info["fvec"] * info["fvec"])
     dof = len(info["fvec"]) - len(p)
     sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof) for i in range(len(p))])
     return p, sigma
 
-
-#a=ransac.ransac(x,model(x),40,15000,0.1,40)
-#plot(polyval(a,arange(400)))
-#plot(tn)
-#tn1=polyval(a,arange(400))
-
-
-#if __name__== '__main__':
-#    import matplotlib.pyplot as plt
-#    k=[250, 399, 0]
-#    (t,w,s, se,r, re)=testload()
-#    r=calc_od(r)
-#    a=subtract_background(r)
-#    rf=re*a
-#    plt.plot(t,  a[:, k], t, rf[:, k]+a[:, k], t,-rf[:, k]+a[:, k] )
-#    plt.show()
 #
-#
-def w_rgb(w):
+def wavelength2rgb(w):
+    """
+    Converts a wavelength to a RGB color.
+    """
     if w >= 380 and w < 440:
         R = -(w - 440.) / (440. - 350.)
         G = 0.0
