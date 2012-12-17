@@ -38,7 +38,7 @@ def plot_diagnostic(fitter):
     normed_res=residuals/np.std(residuals,0)
     plt.subplot2grid((3,3),(0,0),2,3).imshow(normed_res,vmin=-5,
                                              vmax=5,aspect='auto')
-    plt.subplot2grid((3,3),(2,0)).plot(u[:,:2])
+    plt.subplot2grid((3,3),(2,0)).plot(fitter.t, u[:,:2])
     plt.subplot2grid((3,3),(2,1)).plot(fitter.wl,v.T[:,:2])
     ax=plt.subplot2grid((3,3),(2,2))
     ax.stem(range(1,11),s[:10])
