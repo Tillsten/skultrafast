@@ -39,7 +39,7 @@ def _fold_exp(tt, w, tz, tau):
     k = 1 / (tau[:, None])
     t = tt + tz
     y = np.exp(k * (ws * ws * k / (4.0) - t)) * 0.5 * erfc(-t / ws + ws * k / (2.0))#/(ws*np.sqrt(2*np.pi))
-    y /= np.max(np.abs(y), 0)
+    #y /= np.max(np.abs(y), 0)
     return y
 
 

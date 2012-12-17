@@ -2,7 +2,9 @@
 from numpy import zeros, loadtxt, ceil, interp, around, arange, floor,log10
 import numpy as np
 from scipy.interpolate import splrep, splev
+from collections import namedtuple
 
+tup = namedtuple('Result','wl t data')
 
 
 def binner(n, wl, dat):
@@ -21,8 +23,6 @@ def find_w(w,x):
     idx = (abs(w - x)).argmin()
     return idx
 
-def calc_od(sig):
-    return - 1000 * log10(sig)
 
 def first_min(sig, low_lim):
     i = 4
@@ -82,7 +82,7 @@ def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500
     dat_new=zeros((new_t.size,dat.shape[1]))
     for i in range(dat.shape[1]):
         t_array[:,i]-=time_zero[i]-shift
-        dat_new[:,i]=interp(new_t,t_array[:,i],dat[:,i])
+        dat_new[:,i]=interp(new_t,t_array[:,i],dat[:,i], left=0)
     return dat_new
 
 def interpol_sm(r,t,re,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000]),s=None):
@@ -341,7 +341,7 @@ def efa(dat, n, reverse=False):
         
     return out
     
-from sklearn.decomposition import PCA
+#from sklearn.decomposition import PCA
 def moving_efa(dat, n, ncols, method='svd'):
     out=np.zeros((dat.shape[0], n))
     p=PCA()
@@ -357,8 +357,8 @@ def moving_efa(dat, n, ncols, method='svd'):
 from scipy.optimize import nnls 
 
 
-from sklearn.linear_model import Ridge
-r=Ridge(1.0, False)
+#from sklearn.linear_model import Ridge
+#r=Ridge(1.0, False)
 
 
 def als(dat, n=5):   
@@ -388,7 +388,7 @@ def als(dat, n=5):
     return u0.T, v0.T
 
 
-import mls
+#import mls
 def do_nnls(A,b):
     n = b.shape[1]
     out = np.zeros((A.shape[1], n))

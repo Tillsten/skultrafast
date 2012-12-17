@@ -61,10 +61,10 @@ def apply_argsort(A, ix, ax=-1):
 
 
 def trunc_mean(d):
-    idx = np.argsort(abs(d - np.median(a, -1)[..., None]), -1)
+    idx = np.argsort(np.abs(d - np.median(d, -1)[..., None]), -1)
     ind = np.indices(d.shape)
     ind[-1] = idx
-    return d
+    return d[idx]
 
 if __name__ == '__main__':
     a = np.load('..\\br_py_ex640_para_dat10.npy')
