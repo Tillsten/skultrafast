@@ -6,7 +6,20 @@ from collections import namedtuple
 
 tup = namedtuple('Result','wl t data')
 
+def add_to_cls(cls):
+    def function_enum(fn):
+        setattr(cls, fn.__name__, staticmethod(fn))        
+        return fn 
+    return function_enum
 
+def add_tup(str_lst):
+    def function_enum(fn):
+        str_lst[0].append(fn.__name__)
+        str_lst[1].append(fn)
+        return fn
+    return function_enum
+
+    
 def binner(n, wl, dat):
     """ Given wavelengths and data it bins the data into n-wavelenths.
     """
@@ -18,88 +31,25 @@ def binner(n, wl, dat):
         binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
-def find_w(w,x):
+def fi(w,x):
     """needs global w as array. gives idnex to nearest value"""
     idx = (abs(w - x)).argmin()
     return idx
 
 
-def first_min(sig, low_lim):
-    i = 4
-    while (not sig[i - 1] > sig[i] < sig[i + 1]) or sig[i] > low_lim:
-        i += 1
-
-        if i > sig.shape[0]-2:
-            break
-    return i
-
-
-def get_abs(s, lim):
-    z = zeros(s.shape[1], dtype = 'int')
-    for i in range(s.shape[1]):
-        j = 0
-        while j < s.shape[0] - 2 and (s[j, i]) < lim:
-            j = j + 1
-        if j != s.shape[0] - 1: z[i] = j
-    return z
-
-def get_zeros(s, low_lim = -0.5):
-    z = zeros(s.shape[1], dtype = 'int')
-    for i in range(s.shape[1]):
-        z[i] = first_min(s[:, i], low_lim)
-    return z
-
 def subtract_background(dat, t, tn, offset=0.3):
     for i in range(dat.shape[1]):
-        mask=(t-tn[i])<-offset
-        corr=dat[mask,i].mean()
-        dat[:,i]-=corr
+        mask = (t-tn[i]) < -offset
+        corr=dat[mask, i].mean()
+        dat[:, i] -= corr
     return dat
-
-def poly_time(k, t, level = 0.25, up = 2000, low = -500,w=np.arange(400),deg=2):
-    k = t[get_zeros(k, level)]
-    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
-    masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
-    return(np.poly1d(p)(np.arange(k.shape[0]))),p
-
-def poly_time_abs(k, t, level = -1, up = 2000, low = -1000,w=arange(400), deg=2):
-    k = t[np.argmin(abs(k)<level,0)]
-    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
-    masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), deg)
-    return(np.poly1d(p)(w)),p
-
-def poly_time_abs_r(k, t,w, level = -1, up = 2000, low = -1000):
-    k = t[get_abs(k, level)]
-    m = np.ma.masked_array(k, np.logical_or(k<low, k>up))
-    masked_range = np.ma.masked_array(w, m.mask)
-    p = np.polyfit(masked_range.compressed(), m.compressed(), 3)    
-    return(np.poly1d(p)(arange(k.shape[0])))
-
-def interpol(dat,t,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000])):
-    t_array=np.tile(t.reshape(t.size,1),(1,dat.shape[1]))
-    dat_new=zeros((new_t.size,dat.shape[1]))
-    for i in range(dat.shape[1]):
-        t_array[:,i]-=time_zero[i]-shift
-        dat_new[:,i]=interp(new_t,t_array[:,i],dat[:,i], left=0)
-    return dat_new
-
-def interpol_sm(r,t,re,time_zero,shift,new_t=np.array([-500,-250,0,250,500,1000,1500,2000,500000]),s=None):
-    t_array=np.tile(t.reshape(t.size,1),(1,r.shape[1]))
-    r_new=zeros((new_t.size,r.shape[1]))
-    for i in range(r.shape[1]):
-        #print i
-        t_array[:,i]-=time_zero[i]-shift
-        k=splrep(t_array[:,i],r[:,i],re[:,i],s=s)
-        r_new[:,i]=splev(new_t,k)
-    return r_new
+    
 
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
 
 def savitzky_golay(y, window_size, order, deriv=0):
-    r"""Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
+    """Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
     The Savitzky-Golay filter removes high frequency noise from data.
     It has the advantage of preserving the original shape and
     features of the signal better than other types of filtering
@@ -118,7 +68,7 @@ def savitzky_golay(y, window_size, order, deriv=0):
     Returns
     -------
     ys : ndarray, shape (N)
-        the swww.http.com//scipy-central.org/item/37/1/generating-confidence-intervals-via-model-comparsionsmoothed signal (or it's n-th derivative).
+        the smoothed signal (or it's n-th derivative).
     Notes
     -----
     The Savitzky-Golay is a type of low-pass filter, particularly
@@ -234,90 +184,44 @@ def find_linear_part(t):
     d=np.diff(t)
     return np.argmin(np.abs(d-d[0])<0.00001)
 
-class PoloynomialLeastSquaredModel:
-    """
-    Model used for ransac, fits data to polynom of specified degree.
-    """
-    def __init__(self, deg):        
-        self.degree=deg
-    
-    def fit(self, data):
-        x=data[:,0]
-        y=data[:,1]
-        return np.polyfit(x, y, self.degree)
-
-    def get_error(self, data, model):
-        x=data[:,0]
-        y=data[:,1]
-        return (y-np.poly1d(model)(x))**2
-
-
-
-
-import ransac
-
-def find_time_zero(d, value, method='abs', polydeg=3, *args):
-    """
-    Fits the dispersion of the timezero-point with a polynom of given
-    degree. Uses the ransac algorithm to fit a approximation won by given
-    method. The default method is to find the first point where the absolute 
-    value is above a given limit.
-    """
-    
-    t=d.t
-    w=d.wl
-    dat=d.data
-
-    
-    if method == 'abs':
-        tn=t[np.argmin((np.abs(dat) < value),0)]
-    
-    ransac_data= np.column_stack((w,tn))    
-    ransac_model = PoloynomialLeastSquaredModel(polydeg)
-    m = ransac.ransac(ransac_data, ransac_model, tn.size*0.2, 500, 0.1, tn.size*0.6)
-    
-    return np.poly1d(m)(w), m
-        
-import numpy as np
-
 def rebin(a, new_shape):
     """
-Resizes a 2d array by averaging or repeating elements,
-new dimensions must be integral factors of original dimensions
+    Resizes a 2d array by averaging or repeating elements,
+    new dimensions must be integral factors of original dimensions
+    
+    Parameters
+    ----------
+    a : array_like
+    Input array.
+    new_shape : tuple of int
+    Shape of the output array
+    
+    Returns
+    -------
+    rebinned_array : ndarray
+    If the new shape is smaller of the input array, the data are averaged,
+    if the new shape is bigger array elements are repeated
+    
+    See Also
+    --------
+    resize : Return a new array with the specified shape.
+    
+    Examples
+    --------
+    >>> a = np.array([[0, 1], [2, 3]])
+    >>> b = rebin(a, (4, 6)) #upsize
+    >>> b
+    array([[0, 0, 0, 1, 1, 1],
+    [0, 0, 0, 1, 1, 1],
+    [2, 2, 2, 3, 3, 3],
+    [2, 2, 2, 3, 3, 3]])
+    
+    >>> c = rebin(b, (2, 3)) #downsize
+    >>> c
+    array([[ 0. , 0.5, 1. ],
+    [ 2. , 2.5, 3. ]])
 
-Parameters
-----------
-a : array_like
-Input array.
-new_shape : tuple of int
-Shape of the output array
-
-Returns
--------
-rebinned_array : ndarray
-If the new shape is smaller of the input array, the data are averaged,
-if the new shape is bigger array elements are repeated
-
-See Also
---------
-resize : Return a new array with the specified shape.
-
-Examples
---------
->>> a = np.array([[0, 1], [2, 3]])
->>> b = rebin(a, (4, 6)) #upsize
->>> b
-array([[0, 0, 0, 1, 1, 1],
-[0, 0, 0, 1, 1, 1],
-[2, 2, 2, 3, 3, 3],
-[2, 2, 2, 3, 3, 3]])
-
->>> c = rebin(b, (2, 3)) #downsize
->>> c
-array([[ 0. , 0.5, 1. ],
-[ 2. , 2.5, 3. ]])
-
-"""
+    """
     M, N = a.shape
     m, n = new_shape
     if m<M:
@@ -325,9 +229,10 @@ array([[ 0. , 0.5, 1. ],
     else:
         return np.repeat(np.repeat(a, m/M, axis=0), n/N, axis=1)
     
-    
+from scipy.sparse.linalg import svds
 def efa(dat, n, reverse=False):
-    """ Doing evolving factor analyis.
+    """ 
+    Doing evolving factor analyis.
     """
     if reverse: 
         data=dat[::-1, :]
@@ -335,16 +240,16 @@ def efa(dat, n, reverse=False):
         data=dat
         
     out=np.zeros((data.shape[0], n))
-    for i in range(1, data.shape[0]):
-        sv = np.linalg.svd(data[:i, :])[1]        
-        out[i,:min(i, n)]=sv[:min(i, n)]
-        
+    for i in range(6, data.shape[0]):
+        sv = svds(data[:i, :], min(i,n))[1]
+        print sv
+        out[i, :]=sv        
     return out
-    
+
 #from sklearn.decomposition import PCA
 def moving_efa(dat, n, ncols, method='svd'):
     out=np.zeros((dat.shape[0], n))
-    p=PCA()
+    #p=PCA()
     for i in range(0, dat.shape[0]-n):
         if method=='svd':
             sv = np.linalg.svd(dat[i:i+ncols,:])[1][:n]
@@ -362,29 +267,31 @@ from scipy.optimize import nnls
 
 
 def als(dat, n=5):   
-  
+
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
-    v0=v.T[:n]    
-    
+    v0=v.T[:n]           
+    u0 = np.random.random(u0.shape)+0.1
+    v0 = np.random.random(v0.shape)+0.1
     res = np.linalg.lstsq(u0.T,dat)[1].sum()
-    
-    for i in range(2000):
+    res = 10000.
+    for i in range(15000):
         if i % 2 == 0:
-            v0 = do_nnls(u0.T, dat)
-            #v0 = v0/v0.max()
+            v0 = do_nnls(u0.T, dat)                      
+            v0 /= np.max(v0, 1)[:, None]
+            res_n = ((u0.T.dot(v0) - dat)**2).sum()            
         else:
             
-            u0, res_n, t , t = np.linalg.lstsq(v0.T, dat.T)
+            u0, res_n, t , t = np.linalg.lstsq(v0.T, dat.T)            
             ##r.fit(dat.T, v0.T)
-            #u0 = r.coef_[:]
-            res_n = res_n.sum()
-            print res_n
-            if res-res_n < 0.01: 
-                break
-                #
+            #u0 = r.coef_[:]            
+            res_n = ((u0.T.dot(v0) - dat)**2).sum()
+            
+            if abs(res-res_n) < 0.001:             
+                break                
             else:
-                res = res_n.sum()            
+                print i, res_n
+                res = res_n  
     return u0.T, v0.T
 
 
@@ -401,20 +308,9 @@ def do_nnls(A,b):
 
     
 if __name__=='__main__':
-    #a = np.loadtxt('alcor_py2_ex400.txt')
-    a=np.loadtxt('..\\altpfcpy2_620.dat')
-    t = a[1:,0]
-    wl = a[0,1:]
-    a = a[1:, 1:]
-    
-    u, v = als(a[:,:].T)
-    
-    figure(0)
-#    clf()
-    subplot(211)
-    plot(wl,u)
-    subplot(212)
-    plot(t[:],v)
+    u, v = als(g.data.T, 5)
+    subplot(211).plot(w, u)
+    subplot(212).plot(t, v)
     #figure(1)
     #clf()
     #imshow(a-u.dot(v.T).T)    
