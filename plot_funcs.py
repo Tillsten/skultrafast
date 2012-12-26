@@ -3,7 +3,7 @@ unitdict={'x': ' nm', 'y': ' ps', 'z': '$\\Delta$OD'}
 title=""
 import matplotlib.pyplot as plt
 import numpy as np
-import dv
+import dv, data_io
 
 def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     """Plots the decay-asscoiated  """        
@@ -44,17 +44,20 @@ def plot_diagnostic(fitter):
     ax.stem(range(1,11),s[:10])
     ax.set_xlim(0,12)
 
-def plot_spectra(fitter,tp=None,num_spec=8,loc=4,use_m=False):
-    t=fitter.t
-    tmin,tmax=t.min(),t.max()
-    if tp==None: tp=np.logspace(np.log10(0.100),np.log10(tmax),num=num_spec)
-    tp=np.round(tp,2)    
-    t0=fitter.last_para[fitter.model_disp]
+def plot_spectra(fitter, tp=None, num_spec=8, loc=4, use_m=False):
+    t = fitter.t
+    tmin,tmax = t.min(),t.max()
+    if tp is None: 
+        tp = np.logspace(np.log10(0.100), np.log10(tmax), num=num_spec)
+    tp = np.round(tp,2)    
+    t0 = fitter.last_para[fitter.model_disp]
     if use_m:
-        data_used=fitter.m.T
+        data_used = fitter.m.T
     else:
-        data_used=fitter.data
-    specs=dv.interpol(data_used,fitter.t,np.zeros(fitter.data.shape[1]),t0,tp)
+        data_used = fitter.data
+    specs = data_io.interpol(dv.tup(fitter.wl, fitter.t, data_used),
+                             np.zeros(fitter.data.shape[1]), t0, tp)
+    
     plt.plot(fitter.wl,specs.T)    
     plt.legend([unicode(i)+u' '+unitdict['y'] for i in np.round(tp,2)],ncol=2,loc=loc)
     plt.axhline(0,color='grey',zorder=-10,ls='--')
@@ -85,7 +88,7 @@ def plot_transients(fitter, wls, plot_fit=True, scale='linear'):
 def plot_residuals(fitter, wls, scale='linear'):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:, None] - fitter.wl[None, :]), 1)
-    plt.plot(fitter.t, (fitter.data - fitter.m.T)[:, idx], '^')
+    plt.plot(fitter.t, (fitter.data - fitter.m.T)[:, idx], '-^')
     plt.legend([unicode(i) + u' ' + unitdict['x'] for i in np.round(fitter.wl[idx])])
     plt.autoscale(1, tight=1)
     plt.xlabel(unitdict['y'])
@@ -97,7 +100,17 @@ def plot_residuals(fitter, wls, scale='linear'):
         
         
         
-
+def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
+    ax1 = plt.subplot(121)
+    ax1.plot(tup.wl, raw_tn)    
+    ax1.plot(tup.wl, fit_tn)    
+    ax1.pcolormesh(tup.wl, tup.t, tup.data)
+    ax1.set_ylim(fit_tn.min(), fit_tn.max())
+    ax2 = plt.subplot(122)
+    ax2.pcolormesh(cor.wl, cor.t, cor.data)
+    ax2.set_ylim(fit_tn.min(), fit_tn.max())
+    
+    
 def make_legend(p, err, n):
     dig = np.floor(np.log10(err))
     l = []

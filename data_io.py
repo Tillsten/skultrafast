@@ -49,13 +49,14 @@ def loader_func(name):
     
     files = glob.glob(name + '_dat?.npy') + glob.glob(name + '_dat??.npy')
     if len(files) == 0:
-        raise IOError('No file founde.')
-    num_list = [i[i.find('dat') + 3:-4] for i in files]
-    #print num_list
+        raise IOError('No file found.')
+    
+    num_list = [i[i.find('dat') - 4 - 1] for i in files]
+    print num_list
     endname = max(zip(map(int, num_list), files))[1]
     print 'Loading: ' + endname
     a = np.load(endname)
-    files = glob.glob(name + '-???_0_' + '*dat.npy')
+    files = glob.glob(name + '-???_?_' + '*dat.npy')
     print files
     wls = []
     for i in files:
@@ -87,10 +88,25 @@ def concate_data_pol(wls, dat):
     dat = dat[:, idx, :]
     return w, dat
 
+def save_txt_das(name, fitter):
+    """
+    Saves the das of a fitter-obj in name.txt
+    """
+    f = fitter
+    spec = f.c.T[:, :-4] if f.model_coh else f.c.T
+    arr = np.column_stack((f.wl, spec))
+    taus = np.hstack((0, f.last_para[2:]))
+    
+    arr = np.vstack((taus, arr))
+    np.savetxt(name, arr)
 
 def save_txt(name, wls, t, dat):
-    tmp = np.vstack((wls, dat))
-    arr = np.hstack((np.vstack((0,t[:,None])), tmp))
+    try:
+        tmp = np.vstack((wls[None, :], dat))
+        arr = np.hstack((np.vstack((0,t[:,None])), tmp))
+    except IndexError, e:
+        print wls.shape, t. shape, dat.shape
+        raise IndexError(e)
     np.savetxt(name, arr)
     
 
