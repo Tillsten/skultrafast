@@ -175,7 +175,8 @@ class Fitter(object):
     def res(self, para):
         """Return the residuals for given parameters."""
         self.model(para)
-        return ((self.data - self.m.T) / self.weights).flatten()
+        self.residuals = (self.data - self.m.T)
+        return (self.residuals / self.weights).flatten()
 
     def res_sum(self, para):
         """Returns the squared sum of the residuals for given parameters"""
