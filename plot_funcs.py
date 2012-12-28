@@ -3,13 +3,21 @@ unitdict={'x': ' nm', 'y': ' ps', 'z': '$\\Delta$OD'}
 title=""
 import matplotlib.pyplot as plt
 import numpy as np
-import dv, data_io
+import dv, data_io, zero_finding
+
+plt.rcParams['font.size']=9
+plt.rcParams['legend.fontsize'] = 'small'
+plt.rcParams['legend.borderpad'] = 0.1
+plt.rcParams['legend.columnspacing'] = 0.3
+plt.rcParams['legend.labelspacing'] = 0.3
+plt.rcParams['legend.loc'] = 'best'
 
 def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     """Plots the decay-asscoiated  """        
     t_slice = fitter.model_disp+2
     fitter.last_para[t_slice:] = np.sort(fitter.last_para[t_slice:])
     fitter.res(fitter.last_para)
+    
     if plot_coh and fitter.model_coh:
         ulim = fitter.num_exponentials
     else:
@@ -21,12 +29,13 @@ def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
         llim = 1 
     
     dat_to_plot= fitter.c.T[:,llim:ulim]
-    if normed: dat_to_plot=dat_to_plot/np.abs(dat_to_plot).max(0)
-    plt.plot(fitter.wl,dat_to_plot,lw=2)
-    plt.autoscale(1,tight=1)
-    plt.axhline(0,color='grey',zorder=-10,ls='--')
-    leg=np.round(fitter.last_para[2+llim+fitter.model_disp:],2)
-    plt.legend([str(i)+ unitdict['y'] for i in leg])
+    if normed: 
+        dat_to_plot = dat_to_plot/np.abs(dat_to_plot).max(0)
+    plt.plot(fitter.wl, dat_to_plot, lw=2)
+    plt.autoscale(1, tight=1)
+    plt.axhline(0, color='grey', zorder=-10, ls='--')
+    leg = np.round(fitter.last_para[2 + llim + fitter.model_disp:], 2)
+    plt.legend([str(i)+ unitdict['y'] for i in leg], labelspacing=0.25)
     plt.xlabel(unitdict['x'])
     plt.ylabel(unitdict['z'])
     if title:
@@ -46,21 +55,23 @@ def plot_diagnostic(fitter):
 
 def plot_spectra(fitter, tp=None, num_spec=8, loc=4, use_m=False):
     t = fitter.t
-    tmin,tmax = t.min(),t.max()
+    tmin, tmax = t.min(),t.max()
     if tp is None: 
         tp = np.logspace(np.log10(0.100), np.log10(tmax), num=num_spec)
-    tp = np.round(tp,2)    
+        tp = np.hstack([-0.5, -.1, 0, tp])
+    tp = np.round(tp, 2)    
     t0 = fitter.last_para[fitter.model_disp]
     if use_m:
         data_used = fitter.m.T
     else:
         data_used = fitter.data
-    specs = data_io.interpol(dv.tup(fitter.wl, fitter.t, data_used),
-                             np.zeros(fitter.data.shape[1]), t0, tp)
+    specs = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, data_used),
+                             np.zeros(fitter.data.shape[1]), t0, tp).data
     
     plt.plot(fitter.wl,specs.T)    
-    plt.legend([unicode(i)+u' '+unitdict['y'] for i in np.round(tp,2)],ncol=2,loc=loc)
-    plt.axhline(0,color='grey',zorder=-10,ls='--')
+    plt.legend([unicode(i)+u' '+unitdict['y'] for i in np.round(tp,2)],
+                ncol=2, loc=loc, labelspacing=0.25)
+    plt.axhline(0, color='grey', zorder=-10, ls='--')
     plt.autoscale(1,tight=1)
     plt.xlabel(unitdict['x'])
     plt.ylabel(unitdict['z'])
@@ -71,11 +82,12 @@ def plot_spectra(fitter, tp=None, num_spec=8, loc=4, use_m=False):
 def plot_transients(fitter, wls, plot_fit=True, scale='linear'):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]),1)
-    plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
+    print idx
+    plt.plot(fitter.t - fitter.last_para[fitter.model_disp],
              fitter.data[:, idx], '^')
     plt.legend([unicode(i) + u' ' + unitdict['x'] for i in np.round(fitter.wl[idx])])
     if plot_fit and hasattr(fitter,'m'):
-        plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
+        plt.plot(fitter.t - fitter.last_para[fitter.model_disp], 
                  fitter.m.T[:, idx], 'k')
     plt.autoscale(1, tight=1)
     plt.xlabel(unitdict['y'])
@@ -89,7 +101,8 @@ def plot_residuals(fitter, wls, scale='linear'):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:, None] - fitter.wl[None, :]), 1)
     plt.plot(fitter.t, (fitter.data - fitter.m.T)[:, idx], '-^')
-    plt.legend([unicode(i) + u' ' + unitdict['x'] for i in np.round(fitter.wl[idx])])
+    plt.legend([unicode(i) + u' ' + unitdict['x'] for i in np.round(fitter.wl[idx])],
+                 labelspacing=0.25)
     plt.autoscale(1, tight=1)
     plt.xlabel(unitdict['y'])
     plt.ylabel(unitdict['z'])
@@ -98,8 +111,28 @@ def plot_residuals(fitter, wls, scale='linear'):
     if title:
         plt.title(title)
         
-        
-        
+def a4_overview(fitter, fname,plot_fastest=1):
+    f=plt.figure(1, figsize=(8.2, 11.6))
+    plt.subplot(321)
+    plt.pcolormesh(fitter.wl, fitter.t, fitter.data)
+    plt.autoscale(1, tight=1)
+    plt.subplot(322)
+    plt.imshow(fitter.residuals)
+    plt.autoscale(1, tight=1)
+    plt.subplot(323)
+    plot_das(fitter, plot_fastest)
+    plt.subplot(324)
+    plot_das(fitter, 1, normed=True)
+    plt.subplot(325)
+    plot_spectra(fitter)
+    plt.subplot(326)    
+    wl = fitter.wl
+    ind = [int(round(i)) for i in np.linspace(wl.min(), wl.max(), 10)]    
+    plot_transients(fitter, ind, scale='symlog')
+    #plt.gcf().set_size_inches((8.2, 11.6))
+    plt.subplots_adjust()
+    f.savefig(fname, dpi=600)    
+
 def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     ax1 = plt.subplot(121)
     ax1.plot(tup.wl, raw_tn)    

@@ -5,7 +5,7 @@ from scipy.special import erfc #errorfunction
 from scipy.optimize import leastsq
 from scipy.stats import f #fisher
 from scipy.linalg import qr, lstsq
-import scipy.sparse.linalg as li
+#import scipy.sparse.linalg as li
 #from scipy import optimize as opt
 #import openopt as oo
 import dv
@@ -296,10 +296,10 @@ def f_compare(Ndata, Nparas, new_chi, best_chi, Nfix=1.):
         Nfix, Ndata - Nparas)
 
 
-def my_f(N, P, chi, old_chi, Nfix=1., lin_dof=800):
-    print "klappt"
-
-    return f_compare(N, P + lin_dof, chi, old_chi, Nfix)
+def mod_dof_f(dof):
+    def f_mod(N, P, chi, old_chi, Nfix=1.):
+        return f_compare(N, P + dof, chi, old_chi, Nfix)
+    return f_mod
 
 
 if __name__ == '__main__':

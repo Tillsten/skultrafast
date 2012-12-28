@@ -104,9 +104,9 @@ def save_txt(name, wls, t, dat):
     try:
         tmp = np.vstack((wls[None, :], dat))
         arr = np.hstack((np.vstack((0,t[:,None])), tmp))
-    except IndexError, e:
+    except ValueError:
         print wls.shape, t. shape, dat.shape
-        raise IndexError(e)
+        raise IndexError
     np.savetxt(name, arr)
     
 
