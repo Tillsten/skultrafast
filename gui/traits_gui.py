@@ -101,7 +101,7 @@ class Data(HasTraits):
 
     def add_spectrum(self, x, y):
         name = str(round(self.times[y], 2))
-        y = self.data[x, :]
+        y = self.data[y, :]
         if self.has_fit:
             y_fit = self.fit_data[x, :]
             self.spectrum_plotter.add_ydata(name, y, y_fit)
@@ -153,7 +153,9 @@ class ClickTool(BaseTool):
 
 from lmtraits import AllParameter
 
-
+class FitInfo(HasTraits):
+    chi_sq = Float
+    
 class FitterWindow(HasTraits):
     fitter = Instance(Fitter)
     para = Instance(AllParameter)
@@ -206,13 +208,13 @@ class FitterWindow(HasTraits):
         spec = [i for i in self.fitter.c[:-4]]
         for i in zip(tau, spec):
             self.dasplotter.add_ydata(*i)
-
         self.pd.set_data('res', self.fitter.m.T - self.fitter.data)
 
     @on_trait_change('para:start_fit')
     def start_fit(self):
         a = self.fitter.start_lmfit(self.para.to_array())
         a.params = self.para.to_lmparas()
+        a.prepare_fit(a.params)
         a.leastsq()
         self.para.from_lmparas(a.params)
         self.calc_res()
@@ -226,33 +228,6 @@ class FitterWindow(HasTraits):
            Item('@dasplotter', show_label=False, width=0.3)),
         resizable=True)
 
-
-class ZeroCorrection(HasTraits):
-    method = Enum(['Max', 'Abs', 'First Peak'], default='Abs')
-    method_para = Float(default=2., label='Value')
-    poly_degrees = Int(min=1, max=5, default=3)
-
-
-class ZeroCorrectionTool(HasTraits):
-    zc = Instance(ZeroCorrection)
-    fitter = Instance(Fitter)
-    plot = Instance(Plot)
-
-    def _zc_default(self):
-        return ZeroCorrection()
-
-    def _plot_default(self):
-        fitter = self.fitter
-        idx = dv.find_linear_part(fitter.t)
-        self.pd = ArrayPlotData(wl=fitter.wl, t=fitter.t[:idx], d=fitter.data[:idx, :])
-        plot = Plot(self.pd)
-        plot.img_plot('d')
-        plot.plot(('wl', 'tn'))
-        return plot
-
-    size = ((400, 400))
-    traits_view = View(Item('plot', editor=ComponentEditor(size=size),
-        show_label=False), Item('@zc'))
 
 
 class MainWindow(HasTraits):
@@ -286,47 +261,47 @@ class MainWindow(HasTraits):
 
 
         #traits_view=View(Item('v_container', editor=ComponentEditor()))
-
-from scipy import ndimage
-
-#x=np.linspace(0,20,500)
-#y=np.sin(x/1.2)
-import dv
-
-a = np.loadtxt('..\\alcor_py2_ex400.txt')
-
-#t,wl,a=dv.loader_func('..\\messpy2\\tmp\\fremdprobe_para_400exec')
-#wl, d=dv.concate_data(wl,a)
-#t/=1000.
-
-t = a[1:200, 0]#/1000.
-w = a[0, 1:]
-d = a[1:200, 1:]
-
-import scipy.ndimage as nd
-#d=nd.uniform_filter(d,(3,5))
-#f=FFTTool(x=w[:],y=d[4,:]) 
-#f.configure_traits()
-
-class f:
-    pass
-
-#d=d[...,:].mean(-1)
-d = d[:, :]
-wl = w[:]
-
-a = f()
-a.wl = wl
-a.t = t[:]
-
-
-#d=ndimage.gaussian_filter(d,(1,4))
-a.data = d
-#tn,p=dv.find_time_zero(a,3,polydeg=4)
-#d=dv.interpol(d,t,tn,0.4,t)
-
-f = Fitter(wl, t, d, 1)
-f.weights = np.median(d, 0)
-#dData(wavelengths=w,times=t,data=d)
-m = MainWindow(fitter=f)
-m.configure_traits()
+if __name__=='__main__':
+    from scipy import ndimage
+    
+    #x=np.linspace(0,20,500)
+    #y=np.sin(x/1.2)
+    import dv
+    
+    a = np.loadtxt('..\\alcor_py2_ex400.txt')
+    
+    #t,wl,a=dv.loader_func('..\\messpy2\\tmp\\fremdprobe_para_400exec')
+    #wl, d=dv.concate_data(wl,a)
+    #t/=1000.
+    
+    t = a[1:200, 0]#/1000.
+    w = a[0, 1:]
+    d = a[1:200, 1:]
+    
+    import scipy.ndimage as nd
+    #d=nd.uniform_filter(d,(3,5))
+    #f=FFTTool(x=w[:],y=d[4,:]) 
+    #f.configure_traits()
+    
+    class f:
+        pass
+    
+    #d=d[...,:].mean(-1)
+    d = d[:, :]
+    wl = w[:]
+    
+    a = f()
+    a.wl = wl
+    a.t = t[:]
+    
+    
+    #d=ndimage.gaussian_filter(d,(1,4))
+    a.data = d
+    #tn,p=dv.find_time_zero(a,3,polydeg=4)
+    #d=dv.interpol(d,t,tn,0.4,t)
+    
+    f = Fitter(wl, t, d, 1)
+    f.weights = np.median(d, 0)
+    #dData(wavelengths=w,times=t,data=d)
+    m = MainWindow(fitter=f)
+    m.configure_traits()
