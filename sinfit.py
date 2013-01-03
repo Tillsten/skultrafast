@@ -48,7 +48,7 @@ def AcfPeriodogram(x, dt = 1, norm = False, doplot = False, \
     maxl = min(len(x), max(len(x)/4, 50))
     lag, corr, line, ax = pylab.acorr(x, maxlags = maxl)
     if smooth == True:
-        corr *= sinc(numpy.pi/box)
+        corr *= numpy.sinc(numpy.pi/box)
     pgram, freq = DftPowerSpectrum(corr, dt, doplot = False)
     if doplot == True:
         pylab.plot(freq, pgram)
@@ -124,9 +124,9 @@ def analyse(time, data_in, omega = None, doplot = False):
     data -= themean
     N = data.size
     dt = time[1] - time[0]
-    dft_ps, freq = dft.DftPowerSpectrum(data, dt = dt)
+    dft_ps, freq = DftPowerSpectrum(data, dt = dt)
     dft_omega = 2 * numpy.pi * freq
-    if omega == None: omega = numpy.r_[0.0001:numpy.pi:0.0001]
+    if omega == None: omega = numpy.r_[0.001:80:0.001]
     C , amps = calc_C(time, data, omega)
     amp, sigma = calc_amp_sigma(time, data, omega, C, amps)
     L = calc_L(C, x = data)
@@ -146,25 +146,29 @@ def analyse(time, data_in, omega = None, doplot = False):
         print 'Estimated angular frequency:', omega_est, '+/-', omega_err
         print 'Estimated amplitude:', amp_est, '+/-', amp_err
         print 'Estimated noise st.dev:', sigma_est, '+/-', sigma_err
-        ee = pu.dofig(1, 1, 2, aspect = 1)
-        ax1 = pu.doaxes(ee, 1, 2, 0, 0)
+        #ee = pu.dofig(1, 1, 2, aspect = 1)
+        omega/= 2*np.pi*0.03
+        figure()
+        ax1 = pylab.subplot(121)
         pylab.title('Time series')
         pylab.plot(time, data, 'k-')
         pylab.plot(time, model, 'r-')
         pylab.ylabel('signal')
-        ax2 = pu.doaxes(ee, 1, 2, 0, 1, sharex = ax1)
+        ax2 = pylab.subplot(122, sharex = ax1)
         pylab.plot(time, residuals, 'k-')
         pylab.ylabel('residuals')
         pylab.xlabel('time')
         pylab.xlim(time.min(), time.max())
-        ee = pu.dofig(2, 1, 2, aspect = 1)
-        ax1 = pu.doaxes(ee, 1, 2, 0, 0)
+        #ee = pu.dofig(2, 1, 2, aspect = 1)
+        #ax1 = pu.doaxes(ee, 1, 2, 0, 0)
+        pylab.figure()
+        ax1 = pylab.subplot(121)
         pylab.plot(dft_omega , dft_ps, 'wo', mec = 'k')
         pylab.plot(omega, C, 'k-')
         pylab.plot(omega, 4*sigma**2, 'r-')
         pylab.ylabel('Power')
         pylab.legend(('DFT', 'Schuster','Noise'))
-        ax2 = pu.doaxes(ee, 1, 2, 0, 1, sharex = ax1)
+        pylab.subplot(122, sharex = ax1)
         pylab.plot(omega, PSD, 'k-')
         pylab.ylabel('Bayes PSD')
         pylab.xlabel('angular frequency')
@@ -276,3 +280,13 @@ def sinefit(time, data, err = None, pmin = None, pmax = None, \
 
     if return_periodogram == False: return oper, oamp, ophase, odc
     else: return oper, oamp, ophase, odc, pers, p_w, a_w, chi2_0
+    
+def detrend_poly(y, deg=2):
+    p=numpy.polyfit(numpy.arange(len(y)), y, deg)
+    return y-numpy.poly1d(p)(numpy.arange(len(y)))
+    
+y=analyse(t[220:], fd, doplot=1);
+
+y2=analyse(t[220:], fd-y[-1], doplot=1);
+#y3=analyse(t[220:], y[-1]-y2[-1], doplot=1)
+#y3=analyse(t[220:], y2[-1]-y3[-1], doplot=1)
