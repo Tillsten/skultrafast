@@ -33,12 +33,12 @@ def _fold_exp(tt, w, tz, tau):
     -------
     y: ndarray
        Folded exponentials for given taus.
-
 """
     ws = w
     k = 1 / (tau[:, None])
     t = tt + tz
-    y = np.exp(k * (ws * ws * k / (4.0) - t)) * 0.5 * erfc(-t / ws + ws * k / (2.0))#/(ws*np.sqrt(2*np.pi))
+    y = np.exp(k * (ws * ws * k / (4.0) - t))
+    y *= 0.5 * erfc(-t / ws + ws * k / (2.0))#/(ws*np.sqrt(2*np.pi))
     #y /= np.max(np.abs(y), 0)
     return y
 
@@ -62,7 +62,6 @@ def _exp(tt, w, tz, tau):
     -------
     y: ndarray
        Exponentials for given tau's.
-
     """
     t = tt + tz
     y = np.exp(-t / (tau[:, None]))
@@ -114,8 +113,6 @@ class Fitter(object):
     bounds : float
         Bounds to use for constraint fitting of the linear coefficients, is
         only used in con_model.
-
-
     """
 
     def __init__(self, wl, t, data,
