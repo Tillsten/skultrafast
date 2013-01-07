@@ -62,7 +62,7 @@ def use_first_abs(dat, val=5):
     return np.argmax(idx, 0)
 
 import scipy.optimize as opt
-import cma
+
 @dv.add_to_cls(est)
 def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
     """
