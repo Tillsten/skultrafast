@@ -1,6 +1,6 @@
 # -*- coding: utf-8 *-*
-unitdict={'x': ' nm', 'y': ' ps', 'z': '$\\Delta$OD'}
-title=""
+units = {'x': ' nm', 'y': ' ps', 'z': '$\\Delta$OD'}
+title = ""
 import matplotlib.pyplot as plt
 import numpy as np
 import dv, data_io, zero_finding
@@ -35,25 +35,28 @@ def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     plt.autoscale(1, tight=1)
     plt.axhline(0, color='grey', zorder=-10, ls='--')
     leg = np.round(fitter.last_para[2 + llim + fitter.model_disp:], 2)
-    plt.legend([str(i)+ unitdict['y'] for i in leg], labelspacing=0.25)
-    plt.xlabel(unitdict['x'])
-    plt.ylabel(unitdict['z'])
+    plt.legend([str(i)+ units['y'] for i in leg], labelspacing=0.25)
+    plt.xlabel(units['x'])
+    plt.ylabel(units['z'])
     if title:
         plt.title(title)
 
 def plot_diagnostic(fitter):
     residuals=fitter.data-fitter.m.T
     u,s,v=np.linalg.svd(residuals)
-    normed_res=residuals/np.std(residuals,0)
-    plt.subplot2grid((3,3),(0,0),2,3).imshow(normed_res,vmin=-5,
-                                             vmax=5,aspect='auto')
-    plt.subplot2grid((3,3),(2,0)).plot(fitter.t, u[:,:2])
-    plt.subplot2grid((3,3),(2,1)).plot(fitter.wl,v.T[:,:2])
-    ax=plt.subplot2grid((3,3),(2,2))
-    ax.stem(range(1,11),s[:10])
-    ax.set_xlim(0,12)
+    normed_res=residuals / np.std(residuals, 0)
+    plt.subplot2grid((3, 3), (0, 0), 2, 3).imshow(normed_res, vmin=-3,
+                                             vmax=3, aspect='auto')
+    plt.subplot2grid((3, 3), (2, 0)).plot(fitter.t, u[:,:2])
+    plt.subplot2grid((3, 3), (2, 1)).plot(fitter.wl, v.T[:,:2])
+    ax=plt.subplot2grid((3, 3), (2, 2))
+    ax.stem(range(1, 11), s[:10])
+    ax.set_xlim(0, 12)
 
-def plot_spectra(fitter, tp=None, num_spec=8, loc=4, use_m=False):
+def plot_spectra(fitter, tp=None, num_spec=8, use_m=False):
+    """
+    Plots the transient spectra of an fitter object.
+    """
     t = fitter.t
     tmin, tmax = t.min(),t.max()
     if tp is None: 
@@ -69,12 +72,12 @@ def plot_spectra(fitter, tp=None, num_spec=8, loc=4, use_m=False):
                              np.zeros(fitter.data.shape[1]), t0, tp).data
     
     plt.plot(fitter.wl,specs.T)    
-    plt.legend([unicode(i)+u' '+unitdict['y'] for i in np.round(tp,2)],
-                ncol=2, loc=loc, labelspacing=0.25)
+    plt.legend([unicode(i)+u' '+units['y'] for i in np.round(tp,2)],
+                ncol=2,  labelspacing=0.25)
     plt.axhline(0, color='grey', zorder=-10, ls='--')
-    plt.autoscale(1,tight=1)
-    plt.xlabel(unitdict['x'])
-    plt.ylabel(unitdict['z'])
+    plt.autoscale(1, tight=1)
+    plt.xlabel(units['x'])
+    plt.ylabel(units['z'])
     if title:
         plt.title(title)
 
@@ -83,15 +86,16 @@ def plot_transients(fitter, wls, plot_fit=True, scale='linear'):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]),1)
     print idx
-    plt.plot(fitter.t - fitter.last_para[fitter.model_disp],
+    plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
              fitter.data[:, idx], '^')
-    plt.legend([unicode(i) + u' ' + unitdict['x'] for i in np.round(fitter.wl[idx])])
+    names = [str(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])]
+    plt.legend(names)
     if plot_fit and hasattr(fitter,'m'):
-        plt.plot(fitter.t - fitter.last_para[fitter.model_disp], 
+        plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
                  fitter.m.T[:, idx], 'k')
     plt.autoscale(1, tight=1)
-    plt.xlabel(unitdict['y'])
-    plt.ylabel(unitdict['z'])
+    plt.xlabel(units['y'])
+    plt.ylabel(units['z'])
     if scale != 'linear':
         plt.xscale(scale)
     if title:
@@ -101,23 +105,23 @@ def plot_residuals(fitter, wls, scale='linear'):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:, None] - fitter.wl[None, :]), 1)
     plt.plot(fitter.t, (fitter.data - fitter.m.T)[:, idx], '-^')
-    plt.legend([unicode(i) + u' ' + unitdict['x'] for i in np.round(fitter.wl[idx])],
+    plt.legend([unicode(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])],
                  labelspacing=0.25)
     plt.autoscale(1, tight=1)
-    plt.xlabel(unitdict['y'])
-    plt.ylabel(unitdict['z'])
+    plt.xlabel(units['y'])
+    plt.ylabel(units['z'])
     if scale != 'linear':
         plt.xscale(scale)
     if title:
         plt.title(title)
         
-def a4_overview(fitter, fname,plot_fastest=1):
-    f=plt.figure(1, figsize=(8.2, 11.6))
+def a4_overview(fitter, fname, plot_fastest=1):
+    f=plt.figure(1, figsize=(8.3, 11.7))
     plt.subplot(321)
     plt.pcolormesh(fitter.wl, fitter.t, fitter.data)
     plt.autoscale(1, tight=1)
     plt.subplot(322)
-    plt.imshow(fitter.residuals)
+    plt.imshow(fitter.residuals, aspect='auto')
     plt.autoscale(1, tight=1)
     plt.subplot(323)
     plot_das(fitter, plot_fastest)
@@ -131,6 +135,7 @@ def a4_overview(fitter, fname,plot_fastest=1):
     plot_transients(fitter, ind, scale='symlog')
     #plt.gcf().set_size_inches((8.2, 11.6))
     plt.subplots_adjust()
+    plt.show()
     f.savefig(fname, dpi=600)    
 
 def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
