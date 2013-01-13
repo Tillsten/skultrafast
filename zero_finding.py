@@ -9,9 +9,9 @@ import scipy.ndimage as nd
 from statsmodels.api import RLM
 import plot_funcs as pl
 from matplotlib.pyplot import plot
-from fitter import _coh_gaussian, _fold_exp
+#from skultrafast.fitter import _coh_gaussian
 from scipy.linalg import lstsq
-from scipy.optimize import leastsq
+#from scipy.optimize import leastsq
 
 class est(object):
     pass

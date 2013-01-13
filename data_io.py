@@ -50,24 +50,25 @@ def loader_func(name):
     files = glob.glob(name + '_dat?.npy') + glob.glob(name + '_dat??.npy')
     if len(files) == 0:
         raise IOError('No file found.')
-    
-    num_list = [i[i.find('dat') - 4 - 1] for i in files]
-    print num_list
+    print files
+    import re    
+    num_list = [re.findall('dat\d+', i)[0][3:] for i in files]    
     endname = max(zip(map(int, num_list), files))[1]
     print 'Loading: ' + endname
     a = np.load(endname)
-    files = glob.glob(name + '-???_?_' + '*dat.npy')
-    print files
+    num = str(max(map(int, num_list)) - 1)
+    files = glob.glob(name + '-???_'+ num + '_' + '*dat.npy')
     wls = []
     for i in files:
         print 'Loading: ' + i
+        cwl = re.findall('-\d\d\d_', i)
         tmp = np.load(i)
         t, w = tmp[1:,0], tmp[0,1:]
         wls.append(w)
     return t, wls, a
 
 def concate_data(wls,dat):   
-    """ Puts the data from different central wavelengths into one Array"""
+    """Puts the data from different central wavelengths into one Array"""
     
     w = np.hstack(tuple(wls))
     idx = np.argsort(w)
@@ -95,17 +96,32 @@ def save_txt_das(name, fitter):
     f = fitter
     spec = f.c.T[:, :-4] if f.model_coh else f.c.T
     arr = np.column_stack((f.wl, spec))
-    taus = np.hstack((0, f.last_para[2:]))
+    offset = 2 + f.model_disp
+    taus = np.hstack((0, f.last_para[offset:]))
     
     arr = np.vstack((taus, arr))
     np.savetxt(name, arr)
+
+def make_report(fitter, info, raw=None):
+    import plot_funcs
+    g = fitter
+    name = info.get('name','')
+    solvent = info.get('solvent','')    
+    excitation = info.get('excitation','')
+    title = u"{} in {} excited at {}".format(name, solvent, excitation)
+    plot_funcs.a4_overview(g, 'pics\\' + name + '.png', title=title)
+    save_txt_das(name + '_-DAS.txt', g)
+    save_txt(name + '_data.txt', g.wl, g.t, g.data)
+    save_txt(name + '_fit.txt', g.wl, g.t, g.m)
+    if raw:
+        save_txt(name + '_raw.txt', *raw)
 
 def save_txt(name, wls, t, dat):
     try:
         tmp = np.vstack((wls[None, :], dat))
         arr = np.hstack((np.vstack((0,t[:,None])), tmp))
     except ValueError:
-        print wls.shape, t. shape, dat.shape
+        print wls.shape, t.shape, dat.shape
         raise IndexError
     np.savetxt(name, arr)
     
