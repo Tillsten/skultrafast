@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
+from numpy.linalg import solve, qr
 from scipy.special import erfc #errorfunction
 from scipy.optimize import leastsq
 from scipy.stats import f #fisher
-from scipy.linalg import qr, lstsq
+#from scipy.linalg import qr, lstsq
+LinAlgError = np.linalg.LinAlgError
 #import scipy.sparse.linalg as li
-#from scipy import optimize as opt
-#import openopt as oo
-import dv
+from sklearn.linear_model.ridge import ridge_regression
+import dv, zero_finding
 import lmfit
-
+import cython
 sq2 = np.sqrt(2)
 BASE_WL = 550.
-
+import numexpr as ne
+ne.set_vml_accuracy_mode('fast')
 def _fold_exp(tt, w, tz, tau):
     """
     Returns the values of the folded exponentials for given parameters.
@@ -34,13 +36,14 @@ def _fold_exp(tt, w, tz, tau):
     y: ndarray
        Folded exponentials for given taus.
 """
+
     ws = w
-    k = 1 / (tau[:, None])
-    t = tt + tz
-    y = np.exp(k * (ws * ws * k / (4.0) - t))
+    k = 1 / (tau[..., None, None])
+    t = (tt + tz).T[None, ...]
+    y = ne.evaluate('exp(k * (ws * ws * k / (4.0) - t))')
     y *= 0.5 * erfc(-t / ws + ws * k / (2.0))#/(ws*np.sqrt(2*np.pi))
     #y /= np.max(np.abs(y), 0)
-    return y
+    return y.T
 
 
 def _exp(tt, w, tz, tau):
@@ -89,10 +92,11 @@ def _coh_gaussian(t, w, tz):
     """
     w = w / sq2
     tt = t + tz
-    y = np.tile(np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * np.pi)), (4, 1)).T
-    y[:, 1] *= (-tt / w ** 2)
-    y[:, 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
-    y[:, 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
+    y = ne.evaluate('where(tt/w < 4, exp(-0.5 * (tt / w) ** 2) / (w * sqrt(2 * 3.14159265)), 0)')    
+    y = np.tile(y[..., None], (1, 1, 4))
+    y[..., 1] *= (-tt / w ** 2)
+    y[..., 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
+    y[..., 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
     y /= np.max(np.abs(y), 0)
     return y
 
@@ -116,7 +120,7 @@ class Fitter(object):
     """
 
     def __init__(self, wl, t, data,
-                 model_coh=False, model_disp=0, bound=1000.):
+                 model_coh=False, model_disp=0, bound=1000., tn=None):
         self.t = t
         self.wl = wl
         self.model_coh = model_coh
@@ -127,9 +131,10 @@ class Fitter(object):
         self.last_spec = None
         self.bound = bound
         self.weights = 1.
+        
         if model_disp:
             self.org = data[:]
-            self.minwl = np.min(wl)
+            self.disp_x = (wl - np.min(wl)) / (wl.max() - wl.min())
             self.used_disp = np.zeros(model_disp)
 
     def model(self, para):
@@ -141,54 +146,105 @@ class Fitter(object):
         If model_disp is True than there are  model_disp-parameters are at the beginning.
         """
         self.last_para = para
-
         if self.model_disp:
             if  np.any(para[:self.model_disp] != self.used_disp):
-                self.tn = np.poly1d(para[:self.model_disp] + [0])(self.wl - self.minwl)
-                self.data = dv.interpol(self.org, self.t, self.tn, 1., self.t)
+                self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
+                tup = dv.tup(self.wl, self.t, self.org)                
+                self.data  = zero_finding.interpol(tup, self.tn)[2]                
                 self.used_disp[:] = para[:self.model_disp]
             para = para[self.model_disp:]
 
-        self.build_xvec(para)
+        self.build_xvec(para)      
         #TODO: constrained least squares should be implemented here. Maybe a get coeff-method.
-        self.c = lstsq(self.x_vec, self.data)[0]
-        self.m = np.dot(self.c.T, self.x_vec.T)
+        #q, r = np.linalg.qr(self.x_vec)
+        self.c = np.linalg.solve(r, q.T.dot(self.data))
+        #self.c = np.linalg.pinv(self.x_vec).dot(self.data)
+        self.m = np.dot(self.x_vec, self.c)
+        
+    def full_res(self, para):
+        self.last_para = para
+        self.make_full_model(para)
+        self.residuals = self.model - self.data
+        return self.residuals.flatten()
+    
+    def make_full_model(self, para):        
+        para = np.asarray(para)
+        if self.model_disp:
+            self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)            
+        self.t_mat = self.t[:, None] - self.tn[None, :]
+        self.build_xmat(para[self.model_disp:])
+        self.c = np.empty((self.data.shape[1], self.xmat.shape[-1]))
+        self.model = np.empty_like(self.data)
+        for i in xrange(self.data.shape[1]):            
+            #
+            try:
+                A = self.xmat[:, i, :]
+                self.c[i, :] = ridge_regression(A, self.data[:, i], 0.001)
+                
+                #self.c[i, :] = np.linalg.solve(A.T.dot(A), A.T.dot(self.data[:, i]))                    
+            except LinAlgError:
+                q, r = np.linalg.qr(self.xmat[:, i, :])                 
+                self.c[i, :] = np.linalg.solve(r, q.T.dot(self.data[:, i]))  
+            self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
-
+    def build_xmat(self, para):
+        """
+        Builds the basevectors for every channel.
+        """        
+        para = np.array(para)
+        try: 
+            idx = (para != self._last)            
+        except AttributeError:
+            idx = [True] * len(para)        
+        self.num_exponentials = para.size - 1       
+        if self.xmat.shape != 
+            self.xmat = np.empty((n, m, self.num_exponentials + 4))
+        w = para[0]        
+        x0 = 0.
+        taus = para[1:]
+        print x0, w, taus
+        if self.model_coh:
+            n, m = self.t_mat.shape
+            
+            self.xmat[:, :, -4:] = _coh_gaussian(self.t_mat, w, x0)
+        else: 
+            self.xmat = np.empty((n, m, self.num_exponentials))
+        self.xmat[:, :, :self.num_exponentials] = _fold_exp(self.t_mat, w, x0, taus)
+        self.xmat = np.nan_to_num(self.xmat)
+        
     def build_xvec(self, para):
         """
         Build the base (the folded functions) for given parameters.
-        """
+        """        
         para = np.array(para)
-        self.num_exponentials = para.size - 2
-        if self.model_coh:
-            self.x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
-            self.x_vec[:, -4:] = _coh_gaussian(self.t, para[1], para[0])
-            self.x_vec[:, :-4] = _fold_exp(self.t, para[1], para[0], (para[2:])).T
-        else:
-            self.x_vec = _fold_exp(self.t, para[1], para[0], (para[2:])).T
-        self.x_vec = np.nan_to_num(self.x_vec)
-
+        try: 
+            idx = (para != self._last)            
+        except AttributeError:
+            idx = [True] * len(para)
+        if any(idx[:2]) or self.model_disp:
+            self.num_exponentials = para.size - 2
+            if self.model_coh:
+                self.x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
+                self.x_vec[:, -4:] = _coh_gaussian(self.t, para[1], para[0])
+                self.x_vec[:, :-4] = _fold_exp(self.t, para[1],
+                                               para[0], (para[2:])).T
+            else:
+                self.x_vec = _fold_exp(self.t, para[1], para[0], (para[2:])).T
+            self.x_vec = np.nan_to_num(self.x_vec)
+            self._last = para.copy()
+        else:           
+            self.x_vec[:, idx[2:]] = _fold_exp(self.t, para[1],
+                                            para[0], para[idx]).T
+        
     def res(self, para):
         """Return the residuals for given parameters."""
-        self.model(para)
-        self.residuals = (self.data - self.m.T)
+        self.make_model(para)
+        self.residuals = (self.data - self.m)
         return (self.residuals / self.weights).flatten()
 
     def res_sum(self, para):
         """Returns the squared sum of the residuals for given parameters"""
         return np.sum(self.res(para) ** 2)
-
-    def ret_m(self, para):
-        """Return the flatted fit for given parameter"""
-        self.model(para)
-        return self.m.flatten()
-
-    def varpro(self, para, fixed=None):
-        """Variable Projection functional"""
-        self.build_xvec(para, fixed)
-        res = qr(self.x_vec)[0][:, self.x_vec.shape[1]:].T.dot(self.data)
-        return 0.5 * res.flatten()
 
     def res_sum_logscaler(self, para, fixed=None):
         para[1:] = np.exp(para[1:])
@@ -198,46 +254,43 @@ class Fitter(object):
         else:
             return o
 
-    def start_fit(self, x0, fixed=None, **kwargs):
-        """
-        Starts the fit for given x0 and fixed parameters.
-        Returns found x and it's errors.
-        """
-        if fixed != None:
-            print 'isFIxed', fixed
-            best = leastsq(self.res, x0, fixed, full_output=True, **kwargs)
-        else:
-            best = leastsq(self.res, x0, full_output=True, **kwargs)
-        print 'Chi^2:  ', (self.res(best[0], fixed) ** 2).sum()
-        try:
-            p, c = dv.calc_error(best)
-            for (pi, ci) in zip(p, c):
-                print "{0: .3f} +- {1:.4f}".format(pi, ci)
-            return p, c, best
-        except TypeError:
-            for pi in best[0]:
-                print "{0: .3f}".format(pi)
-            return best[0]
 
 
-    def start_lmfit(self, x0, fixed_names=[], lower_bound=0.3):
+    def start_lmfit(self, x0, fixed_names=[], lower_bound=0.3, 
+                    fix_long=True, full_model=1):
         p = lmfit.Parameters()
         for i in range(self.model_disp):
-            p.add('p' + str(i), x0[i])
+            p.add('p' + str(i), x0[i])        
         x0 = x0[self.model_disp:]
-        p.add('x0', x0[0])
-        p.add('w', x0[1], min=0)
-        for i, tau in enumerate(x0[2:]):
-            p.add('t' + str(i), tau, vary=True, min=lower_bound)
-
+        
+        if not self.full_model:
+            p.add('x0', x0[0])
+            x0 = x0[1:]
+        
+        p.add('w', x0[0], min=0)
+        num_exp = len(x0) - 1
+        for i, tau in enumerate(x0[1:]):
+            name = 't' + str(i)
+            p.add(name, tau, vary=True)
+            if tau not in fixed_names:
+                p[name].min = lower_bound
+                
         for k in fixed_names:
             p[k].vary = False
-
+        
+        if fix_long:
+            p['t'+str(num_exp - 1)].vary = False
+        
         def res(p):
             x = [k.value for k in p.values()]
             return self.res(x)
-
-        return lmfit.Minimizer(res, p)
+        
+        def full_res(p):
+            x = [k.value for k in p.values()]
+            return self.full_res(x)
+        fun = full_res if full_model else res
+        
+        return lmfit.Minimizer(fun, p)
 
 
     def start_cmafit(self, x0, restarts=2):
@@ -259,9 +312,6 @@ class Fitter(object):
         sig = pymc.Uniform('sig', 0, 0.15)
         tau = pymc.Uniform('tau', 0, 25, size=self.data.shape[1])
         #tau.value=20*self.data.shape[1]
-
-
-
         H = lambda x: self.model(x)
 
         @pymc.deterministic
@@ -278,6 +328,13 @@ class Fitter(object):
         mo = pymc.Model(set([z0, tau] + rs + l))
 
         return mo
+        
+        
+
+class ExactFitter(Fitter):
+    pass
+
+    
 
 
 def f_compare(Ndata, Nparas, new_chi, best_chi, Nfix=1.):
@@ -300,7 +357,7 @@ def mod_dof_f(dof):
 
 
 if __name__ == '__main__':
-    import pymc
+    #import pymc
 
     coef = np.zeros((2, 400))
     coef[0, :] = -np.arange(-300, 100) ** 2 / 100.
@@ -314,13 +371,14 @@ if __name__ == '__main__':
     dat = dat * (1 + (np.random.random(dat.shape) - 0.5) * 0.20)
     g = Fitter(np.arange(400), t, dat, 2, False, False)
     x0 = [0.5, 0.2, 4, 20]
-    a = g.start_pymc(x0, [(0.2, 20), (0.2, 20)])
-    b = pymc.MCMC(a)
-    b.isample(10000, 1000)
-    pymc.Matplot.plot(b)
+    
+    #a = g.start_pymc(x0, [(0.2, 20), (0.2, 20)])
+    #b = pymc.MCMC(a)
+    #b.isample(10000, 1000)
+    #pymc.Matplot.plot(b)
 #    #a=g.start_cmafit(x0)
-#    a=g.start_lmfit(x0)
-#    a.leastsq()
+    a=g.start_lmfit(x0)
+    a.leastsq()
 #    lmfit.printfuncs.report_errors(a.params)
 #    #ar=g.chi_search(a[0])
 #    import matplotlib.pyplot as plt

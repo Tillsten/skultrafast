@@ -6,7 +6,7 @@ import numpy as np
 import dv, data_io, zero_finding
 
 plt.rcParams['font.size']=9
-plt.rcParams['legend.fontsize'] = 'small'
+plt.rcParams['legend.fontsize'] = 'x-small'
 plt.rcParams['legend.borderpad'] = 0.1
 plt.rcParams['legend.columnspacing'] = 0.3
 plt.rcParams['legend.labelspacing'] = 0.3
@@ -14,21 +14,21 @@ plt.rcParams['legend.loc'] = 'best'
 
 def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     """Plots the decay-asscoiated  """        
-    t_slice = fitter.model_disp+2
-    fitter.last_para[t_slice:] = np.sort(fitter.last_para[t_slice:])
-    fitter.res(fitter.last_para)
+    num_exp = fitter.num_exponentials
+    #fitter.last_para[-num_exp:] = np.sort(fitter.last_para[-num_exp:])
     
-    if plot_coh and fitter.model_coh:
+    
+    if plot_coh or not fitter.model_coh:
         ulim = fitter.num_exponentials
     else:
-        ulim =- 4
+        ulim = -4
 
-    if plot_fastest:
+    if plot_fastest == 0:
         llim = 0 
     else:
-        llim = 1 
+        llim = plot_fastest
     
-    dat_to_plot= fitter.c.T[:,llim:ulim]
+    dat_to_plot= fitter.c[:,llim:ulim]
     if normed: 
         dat_to_plot = dat_to_plot/np.abs(dat_to_plot).max(0)
     plt.plot(fitter.wl, dat_to_plot, lw=2)
@@ -40,6 +40,36 @@ def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     plt.ylabel(units['z'])
     if title:
         plt.title(title)
+        
+def plot_pol_das(fitter, plot_fastest=0, plot_coh=False, normed=False):    
+    """Plots the decay-asscoiated spectra for polarized data"""        
+    t_slice = fitter.model_disp+2
+    fitter.last_para[t_slice:] = np.sort(fitter.last_para[t_slice:])
+    fitter.res(fitter.last_para)
+    
+    if plot_coh and fitter.model_coh:
+        ulim = fitter.num_exponentials
+    else:
+        ulim =- 4
+
+    llim = plot_fastest
+    
+    dat_to_plot= fitter.c[:,llim:ulim]
+    if normed: 
+        dat_to_plot = dat_to_plot / np.abs(dat_to_plot).max(0)
+    half_idx = dat_to_plot.shape[0]/2       
+    p1 = plt.plot(fitter.wl, dat_to_plot[:half_idx, :], lw=2)
+    p2 = plt.plot(fitter.wl, dat_to_plot[half_idx:, :], '--', lw=2)
+    dv.equal_color(p1, p2)
+    plt.autoscale(1, tight=1)
+    plt.axhline(0, color='grey', zorder=-10, ls='--')
+    leg = np.round(fitter.last_para[2 + llim + fitter.model_disp:], 2)
+    plt.legend([str(i)+ units['y'] for i in leg], labelspacing=0.25)
+    plt.xlabel(units['x'])
+    plt.ylabel(units['z'])
+    if title:
+        plt.title(title)
+        
 
 def plot_diagnostic(fitter):
     residuals=fitter.data-fitter.m.T
@@ -53,7 +83,7 @@ def plot_diagnostic(fitter):
     ax.stem(range(1, 11), s[:10])
     ax.set_xlim(0, 12)
 
-def plot_spectra(fitter, tp=None, num_spec=8, use_m=False):
+def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False, lw=1.5):
     """
     Plots the transient spectra of an fitter object.
     """
@@ -68,10 +98,14 @@ def plot_spectra(fitter, tp=None, num_spec=8, use_m=False):
         data_used = fitter.m.T
     else:
         data_used = fitter.data
-    specs = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, data_used),
-                             np.zeros(fitter.data.shape[1]), t0, tp).data
     
-    plt.plot(fitter.wl,specs.T)    
+    specs = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, data_used),
+                             np.zeros(fitter.data.shape[1]), t0, tp).data    
+    
+    p1 = plt.plot(fitter.wl, specs[:, :fitter.wl.size].T, lw=2*lw)    
+    if pol:
+        p2 = plt.plot(fitter.wl, specs[:, fitter.wl.size:].T, lw=lw)    
+        dv.equal_color(p1, p2)
     plt.legend([unicode(i)+u' '+units['y'] for i in np.round(tp,2)],
                 ncol=2,  labelspacing=0.25)
     plt.axhline(0, color='grey', zorder=-10, ls='--')
@@ -82,17 +116,27 @@ def plot_spectra(fitter, tp=None, num_spec=8, use_m=False):
         plt.title(title)
 
 
-def plot_transients(fitter, wls, plot_fit=True, scale='linear'):
+def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear'):
     wls = np.array(wls)
-    idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]),1)
-    print idx
-    plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
-             fitter.data[:, idx], '^')
+    idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]), 1)    
     names = [str(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])]
-    plt.legend(names)
+    
+    p1 = plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
+                  fitter.data[:, idx], '^')
+    if pol: 
+        p2 = plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
+                      fitter.data[:, idx + fitter.data.shape[1] / 2], 'o') 
+        dv.equal_color(p1, p2)
+        
+    
+    plt.legend(names, scatterpoints=1, numpoints=1)
     if plot_fit and hasattr(fitter,'m'):
         plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
-                 fitter.m.T[:, idx], 'k')
+                 fitter.m[:, idx], 'k')
+        if pol:
+            plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
+                     fitter.m[:, idx + fitter.data.shape[1] / 2], 'k')
+            
     plt.autoscale(1, tight=1)
     plt.xlabel(units['y'])
     plt.ylabel(units['z'])
@@ -104,7 +148,7 @@ def plot_transients(fitter, wls, plot_fit=True, scale='linear'):
 def plot_residuals(fitter, wls, scale='linear'):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:, None] - fitter.wl[None, :]), 1)
-    plt.plot(fitter.t, (fitter.data - fitter.m.T)[:, idx], '-^')
+    plt.plot(fitter.t, fitter.residuals[:, idx], '-^')
     plt.legend([unicode(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])],
                  labelspacing=0.25)
     plt.autoscale(1, tight=1)
@@ -115,13 +159,17 @@ def plot_residuals(fitter, wls, scale='linear'):
     if title:
         plt.title(title)
         
-def a4_overview(fitter, fname, plot_fastest=1):
-    f=plt.figure(1, figsize=(8.3, 11.7))
+def a4_overview(fitter, fname, plot_fastest=1, title=None):
+    plt.ioff()    
+    f=plt.figure(1, figsize=(8.3, 12))
     plt.subplot(321)
     plt.pcolormesh(fitter.wl, fitter.t, fitter.data)
+    plt.yscale('symlog')
     plt.autoscale(1, tight=1)
     plt.subplot(322)
-    plt.imshow(fitter.residuals, aspect='auto')
+    plt.imshow(fitter.residuals / fitter.residuals.std(0), aspect='auto')
+    if title:    
+        plt.title(title)
     plt.autoscale(1, tight=1)
     plt.subplot(323)
     plot_das(fitter, plot_fastest)
@@ -133,11 +181,12 @@ def a4_overview(fitter, fname, plot_fastest=1):
     wl = fitter.wl
     ind = [int(round(i)) for i in np.linspace(wl.min(), wl.max(), 10)]    
     plot_transients(fitter, ind, scale='symlog')
-    #plt.gcf().set_size_inches((8.2, 11.6))
-    plt.subplots_adjust()
-    plt.show()
+    plt.gcf().set_size_inches((8.2, 12))
+    plt.tight_layout()
+    plt.draw_if_interactive()
     f.savefig(fname, dpi=600)    
-
+    plt.ion()
+    
 def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     ax1 = plt.subplot(121)
     ax1.plot(tup.wl, raw_tn)    

@@ -50,7 +50,6 @@ class FFTTool(HasTraits):
         pd = ArrayPlotData(freqs=np.zeros(20), amps=np.zeros(20))
         return pd
 
-
     def _pd2_default(self):
         return ArrayPlotData(x=self.x, y=self.y)
 
@@ -73,8 +72,10 @@ class FFTTool(HasTraits):
         n = np.sum(m)
         if sum(m) > 3:
             d = self.y[m]
+            xd = self.x[m]
             win = self.func(n)
-            y = np.abs(np.fft.fft(win * (d - d.mean())))
+            back = np.poly1d(np.polyfit(xd, d, 3))(xd)            
+            y = np.abs(np.fft.fft(win * (d - back)))
             x = np.fft.fftfreq(n, self.Fs)[:y.size / 2]
             self.pd.set_data('freqs', x[1:])
             self.pd.set_data('amps', y[1:y.size / 2])
