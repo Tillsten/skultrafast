@@ -24,8 +24,8 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection,\
 
 from multiplotter import MultiPlotter, FitPlotter
 
-from fitter import Fitter
-import dv
+from ..fitter import Fitter
+import skultrafast.dv as dv
 
 class Data(HasTraits):
     wavelengths = Array()
@@ -208,7 +208,7 @@ class FitterWindow(HasTraits):
         spec = [i for i in self.fitter.c[:-4]]
         for i in zip(tau, spec):
             self.dasplotter.add_ydata(*i)
-        self.pd.set_data('res', self.fitter.m.T - self.fitter.data)
+        self.pd.set_data('res', self.fitter.residuals)
 
     @on_trait_change('para:start_fit')
     def start_fit(self):
