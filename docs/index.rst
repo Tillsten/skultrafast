@@ -11,12 +11,14 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+.. start::
+
 .. automodule:: fitter
     :members:
-    
+
 .. automodule:: dv
 	:members:
-    
+
 
 Indices and tables
 ==================
