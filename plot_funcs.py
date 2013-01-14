@@ -12,7 +12,7 @@ plt.rcParams['legend.columnspacing'] = 0.3
 plt.rcParams['legend.labelspacing'] = 0.3
 plt.rcParams['legend.loc'] = 'best'
 
-def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
+def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False):
     """Plots the decay-asscoiated  """        
     num_exp = fitter.num_exponentials
     #fitter.last_para[-num_exp:] = np.sort(fitter.last_para[-num_exp:])
@@ -23,18 +23,15 @@ def plot_das(fitter, plot_fastest=False, plot_coh=False ,normed=False):
     else:
         ulim = -4
 
-    if plot_fastest == 0:
-        llim = 0 
-    else:
-        llim = plot_fastest
+    llim = plot_fastest
     
-    dat_to_plot= fitter.c[:,llim:ulim]
+    dat_to_plot= fitter.c[:, llim:ulim]
     if normed: 
         dat_to_plot = dat_to_plot/np.abs(dat_to_plot).max(0)
     plt.plot(fitter.wl, dat_to_plot, lw=2)
     plt.autoscale(1, tight=1)
     plt.axhline(0, color='grey', zorder=-10, ls='--')
-    leg = np.round(fitter.last_para[2 + llim + fitter.model_disp:], 2)
+    leg = np.round(fitter.last_para[1 + llim + fitter.model_disp:], 2)
     plt.legend([str(i)+ units['y'] for i in leg], labelspacing=0.25)
     plt.xlabel(units['x'])
     plt.ylabel(units['z'])
