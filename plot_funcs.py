@@ -118,18 +118,21 @@ def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear'):
     idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]), 1)    
     names = [str(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])]
     
-    p1 = plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
-                  fitter.data[:, idx], '^')
+    if hasattr(fitter, 't_mat'):
+        t = fitter.t_mat[:, idx]        
+    else:
+        t = fitter.t + fitter.last_para[0]
+    
+    p1 = plt.plot(t,  fitter.data[:, idx], '^')
     if pol: 
         p2 = plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
                       fitter.data[:, idx + fitter.data.shape[1] / 2], 'o') 
         dv.equal_color(p1, p2)
-        
     
     plt.legend(names, scatterpoints=1, numpoints=1)
-    if plot_fit and hasattr(fitter,'m'):
-        plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
-                 fitter.m[:, idx], 'k')
+    if plot_fit and hasattr(fitter,'model'):
+       
+        plt.plot(t, fitter.model[:, idx], 'k')
         if pol:
             plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
                      fitter.m[:, idx + fitter.data.shape[1] / 2], 'k')

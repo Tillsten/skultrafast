@@ -2,13 +2,13 @@ What is skultrafast?
 ====================
 
 Skultrafast stands for scikit.ultrafast and is an
-python package. It aims to include everthing 
+python package. It aims to include everthing
 needed to analyze ultrafast data. At the moment,
 it is mostly used used to analyse transient absorption
 data, so this at the moment the only fully functional
 part. In also includes a not well tested FROG-algorithm.
 
-The big advantage of python is, that is quite easy 
+The big advantage of python is, that is quite easy
 to talk to other software. Using different optimizers
 to fit data is really easy, also writing a gui in python
 is much easier than most other languages.
@@ -22,7 +22,7 @@ should be made easy (a.k.a. has a gui for these parts).
 Users
 -----
 At the moment it is mostly me. I would be happy
-if anyone would like to join the project! 
+if anyone would like to join the project!
 
 Published results
 -----------------
@@ -32,14 +32,14 @@ First papers using the software should follow soon.
 
 Software prerequisites
 =======================
-To use the software, are working Python enverioment 
+To use the software, are working Python enverioment
 with numpy and scipy is necessery. The software
-is written for Python 2.7, but porting to Python 3.3 
+is written for Python 2.7, but porting to Python 3.3
 shoul be easy for the most parts.
 
 Using the GUI introduces a lot of dependencies: It is made
 with traitsui and chaco, which both have its own stack fo
-depenencies. 
+depenencies.
 
 I am also recommending to python packages lmfit and cma-es.
 
@@ -55,14 +55,15 @@ But i'll try to address both packages directly:
 
 Why not TIMP/Glotaran?
 ----------------------
-First: i think TIMP and Glotaran is awesome! 
+First: i think TIMP and Glotaran is awesome!
 Try it out, if you don't have yet.
 
 But it has some warts:
 I don't like R too much. Also some parts are slower
 than necessary. I also dislike that the corresponding
 GUI is written is java, making changes unnecessarily
-complicated. 
+complicated. Also it seems, that here is not development
+on TIMP.
 
 Why not the Ultrafast Spectroscopy Modelling Toolbox?
 -----------------------------------------------------
