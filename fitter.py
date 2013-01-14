@@ -128,16 +128,17 @@ class Fitter(object):
         self.data = data
 
         #self.one=np.identity(t.size)
-        self.last_spec = None
-        self.bound = bound
-        self.weights = 1.
+
+        self.xmat = np.empty((1))
+        self.weights = None
         
         if model_disp:
             self.org = data[:]
             self.disp_x = (wl - np.min(wl)) / (wl.max() - wl.min())
             self.used_disp = np.zeros(model_disp)
+        
 
-    def model(self, para):
+    def make_model(self, para):
         """
         Returns the fit for given system parameters.
 
@@ -155,62 +156,89 @@ class Fitter(object):
             para = para[self.model_disp:]
 
         self.build_xvec(para)      
-        #TODO: constrained least squares should be implemented here. Maybe a get coeff-method.
-        #q, r = np.linalg.qr(self.x_vec)
+       
+        q, r = np.linalg.qr(self.x_vec)
         self.c = np.linalg.solve(r, q.T.dot(self.data))
         #self.c = np.linalg.pinv(self.x_vec).dot(self.data)
         self.m = np.dot(self.x_vec, self.c)
         
-    def full_res(self, para):
-        self.last_para = para
+    def full_res(self, para):        
         self.make_full_model(para)
-        self.residuals = self.model - self.data
+        
+        self.residuals = (self.model - self.data)
+        if not self.weights is None:
+            self.residuals /= self.weights
         return self.residuals.flatten()
     
-    def make_full_model(self, para):        
+    def make_full_model(self, para):  
+        from sklearn.linear_model import Lasso
         para = np.asarray(para)
+        mdisp = self.model_disp
+        try:
+            is_disp_changed = (para[:mdisp] != self.last_para[:mdisp]).any()
+        except AttributeError:
+            is_disp_changed = True
+        self.last_para = para
         if self.model_disp:
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)            
         self.t_mat = self.t[:, None] - self.tn[None, :]
-        self.build_xmat(para[self.model_disp:])
-        self.c = np.empty((self.data.shape[1], self.xmat.shape[-1]))
-        self.model = np.empty_like(self.data)
+        self.build_xmat(para[self.model_disp:], is_disp_changed)
+        if not hasattr(self, 'c'):
+            self.c = np.zeros((self.data.shape[1], self.xmat.shape[-1]))
+            self.model = np.empty_like(self.data)
         for i in xrange(self.data.shape[1]):            
             #
             try:
                 A = self.xmat[:, i, :]
-                self.c[i, :] = ridge_regression(A, self.data[:, i], 0.001)
-                
+                #l = Lasso(alpha=0.0001)
+                #l.fit(A, self.data[:, i], coef_init=self.c[i, :])
+                #self.c[i, :] = l.coef_
+                self.c[i, :] = ridge_regression(A, self.data[:, i], 0.00001)                
                 #self.c[i, :] = np.linalg.solve(A.T.dot(A), A.T.dot(self.data[:, i]))                    
             except LinAlgError:
                 q, r = np.linalg.qr(self.xmat[:, i, :])                 
                 self.c[i, :] = np.linalg.solve(r, q.T.dot(self.data[:, i]))  
             self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
-    def build_xmat(self, para):
+
+
+
+    def _check_xmat(self):
+        """
+        Makes new xmat if  the number of exponentials changes.
+        """
+        n, m = self.t_mat.shape
+        num_exp = self.num_exponentials
+        if self.model_disp:
+            num_exp += 4
+        if self.xmat.shape != (n, m, num_exp) or self.xmat is None:
+            self.xmat = np.empty((n, m, num_exp))
+
+    def build_xmat(self, para, is_disp_changed):
         """
         Builds the basevectors for every channel.
         """        
         para = np.array(para)
+        self.num_exponentials = para.size - 1       
+        self._check_xmat()
         try: 
             idx = (para != self._last)            
         except AttributeError:
             idx = [True] * len(para)        
-        self.num_exponentials = para.size - 1       
-        if self.xmat.shape != 
-            self.xmat = np.empty((n, m, self.num_exponentials + 4))
-        w = para[0]        
-        x0 = 0.
+        
+        w = para[0]                
         taus = para[1:]
-        print x0, w, taus
-        if self.model_coh:
-            n, m = self.t_mat.shape
-            
-            self.xmat[:, :, -4:] = _coh_gaussian(self.t_mat, w, x0)
-        else: 
-            self.xmat = np.empty((n, m, self.num_exponentials))
-        self.xmat[:, :, :self.num_exponentials] = _fold_exp(self.t_mat, w, x0, taus)
+        x0 = 0
+        print w, taus
+        if idx[0] or is_disp_changed:  
+            if self.model_coh:
+                self.xmat[:, :, -4:] = _coh_gaussian(self.t_mat, w, x0)
+            self.xmat[:, :, :self.num_exponentials] = _fold_exp(self.t_mat, w, 
+                                                                x0, taus)
+        elif any(idx):                        
+            self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w, x0, taus[idx[1:]])
         self.xmat = np.nan_to_num(self.xmat)
+        self._last = para
         
     def build_xvec(self, para):
         """
@@ -246,15 +274,6 @@ class Fitter(object):
         """Returns the squared sum of the residuals for given parameters"""
         return np.sum(self.res(para) ** 2)
 
-    def res_sum_logscaler(self, para, fixed=None):
-        para[1:] = np.exp(para[1:])
-        o = self.res_sum(para)
-        if False:
-            return np.nan
-        else:
-            return o
-
-
 
     def start_lmfit(self, x0, fixed_names=[], lower_bound=0.3, 
                     fix_long=True, full_model=1):
@@ -263,7 +282,7 @@ class Fitter(object):
             p.add('p' + str(i), x0[i])        
         x0 = x0[self.model_disp:]
         
-        if not self.full_model:
+        if not full_model:
             p.add('x0', x0[0])
             x0 = x0[1:]
         
