@@ -159,7 +159,7 @@ class Fitter(object):
         only a offset is modeled, which is very fast.
     """
 
-    def __init__(self, tup, model_coh=False,  model_disp=0):
+    def __init__(self, tup, model_coh=False,  model_disp=1):
 
         wl, t, data = tup
         self.t = t
@@ -172,7 +172,7 @@ class Fitter(object):
         self.num_exponentials = -1
         self.weights = None
 
-        if model_disp:
+        if model_disp > 1:
             self.org = data[:]
             self.disp_x = (wl - np.min(wl)) / (wl.max() - wl.min())
             self.used_disp = np.zeros(model_disp)
@@ -197,8 +197,8 @@ class Fitter(object):
             times. M is equal to self.model_disp.
 
         """
-        self.last_para = para
-        if self.model_disp:
+        self.last_para = np.asarray(para)
+        if self.model_disp > 1:
             # Only calculate interpolated data if necessary:
             if  np.any(para[:self.model_disp] != self.used_disp):
                 self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
@@ -206,10 +206,11 @@ class Fitter(object):
                 self.data = zero_finding.interpol(tup, self.tn)[2]
                 self.used_disp[:] = para[:self.model_disp]
             para = para[self.model_disp:]
-
-        self.build_xvec(para)
+        self.num_exponentials = self.last_para.size - self.model_disp - 1
+        self._build_xvec(para)
         self.c = solve_mat(self.x_vec, self.data)
         self.model = np.dot(self.x_vec, self.c)
+        self.c = self.c.T
 
     def _build_xvec(self, para):
         """
@@ -220,20 +221,29 @@ class Fitter(object):
             idx = (para != self._last)
         except AttributeError:
             idx = [True] * len(para)
+
+        if self.model_disp == 1:
+            x0, w, taus = para[0], para[1], para[2:]
+            tau_idx = idx[2:]
+        else:
+            x0, w, taus = 0., para[0], para[1:]
+            tau_idx = idx[1:]
+
         if any(idx[:2]) or self.model_disp:
-            self.num_exponentials = para.size - 2
+
             if self.model_coh:
-                self.x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
-                self.x_vec[:, -4:] = _coh_gaussian(self.t, para[1], para[0])
-                self.x_vec[:, :-4] = _fold_exp(self.t, para[1],
-                                               para[0], (para[2:])).T
+                x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
+                x_vec[:, -4:] = _coh_gaussian(self.t[:, None], w, x0).squeeze()
+                print para, taus
+                x_vec[:, :-4] = _fold_exp(self.t[:, None], w,
+                                               x0, taus).squeeze()
             else:
-                self.x_vec = _fold_exp(self.t, para[1], para[0], (para[2:])).T
-            self.x_vec = np.nan_to_num(self.x_vec)
+                x_vec = _fold_exp(self.t[:, None], w, x0, taus).squeeze()
+            self.x_vec = np.nan_to_num(x_vec)
             self._last = para.copy()
         else:
-            self.x_vec[:, idx[2:]] = _fold_exp(self.t, para[1],
-                                               para[0], para[idx]).T
+            self.x_vec[:, tau_idx] = _fold_exp(self.t, w,
+                                               x0, taus[tau_idx]).T
 
     def res(self, para):
         """
@@ -241,8 +251,10 @@ class Fitter(object):
         basevector for each channel. See make_model for para format.
         """
         self.make_model(para)
-        self.residuals = (self.data - self.m)
-        return (self.residuals / self.weights).flatten()
+        self.residuals = (self.model - self.data)
+        if not self.weights is None:
+            self.residuals *= self.weights
+        return self.residuals.flatten()
 
     def full_res(self, para):
         """
@@ -252,7 +264,7 @@ class Fitter(object):
         self.make_full_model(para)
         self.residuals = (self.model - self.data)
         if not self.weights is None:
-            self.residuals /= self.weights
+            self.residuals *= self.weights
         return self.residuals.flatten()
 
     def make_full_model(self, para):
