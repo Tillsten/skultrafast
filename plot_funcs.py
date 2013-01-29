@@ -69,9 +69,9 @@ def plot_pol_das(fitter, plot_fastest=0, plot_coh=False, normed=False):
         
 
 def plot_diagnostic(fitter):
-    residuals=fitter.data-fitter.m.T
-    u,s,v=np.linalg.svd(residuals)
-    normed_res=residuals / np.std(residuals, 0)
+    residuals = fitter.residuals
+    u, s, v = np.linalg.svd(residuals)
+    normed_res = residuals / np.std(residuals, 0)
     plt.subplot2grid((3, 3), (0, 0), 2, 3).imshow(normed_res, vmin=-3,
                                              vmax=3, aspect='auto')
     plt.subplot2grid((3, 3), (2, 0)).plot(fitter.t, u[:,:2])
@@ -96,8 +96,13 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False, lw=1.5):
     else:
         data_used = fitter.data
     
+    if hasattr(fitter, 'tn'):
+        tn = fitter.tn
+        t0 = 0.
+    else:
+        tn = np.zeros(fitter.data.shape[1])
     specs = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, data_used),
-                             np.zeros(fitter.data.shape[1]), t0, tp).data    
+                             tn, t0, tp).data    
     
     p1 = plt.plot(fitter.wl, specs[:, :fitter.wl.size].T, lw=2*lw)    
     if pol:
@@ -207,6 +212,13 @@ def make_legend(p, err, n):
         s = ''.join(['$\\tau_', str(int(i - 1)), '=', val, '\\pm ', erri, ' $ps'])
         l.append(s)
     return l
+
+def use_cmap(pl, cmap='RdBu'):
+    cm = plt.get_cmap(cmap)
+    idx = np.linspace(0, 1, len(pl))
+    for i, p in enumerate(pl):
+        pl.set_color(cm(idx[i]))
+    
 
 def make_legend_noerr(p, err, n):
     dig = np.floor(np.log10(err))
