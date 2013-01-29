@@ -124,5 +124,26 @@ def save_txt(name, wls, t, dat):
         print wls.shape, t.shape, dat.shape
         raise IndexError
     np.savetxt(name, arr)
+
+def svd_filter(d, n=10):
+    u, s, v = np.linalg.svd(d, full_matrices=False)
+    s[n:] = 0.
+    return np.dot(u, np.dot(np.diag(s), v))
+
+
+import re
+def extract_freqs_from_gaussianlog(fname):
+    f = open(fname)
+    fr, ir, raman = [], [], []
+    
+    for line in f:
+        if line.lstrip().startswith('Frequencies ---'):
+            fr += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
+        elif line.lstrip().startswith('IR Intensi'):
+            ir+=(map(float, re.sub(r'[^\d,. ]', '', line).split()))
+        elif line.lstrip().startswith('Raman Activities'):
+            raman += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
+    arrs = map(np.array, [fr, ir, raman])
+    return np.vstack([i.flatten() for i in arrs])
     
 
