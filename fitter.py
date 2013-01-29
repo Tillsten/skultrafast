@@ -115,16 +115,22 @@ def solve_mat(A, b_mat, method='fast'):
     if method == 'fast':
         return solve(A.T.dot(A), A.T.dot(b_mat))
 
-    elif method == 'qr':
-        q, r = qr(A)
-        return solve(r, q.T.dot(b_mat))
-
     elif method == 'ridge':
-        alpha = 0.00001
+        alpha = 0.0001
         X = np.dot(A.T, A)
         X.flat[::A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)
         return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
+
+    elif method == 'qr':
+        q, r = qr(A)
+        return solve(r, q.T.dot(b_mat))
+
+    elif method == 'lstsq':
+        return np.linalg.lstsq(A, b_mat)
+
+
+
 
 
 
@@ -208,7 +214,7 @@ class Fitter(object):
             para = para[self.model_disp:]
         self.num_exponentials = self.last_para.size - self.model_disp - 1
         self._build_xvec(para)
-        self.c = solve_mat(self.x_vec, self.data)
+        self.c = solve_mat(self.x_vec, self.data, 'ridge')
         self.model = np.dot(self.x_vec, self.c)
         self.c = self.c.T
 
@@ -217,6 +223,7 @@ class Fitter(object):
         Build the base (the folded functions) for given parameters.
         """
         para = np.array(para)
+        print para
         try:
             idx = (para != self._last)
         except AttributeError:
@@ -229,7 +236,7 @@ class Fitter(object):
             x0, w, taus = 0., para[0], para[1:]
             tau_idx = idx[1:]
 
-        if any(idx[:2]) or self.model_disp:
+        if any(idx[:2]) or self.model_disp or True:
 
             if self.model_coh:
                 x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
@@ -301,7 +308,7 @@ class Fitter(object):
 
         for i in xrange(self.data.shape[1]):
             A = self.xmat[:, i, :]
-            self.c[i, :] = ridge_regression(A, self.data[:, i], 0.00001)
+            self.c[i, :] = ridge_regression(A, self.data[:, i], 0.0001)
             self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
 
@@ -335,7 +342,7 @@ class Fitter(object):
 
     def _check_num_expontials(self, para):
         """
-        Check if num_exp changed and allocate space as neccersy.
+        Check if num_exp changed and allocate space as necessary.
         """
         new_num_exp = para.size - self.model_disp - 1
         if new_num_exp != self.num_exponentials:
@@ -356,23 +363,19 @@ class Fitter(object):
         p = lmfit.Parameters()
         for i in range(self.model_disp):
             p.add('p' + str(i), x0[i])
-        x0 = x0[self.model_disp:]
 
-        if not full_model:
-            p.add('x0', x0[0])
-            x0 = x0[1:]
+        x0 = x0[self.model_disp:]
 
         p.add('w', x0[0], min=0)
         num_exp = len(x0) - 1
         for i, tau in enumerate(x0[1:]):
             name = 't' + str(i)
             p.add(name, tau, vary=True)
-            if tau not in fixed_names:
+            if name not in fixed_names:
                 p[name].min = lower_bound
-
-        for k in fixed_names:
-            p[k].vary = False
-
+            else:
+                p[name].vary = False
+ 
         if fix_long:
             p['t' + str(num_exp - 1)].vary = False
 
@@ -396,7 +399,6 @@ class Fitter(object):
         for pi in (out[0]):
             print "{0: .3f} +- {1:.4f}".format(pi, np.exp(pi))
         return out
-
 
 def start_pymc(fitter, x0, bounds):
     import pymc
@@ -436,6 +438,7 @@ def f_compare(Ndata, Nparas, new_chi, best_chi, Nfix=1.):
                  Nfix, Ndata - Nparas)
 
 
+
 def mod_dof_f(dof):
     def f_mod(N, P, chi, old_chi, Nfix=1.):
         return f_compare(N, P + dof, chi, old_chi, Nfix)
@@ -443,28 +446,29 @@ def mod_dof_f(dof):
 
 
 if __name__ == '__main__':
+    pass
     #import pymc
-
-    coef = np.zeros((2, 400))
-    coef[0, :] = -np.arange(-300, 100) ** 2 / 100.
-    coef[1, :] = np.arange(-200, 200) ** 2 / 100.
-    t = np.linspace(0, 30, 300)
-    g = Fitter(np.arange(400), t, 0, False)
-    g.build_xvec([0.1, 0.3, 5, 16])
-    dat = np.dot(g.x_vec, coef)
-
-    dat += 10 * (np.random.random(dat.shape) - 0.5)
-    dat = dat * (1 + (np.random.random(dat.shape) - 0.5) * 0.20)
-    g = Fitter(np.arange(400), t, dat, 2, False, False)
-    x0 = [0.5, 0.2, 4, 20]
+#
+#    coef = np.zeros((2, 400))
+#    coef[0, :] = -np.arange(-300, 100) ** 2 / 100.
+#    coef[1, :] = np.arange(-200, 200) ** 2 / 100.
+#    t = np.linspace(0, 30, 300)
+#    g = Fitter(np.arange(400), t, 0, False)
+#    g.build_xvec([0.1, 0.3, 5, 16])
+#    dat = np.dot(g.x_vec, coef)
+#
+#    dat += 10 * (np.random.random(dat.shape) - 0.5)
+#    dat = dat * (1 + (np.random.random(dat.shape) - 0.5) * 0.20)
+#    g = Fitter(np.arange(400), t, dat, 2, False, False)
+#    x0 = [0.5, 0.2, 4, 20]
 
     #a = g.start_pymc(x0, [(0.2, 20), (0.2, 20)])
     #b = pymc.MCMC(a)
     #b.isample(10000, 1000)
     #pymc.Matplot.plot(b)
     #    #a=g.start_cmafit(x0)
-    a = g.start_lmfit(x0)
-    a.leastsq()
+#    a = g.start_lmfit(x0)
+ #   a.leastsq()
 #    lmfit.printfuncs.report_errors(a.params)
 #    #ar=g.chi_search(a[0])
 #    import matplotlib.pyplot as plt
