@@ -12,7 +12,7 @@ plt.rcParams['legend.columnspacing'] = 0.3
 plt.rcParams['legend.labelspacing'] = 0.3
 plt.rcParams['legend.loc'] = 'best'
 
-def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False):
+def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False, sas=False):
     """Plots the decay-asscoiated  """        
     num_exp = fitter.num_exponentials
     #fitter.last_para[-num_exp:] = np.sort(fitter.last_para[-num_exp:])
@@ -26,6 +26,8 @@ def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False):
     llim = plot_fastest
     
     dat_to_plot= fitter.c[:, llim:ulim]
+    if sas:
+        dat_to_plot = -dat_to_plot.sum(1)[:,None]+np.cumsum(dat_to_plot, 1)
     if normed: 
         dat_to_plot = dat_to_plot/np.abs(dat_to_plot).max(0)
     plt.plot(fitter.wl, dat_to_plot, lw=2)
@@ -217,7 +219,7 @@ def use_cmap(pl, cmap='RdBu'):
     cm = plt.get_cmap(cmap)
     idx = np.linspace(0, 1, len(pl))
     for i, p in enumerate(pl):
-        pl.set_color(cm(idx[i]))
+        p.set_color(cm(idx[i]))
     
 
 def make_legend_noerr(p, err, n):
@@ -227,3 +229,38 @@ def make_legend_noerr(p, err, n):
         val = str(np.around(p[i], -int(dig[i])))        
         l.append('$\\tau_' + str(int(i - 1)) + '$=' + val + ' ps')
     return l
+    
+    
+def _plot_kin_res(x):
+    import networkx as nx
+    res, c, A, g = fit(x[0], 'p')
+    clf()
+    subplot(131)
+    p1=plot(wl, c[:].T)
+    #plot(wl, -c[-1].T)
+    xlabel('cm-1')
+    ylabel('OD')
+    subplot(132)
+    xlabel('t')
+    ylabel('conc')
+    plot(f.t, A)
+    xscale('log')
+    subplot(133)
+    
+
+    for i in g.nodes():
+        for j in g[i]:        
+            g[i][j]['tau'] = '%2d'%g.edge[i][j]['tau']
+            print g[i][j]['tau']
+
+    pos = {'S1_hot':(0, 3), 'S1_warm':(0,2.3),  'S1':(0, 1.5),
+           'T_hot':(1, 1.5), 'T1':(1,1), 'S0': (0,0)}
+#pos = nx.spring_layout(g, pos)
+    col = [i.get_color() for i in p1]
+    nx.draw(g, pos, node_size=2000, node_color=col)        
+    nx.draw_networkx_edge_labels(g, pos)
+    figure()
+    for i in [0, 5, 10, 20, -1]:
+        plot(wl, f.data[i, :],'ro')
+        plot(wl, (f.data - res)[i, :],'k')
+        plot(wl, res[i,:])

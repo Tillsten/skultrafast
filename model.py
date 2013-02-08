@@ -10,12 +10,11 @@ from sklearn.linear_model import ridge_regression
 
 def make_A(tau):
     g=nx.DiGraph()
-    g.add_edge('S1_hot', 'S1_warm', tau=tau[3])
-    g.add_edge('S1_hot', 'T_hot', tau=tau[0])
+    g.add_edge('S1_hot', 'S1_warm', tau=tau[0])    
     g.add_edge('S1_warm', 'S1', tau=tau[1])
-    g.add_edge('S1', 'S0', tau=6600)
-    g.add_edge('T_hot', 'T1', tau=tau[2])
-    
+    g.add_edge('S1', 'S0', tau=6000)
+    g.add_edge('S1', 'T2', tau=tau[2])
+    #g.add_edge('T2','T1', tau=tau[3])
     #g.add_edge('S1', 'S0', tau=tau[2])
     a0 = nx.to_numpy_matrix(g, weight='tau')
     a = np.where(a0==0, 0, 1/a0)    
@@ -23,105 +22,85 @@ def make_A(tau):
     return a, g
    
 
-def sol_matexp(A, tlist, y0):
-    w, v = np.linalg.eig(A)
-    out = np.zeros((tlist.size, y0.size))
-    viy0 = np.linalg.solve(v, y0)    
-    for i, t in enumerate(tlist):
-        sol_t = (np.dot(v, np.exp(-w*t))).dot(viy0)
-        out[i, :] =  sol_t
-    return out
 
 def sol_matexp(A, tlist, y0):
     w, v = np.linalg.eig(A)
     iv = np.linalg.inv(v)
-    out = np.zeros((tlist.size, y0.size))
-    end = np.dot(np.linalg.inv(v), y0)
+    out = np.zeros((tlist.size, y0.size))    
     for i, t in enumerate(tlist):
         sol_t = np.dot(v,np.diag(np.exp(w*t))).dot(iv).dot(y0)
         out[i, :] =  sol_t
     return out
 
-from scipy.sparse.linalg import lsqr
-import sklearn.linear_model as lm
-import cvxpy 
-sol = lm.ElasticNet(alpha=0.001, l1_ratio=1., 
-                    positive=True, max_iter = 1e5, warm_start=1)
-def fit(p, mode='lm'):
-    a, g = make_A(p)       
+
+from skultrafast.lineshape import lorentz
+
+def make_state_spectra(para, x, state, shape='lorentz'):
+    names = [state + '_' + i for i in ('A', 'w', 'xc')]
+    vals = [para[i].value for i in names]    
+    return lorentz(x, *vals)
+
+def fit(p, x, mode='lm', has_spectral=True):
+    taus = [p[name].value for name in p if name.startswith('tau')]
+    a, g = make_A(taus)       
     y0 = np.zeros(a.shape[0])
-    print g.nodes()
-    y0[g.nodes().index('S1_hot')] += 1       
+    states =  g.nodes()
+    y0[states.index('S1_hot')] += 1       
     A = sol_matexp(a, f.t, y0)
-    bleach = -A.sum(1)
-    A = np.column_stack((A, bleach))
-    N, M = A.shape[1], f.data.shape[1]
-    c = np.empty((N, M))
-    x = cvxpy.variable(N, 1)
-    b = cvxpy.parameter(f.data.shape[0])             
-    #b = cvxpy.matrix(f.data[:, 0:1])    
-    A = cvxpy.matrix(A.copy())    
-    lamb = cvxpy.ones(N) * 0.0001
-    p = cvxpy.program(cvxpy.minimize(cvxpy.norm2(A*x-b+lamb*x)),
-                          [cvxpy.geq(x, 0)])
-    
-    for i in range(M):
-        b.value = cvxpy.matrix(f.data[:, i:i+1])            
-        p.solve(quiet=True)   
-        c[:, i] = x.value.squeeze()
-    #c = ridge_regression(A, f.data, 0.001).T    
-    res = f.data - A.dot(c)
-    
+    s0 = states.index('S0')
+    if has_spectral:
+        shapes = np.zeros((len(states), len(x)))
+        for i, st in enumerate(states):        
+            shapes[i, :] = make_state_spectra(p, x, st)
+        bleach = make_state_spectra(p, x, 'bleach')
+        bleach2 = make_state_spectra(p, x, 'bleach2')
+        bleach += bleach2
+        shapes = shapes + bleach
+        shapes[s0, :] -= bleach
+        fit = A.dot(shapes)
+        res = fit - f.data
+        
+    else:
+        N, M = A.shape[1], f.data.shape[1]
+        c = ridge_regression(A, f.data, 0.001).T    
+        res = f.data - A.dot(c)
+        
     if mode=='sum':
         return (res*res).sum() #+ 15*np.abs(np.diff(c, 2, 1)).sum()
     elif mode=='p':
-        return res, c, A, g
+        return res, A, g, shapes
     elif mode=='lm':        
         o = res.flatten()
         o = np.array(o)[:]
         print o.shape
         #o[-1] += 0.01*c.sum()  
-        return array(o[0,:])
+        return o
+
+def add_state(p, state, A, w, xc, min=0, vary=True):
+    p.add(state + '_A', A, min=min, vary=vary)
+    p.add(state + '_w', w, min=0, vary=vary)
+    p.add(state + '_xc', xc, min=0, vary=vary)
 
 import scipy.optimize as opt
-x0 = [5, 10, 500, 0.3]
+x0 = [2, 5, 100, 5]
 import lmfit
 p = lmfit.Parameters()
+
 for i, tau in enumerate(x0):
     p.add('tau'+str(i), tau, min=0)
-x = opt.leastsq(fit, x0, 'lm')
-#l = lmfit.Minimizer(fit, p, ['lm'])
-#l.leastsq()
-#x0 = [95., 11., 6600.]
-#x = cma.fmin(fit, x0, 5, bounds=[0, None],restarts=1)
-res, c, A, g = fit(x0, 'p')
-clf()
-subplot(131)
-p1=plot(wl, c[:-1].T)
-plot(wl, -c[-1].T)
-xlabel('cm-1')
-ylabel('OD')
-subplot(132)
-xlabel('t')
-ylabel('conc')
-plot(f.t, A)
-xscale('log')
-subplot(133)
+add_state(p, 'S1_hot', 40, 4, 1516)
+add_state(p, 'S1_warm', 45, 4, 1519)
+add_state(p, 'T1', 50, 4, 1515)
+add_state(p, 'T2', 40, 4, 1515)
+add_state(p, 'S1', 45, 4, 1520)
+add_state(p, 'S0', 0, 0, 0, vary=False)
+add_state(p, 'bleach', -40, 6, 1522, min=None)
+add_state(p, 'bleach2', -0, 6, 1505, min=None)
+
+mi = lmfit.Minimizer(fit, p, [f.wl])
+
+mi.leastsq()
+lmfit.report_errors(p)
 
 
-for i in g.nodes():
-    for j in g[i]:        
-        g[i][j]['tau'] = '%2d'%g.edge[i][j]['tau']
-        print g[i][j]['tau']
-
-pos = {'S1_hot':(0, 3), 'S1_warm':(0,2.3),  'S1':(0, 1.5),
-       'T_hot':(1, 1.5), 'T1':(1,1), 'S0': (0,0)}
-#pos = nx.spring_layout(g, pos)
-col = [i.get_color() for i in p1]
-nx.draw(g, pos, node_size=3000, node_color=col)        
-nx.draw_networkx_edge_labels(g, pos)
-figure()
-for i in [0, 5, 10, 20, -1]:
-    plot(wl, f.data[i, :],'ro')
-    plot(wl, (f.data - res)[i, :],'k')
-    plot(wl, res[i,:])
+res, A, g, shapes = fit(p, f.wl, 'p')
