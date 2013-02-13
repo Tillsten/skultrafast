@@ -53,8 +53,8 @@ def contiuenes_reg(X, ):
 taus = np.logspace(-1, 4, 200)
 #u, o = dv.binner(200, f.wl, f.data)
 #tup = dv.tup(o, f.t[:], u[11:,:])
-tup = dv.tup(f.wl, f.t, f.data)
-s = lm.MultiTaskElasticNet(rho=0.9,fit_intercept=False, max_iter=1e5)     
+tup = dv.tup(f.wl, f.t, m)
+s = lm.MultiTaskLasso(fit_intercept=True, max_iter=1e5)     
 X = _make_base(tup, taus)  
 s.warm_start = True 
 for i, alpha in enumerate(np.linspace(0.001, 0.05, 3)[::-1]):    
