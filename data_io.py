@@ -94,9 +94,9 @@ def save_txt_das(name, fitter):
     Saves the das of a fitter-obj in name.txt
     """
     f = fitter
-    spec = f.c.T[:, :-4] if f.model_coh else f.c.T
+    spec = f.c[:, :-4] if f.model_coh else f.c
     arr = np.column_stack((f.wl, spec))
-    offset = 2 + f.model_disp
+    offset = f.model_disp+1
     taus = np.hstack((0, f.last_para[offset:]))
     
     arr = np.vstack((taus, arr))
@@ -112,7 +112,7 @@ def make_report(fitter, info, raw=None):
     plot_funcs.a4_overview(g, 'pics\\' + name + '.png', title=title)
     save_txt_das(name + '_-DAS.txt', g)
     save_txt(name + '_data.txt', g.wl, g.t, g.data)
-    save_txt(name + '_fit.txt', g.wl, g.t, g.m)
+    save_txt(name + '_fit.txt', g.wl, g.t, g.model)
     if raw:
         save_txt(name + '_raw.txt', *raw)
 
