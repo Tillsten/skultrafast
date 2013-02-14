@@ -129,7 +129,16 @@ def solve_mat(A, b_mat, method='fast'):
     elif method == 'lstsq':
         return np.linalg.lstsq(A, b_mat)
 
-
+    elif method == 'lasso':
+        import sklearn.linear_model as lm
+        s = lm.Lasso(fit_intercept=False)
+        s.alpha = 0.004
+        s.fit(A, b_mat)
+        return s.coef_.T
+    
+    else:
+        raise ValueError('Unknow lsq method, use ridge, qr, fast or lasso')
+    
 
 
 
@@ -157,7 +166,7 @@ class Fitter(object):
         Array containing the time-coordinates.
     data :  ndarry(N,M)
         The 2d-data to fit.
-    model_coh : bool
+    model_coh : boolhttps://gist.github.com/Tillsten/00becc85f76c6d9ea2dd
         If the  model contains coherent artifacts at the time zero,
         defaults to False.
     model_disp : int
@@ -174,7 +183,8 @@ class Fitter(object):
 
         self.model_coh = model_coh
         self.model_disp = model_disp
-
+        self.lsq_method = 'ridge'
+    
         self.num_exponentials = -1
         self.weights = None
 
@@ -214,7 +224,7 @@ class Fitter(object):
             para = para[self.model_disp:]
         self.num_exponentials = self.last_para.size - self.model_disp - 1
         self._build_xvec(para)
-        self.c = solve_mat(self.x_vec, self.data, 'ridge')
+        self.c = solve_mat(self.x_vec, self.data, self.lsq_method)
         self.model = np.dot(self.x_vec, self.c)
         self.c = self.c.T
 
