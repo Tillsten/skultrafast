@@ -30,6 +30,7 @@ class ButtonList(QtGui.QWidget):
         layout = QtGui.QVBoxLayout()
         add_button = QtGui.QPushButton("Add Compartment")
         add_button.clicked.connect(parent.add_compartment)
+        
         layout.addWidget(add_button)
         self.setLayout(layout)
 
@@ -37,10 +38,13 @@ class ButtonList(QtGui.QWidget):
 class MyView(QtGui.QGraphicsView):
     def __init__(self, parent):
         QtGui.QGraphicsView.__init__(self, parent)
-        add_button = QtGui.QPushButton("Add compartment")
+        
         self.setGeometry(QtCore.QRect(100, 100, 250, 250))
         self.scene = QtGui.QGraphicsScene(self)
         self.scene.setSceneRect(QtCore.QRectF(0, 0, 200, 200))
+        self.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.setRenderHint(QtGui.QPainter.HighQualityAntialiasing)
+        self.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
         self.setScene(self.scene)
         self.compartments = []
         self.transitions = []
@@ -115,9 +119,14 @@ class Arrow(QtGui.QGraphicsLineItem):
         return path
 
     def updatePosition(self):
-        line = QtCore.QLineF(self.mapFromItem(self.myStartItem, 0, 0),
-                             self.mapFromItem(self.myEndItem, 0, 0))
-        self.setLine(line)
+        pass
+#        
+#        p1 = self.mapFromItem(self.myStartItem, self.myStartItem.boundingRect())
+#        
+#        p1, p2 = facing_sides(p1, p2)
+#                              
+#        self.setLine(QtCore.QLineF(p1, p2))
+        
 
     def paint(self, painter, option, widget=None):
         if (self.myStartItem.collidesWithItem(self.myEndItem)):
@@ -132,8 +141,10 @@ class Arrow(QtGui.QGraphicsLineItem):
         painter.setPen(myPen)
         painter.setBrush(self.myColor)
 
-        centerLine = QtCore.QLineF(myStartItem.pos(), myEndItem.pos())
-        self.setLine(QtCore.QLineF(myEndItem.pos(), myStartItem.pos()))
+        #centerLine = QtCore.QLineF(myStartItem.pos(), myEndItem.pos())
+        p1, p2 = facing_sides(myStartItem.sceneBoundingRect(),
+                              myEndItem.sceneBoundingRect())
+        self.setLine(QtCore.QLineF(p1, p2))
         line = self.line()
 
         angle = math.acos(line.dx() / line.length())
@@ -142,7 +153,7 @@ class Arrow(QtGui.QGraphicsLineItem):
 
         arrowP1 = line.p1() + QtCore.QPointF(
             math.sin(angle + math.pi / 3.0) * arrowSize,
-            math.cos(angle + math.pi / 3) * arrowSize)
+            math.cos(angle + math.pi / 3.0) * arrowSize)
         arrowP2 = line.p1() + QtCore.QPointF(
             math.sin(angle + math.pi - math.pi / 3.0) * arrowSize,
             math.cos(angle + math.pi - math.pi / 3.0) * arrowSize)
@@ -160,8 +171,24 @@ class Arrow(QtGui.QGraphicsLineItem):
             painter.drawLine(myLine)
             myLine.translate(0, -8.0)
             painter.drawLine(myLine)
-
-
+            
+def facing_sides(rect_a, rect_b):
+    
+    if rect_a.left() < rect_b.left():    
+        left_rect = rect_a
+        right_rect = rect_b
+        switch = True
+    else:
+        left_rect = rect_b
+        right_rect = rect_a
+        switch = False
+        
+    left_point = left_rect.right() + 5, (left_rect.top() + left_rect.bottom())/2.
+    right_point = right_rect.left() - 5, (right_rect.top() + right_rect.bottom())/2.
+    if switch:
+        left_point, right_point = right_point, left_point
+    return QtCore.QPointF(*left_point), QtCore.QPointF(*right_point)
+    
 class AbstractItem(QtGui.QGraphicsRectItem):
     def __init__(self, *args):
         super(AbstractItem, self).__init__(*args)
@@ -186,7 +213,8 @@ class AbstractItem(QtGui.QGraphicsRectItem):
     def itemChange(self, change, val):
         if change == self.ItemPositionHasChanged:
             for arr in self.arrows:
-                arr.updatePosition()
+                pass
+                # arr.updatePosition()
         return QtGui.QGraphicsItem.itemChange(self, change, val)
 
 
