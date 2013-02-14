@@ -49,6 +49,7 @@ class Model(object):
             mat[inv_idx[t.to_comp], i] = t.rate 
             if t.qu_yield != 1. :
                 mat[inv_idx[t.to_comp], i] = t.rate * t.qu_yield
+        self.mat = mat
         return mat
     
     def get_compartments(self):
@@ -74,6 +75,13 @@ class Model(object):
             return ret
         return sol_fun #autowrap(fun,'C', backend='CYTHON', tempdir='..')
 
+    
+    def get_trans(self, y0, taus, t):
+        """
+        Return the solution
+        """
+        print mat.
+        
 def _make_progstr(transitions, fun, e, r):    
     prog_str = 'out = np.zeros((t.size, {0}))\n'.format(fun.shape[0])
     #prog_str += 'exp = np.exp\n'
@@ -127,6 +135,6 @@ if __name__ == '__main__':
     print get_comparments(model.transitions)
     print model.build_matrix()
     
-    fu = model.get_func(y0)
+    #fu = model.get_func(y0)
     tau = np.array([1., 10., 100, 300, 10000, 10000])
     plot(t, fu(tau, t))
