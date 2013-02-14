@@ -116,7 +116,7 @@ def solve_mat(A, b_mat, method='fast'):
         return solve(A.T.dot(A), A.T.dot(b_mat))
 
     elif method == 'ridge':
-        alpha = 0.0001
+        alpha = 0.001
         X = np.dot(A.T, A)
         X.flat[::A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)
