@@ -217,7 +217,7 @@ def use_cmap(pl, cmap='RdBu'):
     cm = plt.get_cmap(cmap)
     idx = np.linspace(0, 1, len(pl))
     for i, p in enumerate(pl):
-        pl.set_color(cm(idx[i]))
+        p.set_color(cm(idx[i]))
     
 
 def make_legend_noerr(p, err, n):
