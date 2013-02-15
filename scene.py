@@ -7,6 +7,30 @@ Created on Tue Feb 12 15:19:05 2013
 
 import sys, math
 from PyQt4 import QtGui, QtCore
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb 15 16:44:12 2013
+
+@author: tillsten
+"""
+from PyQt4.QtGui import *
+
+
+class SchemaIcon(QGraphicsPixmapItem):    
+    def __init__(self, *args):
+        super(SchemaIcon, self).__init__(*args)
+        self.setAcceptHoverEvents(True)                
+        pixmap = QPixmap('flop.png')
+        self.setPixmap(pixmap)
+        self.setScale(0.5)
+        self.setGraphicsEffect(QGraphicsDropShadowEffect())        
+    
+    def hoverEnterEvent(self, ev):
+        self.setGraphicsEffect(QGraphicsColorizeEffect())
+    
+    def hoverLeaveEvent(self, ev):
+        print 'yep'
+        self.setGraphicsEffect(QGraphicsDropShadowEffect())
 
 
 class CompartmentWindow(QtGui.QWidget):
