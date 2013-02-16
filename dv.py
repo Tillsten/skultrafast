@@ -8,8 +8,8 @@ tup = namedtuple('Result','wl t data')
 
 def add_to_cls(cls):
     def function_enum(fn):
-        setattr(cls, fn.__name__, staticmethod(fn))        
-        return fn 
+        setattr(cls, fn.__name__, staticmethod(fn))
+        return fn
     return function_enum
 
 def add_tup(str_lst):
@@ -19,7 +19,7 @@ def add_tup(str_lst):
         return fn
     return function_enum
 
-    
+
 def binner(n, wl, dat):
     """ Given wavelengths and data it bins the data into n-wavelenths.
     """
@@ -40,10 +40,10 @@ def fi(w,x):
 def subtract_background(dat, t, tn, offset=0.3):
     for i in range(dat.shape[1]):
         mask = (t-tn[i]) < -offset
-        corr=dat[mask, i].mean()
+        corr = dat[mask, i].mean()
         dat[:, i] -= corr
     return dat
-    
+
 
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
@@ -119,7 +119,7 @@ def savitzky_golay(y, window_size, order, deriv=0):
 
 def calc_error(args):
     """
-    Calculates the error from a leastsq fit infodict.    
+    Calculates the error from a leastsq fit infodict.
     """
     p, cov, info, mesg, success = args
     chisq = sum(info["fvec"] * info["fvec"])
@@ -174,12 +174,12 @@ def equal_color(plots1,plots2):
         raise ValueError
     for (plot1,plot2) in zip(plots1,plots2):
         plot2.set_color(plot1.get_color())
-        
+
 
 def find_linear_part(t):
     """
     Finds the first value of an 1d-array where the difference betweeen
-    consecutively value varys.    
+    consecutively value varys.
     """
     d=np.diff(t)
     return np.argmin(np.abs(d-d[0])<0.00001)
@@ -188,24 +188,24 @@ def rebin(a, new_shape):
     """
     Resizes a 2d array by averaging or repeating elements,
     new dimensions must be integral factors of original dimensions
-    
+
     Parameters
     ----------
     a : array_like
     Input array.
     new_shape : tuple of int
     Shape of the output array
-    
+
     Returns
     -------
     rebinned_array : ndarray
     If the new shape is smaller of the input array, the data are averaged,
     if the new shape is bigger array elements are repeated
-    
+
     See Also
     --------
     resize : Return a new array with the specified shape.
-    
+
     Examples
     --------
     >>> a = np.array([[0, 1], [2, 3]])
@@ -215,7 +215,7 @@ def rebin(a, new_shape):
     [0, 0, 0, 1, 1, 1],
     [2, 2, 2, 3, 3, 3],
     [2, 2, 2, 3, 3, 3]])
-    
+
     >>> c = rebin(b, (2, 3)) #downsize
     >>> c
     array([[ 0. , 0.5, 1. ],
@@ -228,22 +228,22 @@ def rebin(a, new_shape):
         return a.reshape((m,M/m,n,N/n)).mean(3).mean(1)
     else:
         return np.repeat(np.repeat(a, m/M, axis=0), n/N, axis=1)
-    
+
 from scipy.sparse.linalg import svds
 def efa(dat, n, reverse=False):
-    """ 
+    """
     Doing evolving factor analyis.
     """
-    if reverse: 
+    if reverse:
         data=dat[::-1, :]
     else:
         data=dat
-        
+
     out=np.zeros((data.shape[0], n))
     for i in range(6, data.shape[0]):
         sv = svds(data[:i, :], min(i,n))[1]
         print sv
-        out[i, :]=sv        
+        out[i, :]=sv
     return out
 
 #from sklearn.decomposition import PCA
@@ -259,39 +259,39 @@ def moving_efa(dat, n, ncols, method='svd'):
         out[i,:] = sv
     return out
 
-from scipy.optimize import nnls 
+from scipy.optimize import nnls
 
 
 #from sklearn.linear_model import Ridge
 #r=Ridge(1.0, False)
 
 
-def als(dat, n=5):   
+def als(dat, n=5):
 
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
-    v0=v.T[:n]           
+    v0=v.T[:n]
     u0 = np.random.random(u0.shape)+0.1
     v0 = np.random.random(v0.shape)+0.1
     res = np.linalg.lstsq(u0.T,dat)[1].sum()
     res = 10000.
     for i in range(15000):
         if i % 2 == 0:
-            v0 = do_nnls(u0.T, dat)                      
+            v0 = do_nnls(u0.T, dat)
             v0 /= np.max(v0, 1)[:, None]
-            res_n = ((u0.T.dot(v0) - dat)**2).sum()            
-        else:
-            
-            u0, res_n, t , t = np.linalg.lstsq(v0.T, dat.T)            
-            ##r.fit(dat.T, v0.T)
-            #u0 = r.coef_[:]            
             res_n = ((u0.T.dot(v0) - dat)**2).sum()
-            
-            if abs(res-res_n) < 0.001:             
-                break                
+        else:
+
+            u0, res_n, t , t = np.linalg.lstsq(v0.T, dat.T)
+            ##r.fit(dat.T, v0.T)
+            #u0 = r.coef_[:]
+            res_n = ((u0.T.dot(v0) - dat)**2).sum()
+
+            if abs(res-res_n) < 0.001:
+                break
             else:
                 print i, res_n
-                res = res_n  
+                res = res_n
     return u0.T, v0.T
 
 
@@ -299,21 +299,21 @@ def als(dat, n=5):
 def do_nnls(A,b):
     n = b.shape[1]
     out = np.zeros((A.shape[1], n))
-    for i in xrange(n):              
+    for i in xrange(n):
         #mls.bounded_lsq(A.T, b[:,i], np.zeros((A.shape[1],1)), np.ones((A.shape[1],1))).shape
         out[:,i] =  nnls(A, b[:,i])[0]
     return out
-    
 
 
-    
+
+
 if __name__=='__main__':
     u, v = als(g.data.T, 5)
     subplot(211).plot(w, u)
     subplot(212).plot(t, v)
     #figure(1)
     #clf()
-    #imshow(a-u.dot(v.T).T)    
+    #imshow(a-u.dot(v.T).T)
     #o = efa(a, 10)
     #o2 = efa(a,10,True)
     #plot(t,log(o),'k')

@@ -16,23 +16,6 @@ Created on Fri Feb 15 16:44:12 2013
 from PyQt4.QtGui import *
 
 
-class SchemaIcon(QGraphicsPixmapItem):    
-    def __init__(self, *args):
-        super(SchemaIcon, self).__init__(*args)
-        self.setAcceptHoverEvents(True)                
-        pixmap = QPixmap('flop.png')
-        self.setPixmap(pixmap)
-        self.setScale(0.5)
-        self.setGraphicsEffect(QGraphicsDropShadowEffect())        
-    
-    def hoverEnterEvent(self, ev):
-        self.setGraphicsEffect(QGraphicsColorizeEffect())
-    
-    def hoverLeaveEvent(self, ev):
-        print 'yep'
-        self.setGraphicsEffect(QGraphicsDropShadowEffect())
-
-
 class CompartmentWindow(QtGui.QWidget):
     def __init__(self, parent=None):
         super(CompartmentWindow, self).__init__(parent)
@@ -54,7 +37,7 @@ class ButtonList(QtGui.QWidget):
         layout = QtGui.QVBoxLayout()
         add_button = QtGui.QPushButton("Add Compartment")
         add_button.clicked.connect(parent.add_compartment)
-        
+
         layout.addWidget(add_button)
         self.setLayout(layout)
 
@@ -62,7 +45,7 @@ class ButtonList(QtGui.QWidget):
 class MyView(QtGui.QGraphicsView):
     def __init__(self, parent):
         QtGui.QGraphicsView.__init__(self, parent)
-        
+
         self.setGeometry(QtCore.QRect(100, 100, 250, 250))
         self.scene = QtGui.QGraphicsScene(self)
         self.scene.setSceneRect(QtCore.QRectF(0, 0, 200, 200))
@@ -144,13 +127,13 @@ class Arrow(QtGui.QGraphicsLineItem):
 
     def updatePosition(self):
         pass
-#        
+#
 #        p1 = self.mapFromItem(self.myStartItem, self.myStartItem.boundingRect())
-#        
+#
 #        p1, p2 = facing_sides(p1, p2)
-#                              
+#
 #        self.setLine(QtCore.QLineF(p1, p2))
-        
+
 
     def paint(self, painter, option, widget=None):
         if (self.myStartItem.collidesWithItem(self.myEndItem)):
@@ -195,10 +178,10 @@ class Arrow(QtGui.QGraphicsLineItem):
             painter.drawLine(myLine)
             myLine.translate(0, -8.0)
             painter.drawLine(myLine)
-            
+
 def facing_sides(rect_a, rect_b):
-    
-    if rect_a.left() < rect_b.left():    
+
+    if rect_a.left() < rect_b.left():
         left_rect = rect_a
         right_rect = rect_b
         switch = True
@@ -206,13 +189,13 @@ def facing_sides(rect_a, rect_b):
         left_rect = rect_b
         right_rect = rect_a
         switch = False
-        
+
     left_point = left_rect.right() + 5, (left_rect.top() + left_rect.bottom())/2.
     right_point = right_rect.left() - 5, (right_rect.top() + right_rect.bottom())/2.
     if switch:
         left_point, right_point = right_point, left_point
     return QtCore.QPointF(*left_point), QtCore.QPointF(*right_point)
-    
+
 class AbstractItem(QtGui.QGraphicsRectItem):
     def __init__(self, *args):
         super(AbstractItem, self).__init__(*args)
