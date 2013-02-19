@@ -33,7 +33,7 @@ def binner(n, wl, dat):
 
 def fi(w,x):
     """needs global w as array. gives idnex to nearest value"""
-    idx = (abs(w - x)).argmin()
+    idx = (np.abs(w[None,:] - np.atleast_1d(x)[:, None])).argmin(0)
     return idx
 
 
