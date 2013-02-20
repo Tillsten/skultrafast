@@ -120,7 +120,8 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False, lw=1.5):
         plt.title(title)
 
 
-def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear'):
+def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear',
+                    plot_res=False):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]), 1)    
     names = [str(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])]
@@ -130,19 +131,22 @@ def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear'):
     else:
         t = fitter.t + fitter.last_para[0]
     
-    p1 = plt.plot(t,  fitter.data[:, idx], '^')
+    data_to_plot =  fitter.data[:, idx]
+    if plot_res: 
+        data_to_plot -= fitter.model[:, idx]
+    p1 = plt.plot(t, data_to_plot , '^')
+    
     if pol: 
-        p2 = plt.plot(fitter.t + fitter.last_para[fitter.model_disp],
-                      fitter.data[:, idx + fitter.data.shape[1] / 2], 'o') 
+        p2 = plt.plot(t, fitter.data[:, idx + fitter.data.shape[1] / 2], 'o') 
         dv.equal_color(p1, p2)
     
     plt.legend(names, scatterpoints=1, numpoints=1)
-    if plot_fit and hasattr(fitter,'model'):
-       
+    
+    if plot_fit and hasattr(fitter,'model'):       
         plt.plot(t, fitter.model[:, idx], 'k')
         if pol:
-            plt.plot(fitter.t + fitter.last_para[fitter.model_disp], 
-                     fitter.m[:, idx + fitter.data.shape[1] / 2], 'k')
+            plt.plot(t, 
+                     fitter.model[:, idx + fitter.data.shape[1] / 2], 'k')
             
     plt.autoscale(1, tight=1)
     plt.xlabel(units['y'])
