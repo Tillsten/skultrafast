@@ -19,6 +19,11 @@ def add_tup(str_lst):
         return fn
     return function_enum
 
+def fs2cm(t):
+    return 1/(t * 3e-5)
+    
+def cm2fs(cm):
+    return  1/(cm * 3e-5)
 
 def binner(n, wl, dat):
     """ Given wavelengths and data it bins the data into n-wavelenths.
