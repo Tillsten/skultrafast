@@ -369,11 +369,12 @@ class Fitter(object):
         return np.sum(self.res(para) ** 2)
 
     def start_lmfit(self, x0, fixed_names=[], lower_bound=0.3,
-                    fix_long=True, full_model=1):
+                    fix_long=True, fix_disp=False, full_model=1):
         p = lmfit.Parameters()
         for i in range(self.model_disp):
             p.add('p' + str(i), x0[i])
-
+            if fix_disp:
+                p['p' + str(i)].vary = False
         x0 = x0[self.model_disp:]
 
         p.add('w', x0[0], min=0)

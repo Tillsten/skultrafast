@@ -14,7 +14,7 @@ from qtdataflow.view import PixmapNodeView
 from PyQt4.QtGui import QFileDialog, QApplication
 from skultrafast.dv import tup
 from skultrafast.fitter import Fitter
-#from skultrafast.gui.traits_gui import MainWindow
+from skultrafast.gui.traits_gui import MainWindow
 
 import numpy as np
 
@@ -73,7 +73,7 @@ class ShowDat(Node):
     
     def show_widget(self):
         tup = self.in_conn[0].get()
-        #MainWindow(fitter=Fitter(tup)).edit_traits()
+        MainWindow(fitter=Fitter(tup)).edit_traits()
         
         
         
