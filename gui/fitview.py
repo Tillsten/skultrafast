@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams['font.size'] = 8
 import numpy as np
 import cPickle
-from dv import loader_func
+
 from dv import concate_data
 
 
