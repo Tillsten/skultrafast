@@ -318,7 +318,7 @@ class Fitter(object):
 
         for i in xrange(self.data.shape[1]):
             A = self.xmat[:, i, :]
-            self.c[i, :] = ridge_regression(A, self.data[:, i], 0.0001)
+            self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
             self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
 
