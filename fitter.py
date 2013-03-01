@@ -113,7 +113,7 @@ def solve_mat(A, b_mat, method='fast'):
     Returns the solution for the least squares problem |Ax - b_i|^2.
     """
     if method == 'fast':
-        return solve(A.T.dot(A), A.T.dot(b_mat))
+        return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
 
     elif method == 'ridge':
         alpha = 0.001
@@ -122,9 +122,13 @@ def solve_mat(A, b_mat, method='fast'):
         Xy = np.dot(A.T, b_mat)
         return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
 
-    elif method == 'qr':
-        q, r = qr(A)
-        return solve(r, q.T.dot(b_mat))
+    elif method == 'qr':        
+        cq, r = linalg.qr_multiply(A, b_mat)
+        return linalg.solve_triangular(r, cq)        
+        
+    elif method == 'cho':
+        c, l = linalg.cho_factor( A.T.dot(A))        
+        return linalg.cho_solve((c, l), A.T.dot(b_mat))
 
     elif method == 'lstsq':
         return np.linalg.lstsq(A, b_mat)
@@ -271,7 +275,7 @@ class Fitter(object):
         self.residuals = (self.model - self.data)
         if not self.weights is None:
             self.residuals *= self.weights
-        return self.residuals.flatten()
+        return self.residuals.ravel()
 
     def full_res(self, para):
         """
@@ -282,7 +286,7 @@ class Fitter(object):
         self.residuals = (self.model - self.data)
         if not self.weights is None:
             self.residuals *= self.weights
-        return self.residuals.flatten()
+        return self.residuals.ravel()
 
     def make_full_model(self, para):
         """
