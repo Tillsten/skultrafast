@@ -53,15 +53,21 @@ def contiuenes_reg(X, ):
 taus = np.logspace(-1, 4, 200)
 #u, o = dv.binner(200, f.wl, f.data)
 #tup = dv.tup(o, f.t[:], u[11:,:])
-tup = dv.tup(f.wl, f.t, m)
-s = lm.MultiTaskLasso(fit_intercept=True, max_iter=1e5)     
+k, nwl = dv.binner(100, f.wl, m.data)
+k /= k[-2:-1,:]
+tup = dv.tup(nwl, m.t[35:], k[35:,:])
+
+s = lm.Lasso(fit_intercept=True, max_iter=1e5)     
 X = _make_base(tup, taus)  
 s.warm_start = True 
-for i, alpha in enumerate(np.linspace(0.001, 0.05, 3)[::-1]):    
+for i, alpha in enumerate(np.linspace(0.001, 0.03, 3)):    
     s.alpha = alpha
     s.fit(X, tup.data)
     subplot(3,1, i+1)
     title(str(alpha))
-    pcolormesh(tup.wl, taus, (s.coef_).T)#/np.abs(a[:800, :]).max(1)[:, None]).T)
+    normed = s.coef_/np.abs(s.coef_).max(0)[None,:]
+    pcolormesh(tup.wl, taus, s.coef_)
     yscale('log')
+    #clim(-abs(s.coef_).max(), abs(s.coef_).max())
+    set_cmap(cm.RdBu)
 
