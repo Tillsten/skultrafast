@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 from numpy.linalg import solve, qr
 from scipy import linalg
-from scipy.special import erfc #errorfunction
+#from scipy.special import erfc #errorfunction
 from scipy.optimize import leastsq
 from scipy.stats import f #fisher
 from skultrafast import dv, zero_finding
@@ -18,41 +18,112 @@ except ImportError:
     has_sklearn = False
 
 
-
 sq2 = np.sqrt(2)
+from numba import autojit, vectorize, f8, jit
 
-import numexpr as ne
 
-ne.set_vml_accuracy_mode('fast')
-def _fold_exp(tt, w, tz, tau):
+        
+from math import exp, erfc
+
+
+
+   
+#@vectorize.vectorize([f8(f8)])
+@jit('f8(f8)')
+def fast_erfc(x):    
+    a1 = 0.278393 
+    a2 = 0.230389 
+    a3 = 0.000972 
+    a4 = 0.078108    
+    smaller = x < 0
+    if smaller:
+        x = x * -1.
+    bot = 1 + a1*x + a2*x*x +a3*x*x*x + a4*x*x*x*x
+    ret = 1./(bot*bot*bot*bot)    
+    
+    if smaller:
+        return -ret + 2.
+    else: 
+        return  ret 
+fast_erfc(0)
+    
+
+@jit('f8(f8, f8, f8, f8)')
+def fast_fit_func(t, tz, w, k):    
+    t = t - tz                
+    if t < -2.5 * w:
+        return 0.
+    elif t < 2.5 * w:
+        #print -t/w + w*k/2., w, k, t
+        return exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
+    elif t < 5 * 1/k:
+        return exp(k* (w*w*k/ (4.0) - t))
+    else:
+        return 0.
+
+@jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])        
+def full_fast_fit(t_arr, tz, w, tau_arr):
+    n, m = t_arr.shape
+    l = tau_arr.size
+    out = np.empty((l, m, n))
+    for tau_idx in range(l):
+        k = 1 / tau_arr[tau_idx]        
+        for j in range(m):
+            for i in range(n):            
+                out[tau_idx, j, i] = fast_fit_func(t_arr[i, j], -tz, w, k)                  
+    return out.T
+                
+taus = np.array([2., 30.])
+t_array = np.subtract.outer(np.linspace(-5, 30, 500), 
+                                np.linspace(-0, 0, 5))
+w = .2
+#    
+plot(np.linspace(-5, 30, 500), full_fast_fit(t_array, 0., w,  taus)[:, 0, :])
+
+#@jit(f8[:, : , :], [f8[:, :], f8, f8, f8[:]])
+#def _fold_exp(tt, w, tz, tau):
+#    """
+#    Returns the values of the folded exponentials for given parameters.
+#
+#    Parameters
+#    ----------
+#    tt:  ndarray(N)
+#        Array containing the time-coordinates
+#    w:  float
+#        The assumed width/sq2
+#    tz: float
+#        The assumed time zero.
+#    tau: ndarray(M)
+#        The M-decay rates.
+#
+#    Returns
+#    -------
+#    y: ndarray
+#       Folded exponentials for given taus.
+#    """    
+#    #k = 1 / (tau[..., None, None])
+#    #t = (tt + tz).T[None, ...]
+#    fast_fit_func(tt[None, :, :], tz, w, tau[:, None, None])
+#    #y = np.exp(k * (ws * ws * k / (4.0) - t)) * 0.5 * fast_erfc(-t / ws + ws * k / (2.0))    
+#    #y /= np.max(np.abs(y), 0)
+#    return y.T
+    
+_fold_exp = full_fast_fit
+
+def _fold_ndgaussian(base, w_in_steps, ):
     """
-    Returns the values of the folded exponentials for given parameters.
-
-    Parameters
-    ----------
-    tt:  ndarray(N)
-        Array containing the time-coordinates
-    w:  float
-        The assumed width/sq2
-    tz: float
-        The assumed time zero.
-    tau: ndarray(M)
-        The M-decay rates.
-
-    Returns
-    -------
-    y: ndarray
-       Folded exponentials for given taus.
-"""
-    ws = w
-    k = 1 / (tau[..., None, None])
-    t = (tt + tz).T[None, ...]
-    y = ne.evaluate('exp(k * (ws * ws * k / (4.0) - t))')
-    y *= 0.5 * erfc(-t / ws + ws * k / (2.0))#/(ws*np.sqrt(2*np.pi))
-    #y /= np.max(np.abs(y), 0)
-    return y.T
-
-
+    Using scipy ndimage gaussian filter for convolution.
+    
+    Parameter
+    ---------
+    base: ndarray(N, M, K)
+        vectors to be convoluted along the 
+        
+    """
+    from scipy.ndimage import gaussian_filter1d
+    return gaussian_filter1d()
+    
+#@jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])
 def _exp(tt, w, tz, tau):
     """
     Returns the values of the exponentials for given parameters.
@@ -98,15 +169,19 @@ def _coh_gaussian(t, w, tz):
     """
     w = w / sq2
     tt = t + tz
-    y = ne.evaluate(
-        'where(tt/w < 4, exp(-0.5 * (tt / w) ** 2) / (w * sqrt(2 * 3'
-        '.14159265)), 0)')
+    y = np.where(tt < 4 * w, np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * 3.14159265)), 0)
+    y #= np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * 3.14159265))    
     y = np.tile(y[..., None], (1, 1, 4))
     y[..., 1] *= (-tt / w ** 2)
     y[..., 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
     y[..., 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
     y /= np.max(np.abs(y), 0)
     return y
+
+
+
+
+    
 
 def solve_mat(A, b_mat, method='fast'):
     """
