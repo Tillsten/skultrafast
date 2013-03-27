@@ -26,7 +26,10 @@ def cm2fs(cm):
     return  1/(cm * 3e-5)
 
 def binner(n, wl, dat):
-    """ Given wavelengths and data it bins the data into n-wavelenths.
+    """ 
+    Given wavelengths and data it bins the data into n-wavelenths.
+    Returns bdata and bwl    
+    
     """
     idx=np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
     binned=np.empty((dat.shape[0], n))
@@ -38,8 +41,11 @@ def binner(n, wl, dat):
 
 def fi(w,x):
     """needs global w as array. gives idnex to nearest value"""
-    idx = (np.abs(w[None,:] - np.atleast_1d(x)[:, None])).argmin(0)
-    return idx
+    try:
+        len(x)
+    except TypeError:
+        x = [x]        
+    return [np.argmin(np.abs(w-i)) for i in x]
 
 
 def subtract_background(dat, t, tn, offset=0.3):
@@ -121,6 +127,12 @@ def savitzky_golay(y, window_size, order, deriv=0):
     lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
     y = np.concatenate((firstvals, y, lastvals))
     return np.convolve( m, y, mode='valid')
+
+def apply_sg(y, window_size, order, deriv=0):
+    out = np.zeros_like(y)
+    for i in range(y.shape[1]):
+        out[:, i] = savitzky_golay(y[:, i], window_size, order, deriv)
+    return out
 
 def calc_error(args):
     """
