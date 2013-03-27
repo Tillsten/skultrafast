@@ -6,7 +6,7 @@ import numpy as np
 import dv, data_io, zero_finding
 
 plt.rcParams['font.size']=9
-plt.rcParams['legend.fontsize'] = 'x-small'
+plt.rcParams['legend.fontsize'] = 'small'
 plt.rcParams['legend.borderpad'] = 0.1
 plt.rcParams['legend.columnspacing'] = 0.3
 plt.rcParams['legend.labelspacing'] = 0.3
@@ -82,7 +82,8 @@ def plot_diagnostic(fitter):
     ax.stem(range(1, 11), s[:10])
     ax.set_xlim(0, 12)
 
-def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False, lw=1.5):
+def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False,
+                 cm='Spectral', lw=1.5):
     """
     Plots the transient spectra of an fitter object.
     """
@@ -107,6 +108,11 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False, lw=1.5):
                              tn, t0, tp).data    
     
     p1 = plt.plot(fitter.wl, specs[:, :fitter.wl.size].T, lw=2*lw)    
+
+    if cm:
+        use_cmap(p1, cmap=cm) 
+        
+    
     if pol:
         p2 = plt.plot(fitter.wl, specs[:, fitter.wl.size:].T, lw=lw)    
         dv.equal_color(p1, p2)
