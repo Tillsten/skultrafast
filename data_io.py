@@ -130,6 +130,17 @@ def svd_filter(d, n=10):
     s[n:] = 0.
     return np.dot(u, np.dot(np.diag(s), v))
 
+import numba 
+@numba.autojit
+def sort_scans(data):
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            for k in range(data.shape[2]):
+                for l in range(data.shape[3]):
+                    col = data[i, j, k , l , :]
+                    k = np.argsort(np.abs(col-np.mean(col)))            
+                    data[i, j, k , l , :] = col[k]
+    
 
 import re
 def extract_freqs_from_gaussianlog(fname):
