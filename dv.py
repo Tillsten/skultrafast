@@ -45,7 +45,11 @@ def fi(w,x):
         len(x)
     except TypeError:
         x = [x]        
-    return [np.argmin(np.abs(w-i)) for i in x]
+    ret =  [np.argmin(np.abs(w-i)) for i in x]
+    if len(ret)==1:
+        return ret[0]
+    else:
+        return ret
 
 
 def subtract_background(dat, t, tn, offset=0.3):

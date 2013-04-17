@@ -80,7 +80,7 @@ class Model(object):
         """
         Return the solution
         """
-        print mat.
+       #pass  print mat.
         
 def _make_progstr(transitions, fun, e, r):    
     prog_str = 'out = np.zeros((t.size, {0}))\n'.format(fun.shape[0])

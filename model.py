@@ -21,7 +21,7 @@ def sol_matexp(A, tlist, y0):
     return out
 
 
-from skultrafast.lineshape import lorentz
+from skultrafast.lineshapes import lorentz
 
 def make_state_spectra(para, x, state, shape='lorentz'):
     names = [state + '_' + i for i in ('A', 'w', 'xc')]

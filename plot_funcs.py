@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import dv, data_io, zero_finding
 
-plt.rcParams['font.size']=9
-plt.rcParams['legend.fontsize'] = 'small'
-plt.rcParams['legend.borderpad'] = 0.1
-plt.rcParams['legend.columnspacing'] = 0.3
-plt.rcParams['legend.labelspacing'] = 0.3
+#plt.rcParams['font.size']=9
+#plt.rcParams['legend.fontsize'] = 'small'
+#plt.rcParams['legend.borderpad'] = 0.1
+#plt.rcParams['legend.columnspacing'] = 0.3
+#plt.rcParams['legend.labelspacing'] = 0.3
 plt.rcParams['legend.loc'] = 'best'
 
 def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False, sas=False):
