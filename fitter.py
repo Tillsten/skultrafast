@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 from numpy.linalg import solve, qr
 from scipy import linalg
-from scipy.special import erfc #errorfunction
+#from scipy.special import erfc #errorfunction
 from scipy.optimize import leastsq
 from scipy.stats import f #fisher
 from skultrafast import dv, zero_finding
@@ -17,103 +17,14 @@ try:
 except ImportError:
     has_sklearn = False
 
-
-
-sq2 = np.sqrt(2)
-
-import numexpr as ne
-
-ne.set_vml_accuracy_mode('fast')
-def _fold_exp(tt, w, tz, tau):
-    """
-    Returns the values of the folded exponentials for given parameters.
-
-    Parameters
-    ----------
-    tt:  ndarray(N)
-        Array containing the time-coordinates
-    w:  float
-        The assumed width/sq2
-    tz: float
-        The assumed time zero.
-    tau: ndarray(M)
-        The M-decay rates.
-
-    Returns
-    -------
-    y: ndarray
-       Folded exponentials for given taus.
-"""
-    ws = w
-    k = 1 / (tau[..., None, None])
-    t = (tt + tz).T[None, ...]
-    y = ne.evaluate('exp(k * (ws * ws * k / (4.0) - t))')
-    y *= 0.5 * erfc(-t / ws + ws * k / (2.0))#/(ws*np.sqrt(2*np.pi))
-    #y /= np.max(np.abs(y), 0)
-    return y.T
-
-
-def _exp(tt, w, tz, tau):
-    """
-    Returns the values of the exponentials for given parameters.
-
-    Parameters
-    ----------
-    tt:  ndarray(N)
-        Array containing the time-coordinates
-    w:  float
-        The assumed width/sq2
-    tz: float
-        The assumed time zero.
-    tau: ndarray(M)
-        The M-decay rates.
-
-    Returns
-    -------
-    y: ndarray
-       Exponentials for given tau's.
-    """
-    t = tt + tz
-    y = np.exp(-t / (tau[:, None]))
-    return y
-
-
-def _coh_gaussian(t, w, tz):
-    """Models artifacts proportional to a gaussian and it's derivatives
-
-    Parameters
-    ----------
-    t:  ndarray
-        Array containing the time-coordinates
-    w:  float
-        The assumed width/sq2
-    tz: float
-        The assumed time zero.
-
-    Returns
-    -------
-    y:  ndarray (len(t), 4)
-        Array containing a gaussian and it the scaled derivatives,
-        each in its own column.
-    """
-    w = w / sq2
-    tt = t + tz
-    y = ne.evaluate(
-        'where(tt/w < 4, exp(-0.5 * (tt / w) ** 2) / (w * sqrt(2 * 3'
-        '.14159265)), 0)')
-    y = np.tile(y[..., None], (1, 1, 4))
-    y[..., 1] *= (-tt / w ** 2)
-    y[..., 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
-    y[..., 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
-    y /= np.max(np.abs(y), 0)
-    return y
+from skultrafast.base_functions import _fold_exp, _coh_gaussian
 
 def solve_mat(A, b_mat, method='fast'):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
     """
     if method == 'fast':
-        return solve(A.T.dot(A), A.T.dot(b_mat))
+        return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
 
     elif method == 'ridge':
         alpha = 0.001
@@ -122,12 +33,16 @@ def solve_mat(A, b_mat, method='fast'):
         Xy = np.dot(A.T, b_mat)
         return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
 
-    elif method == 'qr':
-        q, r = qr(A)
-        return solve(r, q.T.dot(b_mat))
+    elif method == 'qr':        
+        cq, r = linalg.qr_multiply(A, b_mat)
+        return linalg.solve_triangular(r, cq)        
+        
+    elif method == 'cho':
+        c, l = linalg.cho_factor( A.T.dot(A))        
+        return linalg.cho_solve((c, l), A.T.dot(b_mat))
 
     elif method == 'lstsq':
-        return np.linalg.lstsq(A, b_mat)
+        return np.linalg.lstsq(A, b_mat)[0]
 
     elif method == 'lasso':
         import sklearn.linear_model as lm
@@ -214,19 +129,27 @@ class Fitter(object):
 
         """
         self.last_para = np.asarray(para)
-        if self.model_disp > 1:
-            # Only calculate interpolated data if necessary:
-            if  np.any(para[:self.model_disp] != self.used_disp):
-                self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
-                tup = dv.tup(self.wl, self.t, self.org)
-                self.data = zero_finding.interpol(tup, self.tn)[2]
-                self.used_disp[:] = para[:self.model_disp]
-            para = para[self.model_disp:]
+        if self._chk_for_disp_change(para): 
+            # Only calculate interpolated data if necessary:            
+            self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
+            tup = dv.tup(self.wl, self.t, self.org)
+            self.data = zero_finding.interpol(tup, self.tn)[2]        
+            self.used_disp[:] = para[:self.model_disp]
+            
         self.num_exponentials = self.last_para.size - self.model_disp - 1
-        self._build_xvec(para)
+        if self.model_disp == 0:
+            self._build_xvec(para)
+        self.x_vec = np.nan_to_num(self.x_vec)
         self.c = solve_mat(self.x_vec, self.data, self.lsq_method)
         self.model = np.dot(self.x_vec, self.c)
         self.c = self.c.T
+
+    def _chk_for_disp_change(self, para):
+        if self.model_disp > 1:
+            if  np.any(para[:self.model_disp] != self.used_disp):
+                return True
+        return False
+                
 
     def _build_xvec(self, para):
         """
@@ -234,9 +157,11 @@ class Fitter(object):
         """
         para = np.array(para)
         print para
+        
         try:
             idx = (para != self._last)
         except AttributeError:
+            #self._l
             idx = [True] * len(para)
 
         if self.model_disp == 1:
@@ -247,11 +172,9 @@ class Fitter(object):
             tau_idx = idx[1:]
 
         if any(idx[:2]) or self.model_disp or True:
-
             if self.model_coh:
                 x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
-                x_vec[:, -4:] = _coh_gaussian(self.t[:, None], w, x0).squeeze()
-                print para, taus
+                x_vec[:, -4:] = _coh_gaussian(self.t[:, None], w, x0).squeeze()                
                 x_vec[:, :-4] = _fold_exp(self.t[:, None], w,
                                                x0, taus).squeeze()
             else:
@@ -271,7 +194,7 @@ class Fitter(object):
         self.residuals = (self.model - self.data)
         if not self.weights is None:
             self.residuals *= self.weights
-        return self.residuals.flatten()
+        return self.residuals.ravel()
 
     def full_res(self, para):
         """
@@ -282,7 +205,7 @@ class Fitter(object):
         self.residuals = (self.model - self.data)
         if not self.weights is None:
             self.residuals *= self.weights
-        return self.residuals.flatten()
+        return self.residuals.ravel()
 
     def make_full_model(self, para):
         """
@@ -318,7 +241,7 @@ class Fitter(object):
 
         for i in xrange(self.data.shape[1]):
             A = self.xmat[:, i, :]
-            self.c[i, :] = ridge_regression(A, self.data[:, i], 0.0001)
+            self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
             self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
 
@@ -380,7 +303,8 @@ class Fitter(object):
         p.add('w', x0[0], min=0)
         num_exp = len(x0) - 1
         for i, tau in enumerate(x0[1:]):
-            name = 't' + str(i)
+            name = 't' + str(i)#    
+# 
             p.add(name, tau, vary=True)
             if name not in fixed_names:
                 p[name].min = lower_bound
