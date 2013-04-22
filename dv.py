@@ -38,8 +38,15 @@ def binner(n, wl, dat):
 
 def fi(w,x):
     """needs global w as array. gives idnex to nearest value"""
-    idx = (np.abs(w[None,:] - np.atleast_1d(x)[:, None])).argmin(0)
-    return idx
+    try:
+        x = iter(x)
+    except:
+        x = [x]
+    idx = [np.abs(w - i).argmin() for i in x] 
+    if len(idx)==1: 
+        return idx[0]
+    else:
+        return idx
 
 
 def subtract_background(dat, t, tn, offset=0.3):
@@ -49,7 +56,18 @@ def subtract_background(dat, t, tn, offset=0.3):
         dat[:, i] -= corr
     return dat
 
-
+def polydetrend(x, t=None, deg=3):
+    t = t or np.arange(x.shape[0])
+    p = np.polyfit(t, x, deg)
+    yf = np.poly1d(p)(t)
+    return x - yf
+    
+def arr_polydetrend(x, t=None, deg=3):
+    out = np.zeros_like(x)
+    for i in range(x.shape[1]):
+        out[:, i] = polydetrend(x[:, i], t, deg)
+    return out
+    
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
 
@@ -121,6 +139,8 @@ def savitzky_golay(y, window_size, order, deriv=0):
     lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
     y = np.concatenate((firstvals, y, lastvals))
     return np.convolve( m, y, mode='valid')
+    
+
 
 def calc_error(args):
     """
