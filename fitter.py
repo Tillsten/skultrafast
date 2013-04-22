@@ -129,20 +129,27 @@ class Fitter(object):
 
         """
         self.last_para = np.asarray(para)
-        if self.model_disp > 1:
-            # Only calculate interpolated data if necessary:
-            if  np.any(para[:self.model_disp] != self.used_disp):
-                self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
-                tup = dv.tup(self.wl, self.t, self.org)
-                self.data = zero_finding.interpol(tup, self.tn)[2]
-                self.used_disp[:] = para[:self.model_disp]
-            para = para[self.model_disp:]
+        if self._chk_for_disp_change(para): 
+            # Only calculate interpolated data if necessary:            
+            self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
+            tup = dv.tup(self.wl, self.t, self.org)
+            self.data = zero_finding.interpol(tup, self.tn)[2]        
+            self.used_disp[:] = para[:self.model_disp]
+            
         self.num_exponentials = self.last_para.size - self.model_disp - 1
-        self._build_xvec(para)
+        if self.model_disp == 0:
+            self._build_xvec(para)
         self.x_vec = np.nan_to_num(self.x_vec)
         self.c = solve_mat(self.x_vec, self.data, self.lsq_method)
         self.model = np.dot(self.x_vec, self.c)
         self.c = self.c.T
+
+    def _chk_for_disp_change(self, para):
+        if self.model_disp > 1:
+            if  np.any(para[:self.model_disp] != self.used_disp):
+                return True
+        return False
+                
 
     def _build_xvec(self, para):
         """
@@ -150,9 +157,11 @@ class Fitter(object):
         """
         para = np.array(para)
         print para
+        
         try:
             idx = (para != self._last)
         except AttributeError:
+            #self._l
             idx = [True] * len(para)
 
         if self.model_disp == 1:
