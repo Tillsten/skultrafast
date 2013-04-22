@@ -21,7 +21,7 @@ def sol_matexp(A, tlist, y0):
     return out
 
 
-from skultrafast.lineshape import lorentz
+from skultrafast.lineshapes import lorentz
 
 def make_state_spectra(para, x, state, shape='lorentz'):
     names = [state + '_' + i for i in ('A', 'w', 'xc')]
@@ -65,7 +65,7 @@ def fit(p, x, mode='lm', has_spectral=True):
 #    g=nx.DiGraph()
 #    g.add_edge('S1hot', 'S1warm', tau=tau[0])    
 #    g.add_edge('S1hot', 'T1', tau=tau[1])
-#    g.add_edge('S1warm', 'S1', tau=tau[2])
+#    g.add_edge('S1warm', 'S1', tau=tauconda search --all[2])
 #    g.add_edge('S1', 'S0', tau=7000)
 #    #g.add_edge('S1', 'T2', tau=tau[2])
 #    #g.add_edge('T2','T1', tau=tau[3])

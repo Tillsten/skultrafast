@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from numpy import zeros, loadtxt, ceil, interp, around, arange, floor,log10
 import numpy as np
 from scipy.interpolate import splrep, splev
 from collections import namedtuple
@@ -26,7 +25,10 @@ def cm2fs(cm):
     return  1/(cm * 3e-5)
 
 def binner(n, wl, dat):
-    """ Given wavelengths and data it bins the data into n-wavelenths.
+    """ 
+    Given wavelengths and data it bins the data into n-wavelenths.
+    Returns bdata and bwl    
+    
     """
     idx=np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
     binned=np.empty((dat.shape[0], n))
@@ -39,14 +41,14 @@ def binner(n, wl, dat):
 def fi(w,x):
     """needs global w as array. gives idnex to nearest value"""
     try:
-        x = iter(x)
-    except:
-        x = [x]
-    idx = [np.abs(w - i).argmin() for i in x] 
-    if len(idx)==1: 
-        return idx[0]
+        len(x)
+    except TypeError:
+        x = [x]        
+    ret =  [np.argmin(np.abs(w-i)) for i in x]
+    if len(ret)==1:
+        return ret[0]
     else:
-        return idx
+        return ret
 
 
 def subtract_background(dat, t, tn, offset=0.3):
@@ -139,8 +141,12 @@ def savitzky_golay(y, window_size, order, deriv=0):
     lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
     y = np.concatenate((firstvals, y, lastvals))
     return np.convolve( m, y, mode='valid')
-    
 
+def apply_sg(y, window_size, order, deriv=0):
+    out = np.zeros_like(y)
+    for i in range(y.shape[1]):
+        out[:, i] = savitzky_golay(y[:, i], window_size, order, deriv)
+    return out
 
 def calc_error(args):
     """
