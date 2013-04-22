@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from numpy import zeros, loadtxt, ceil, interp, around, arange, floor,log10
 import numpy as np
 from scipy.interpolate import splrep, splev
 from collections import namedtuple

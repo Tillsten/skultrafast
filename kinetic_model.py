@@ -80,22 +80,21 @@ class Model(object):
         """
         Return the solution
         """
-       #pass  print mat.
+        import scipy.linalg as la
+        symbols = get_symbols(self.transitions)
+                
+        k = np.array(self.mat.subs(zip(symbols, taus))).astype('float')
         
-def _make_progstr(transitions, fun, e, r):    
-    prog_str = 'out = np.zeros((t.size, {0}))\n'.format(fun.shape[0])
-    #prog_str += 'exp = np.exp\n'
-    prog_str += _make_appy_sym(get_symbols(transitions))
-    prog_str += "for i in range(t.shape[0]):\n"
-    prog_str += "   ts = t[i]\n"    
-    for eq in r + list(zip(sympy.numbered_symbols("e"), e)):
-            prog_str += '   %s = %s \n' % eq            
-    for i in range(fun.shape[0]):
-        prog_str += '   out[i, {0}] = e{0}'.format(str(i)) + '\n'
-    prog_str += 'return out'
-    print prog_str
-    return prog_str
+        o = np.zeros((len(t), k.shape[0]))
+        
+        for i in xrange(t.shape[0]):
+            o[i, :] = la.expm(k * t[i]).dot(y0)[:, 0]
+        
+        return o
+       #pass  print mat.
 
+import scipy.linalg as la
+    
 
 def _make_appy_sym(sym):
     l = []
@@ -137,4 +136,4 @@ if __name__ == '__main__':
     
     #fu = model.get_func(y0)
     tau = np.array([1., 10., 100, 300, 10000, 10000])
-    plot(t, fu(tau, t))
+    model.get_trans(y0, tau, t)
