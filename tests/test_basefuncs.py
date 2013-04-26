@@ -7,7 +7,9 @@ Created on Sun Apr 21 20:34:15 2013
 
 import nose
 from skultrafast.base_functions import fast_erfc, calc_gaussian_fold, \
-      _fold_exp, _coh_gaussian, _exp, 
+      _fold_exp, _coh_gaussian, _exp
+      
+import skultrafast.fitter_cython
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 

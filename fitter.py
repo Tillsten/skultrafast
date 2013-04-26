@@ -18,6 +18,7 @@ except ImportError:
     has_sklearn = False
 
 from skultrafast.base_functions import _fold_exp, _coh_gaussian
+from skultrafast.base_functions_cl import _fold_exp, _coh_gaussian
 
 def solve_mat(A, b_mat, method='fast'):
     """
@@ -270,7 +271,7 @@ class Fitter(object):
             print taus[idx[1:]]
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w,
                                                  x0, taus[idx[1:]])
-        self.xmat = np.nan_to_num(self.xmat)
+        #self.xmat = np.nan_to_num(self.xmat)
         self._last = para
 
     def _check_num_expontials(self, para):
