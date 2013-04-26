@@ -12,7 +12,7 @@ from math import exp, erfc, sqrt
 sq2 = sqrt(2)
 
 @autojit
-def _coh_gaussian(t, w, tz):
+def _coh_gaussian(ta, w, tz):
     """
     Models coherent artifacts proportional to a gaussian and it's first three derivatives.
 
@@ -33,14 +33,15 @@ def _coh_gaussian(t, w, tz):
     """
 
     w = w / 1.4142135623730951
-    ta = t + tz
+    if tz != 0:    
+        ta = ta - tz
     n, m = ta.shape
     y = np.zeros(( n, m, 4))
     for i in range(n):
         for j in range(m):
             tt = ta[i, j]
-            if tt/w < 2.5:
-                y[i, j, 0] = np.exp(-0.5 * (tt / w)* (tt / w)) / (w * np.sqrt(2 * 3.14159265))
+            if tt/w < 3.:
+                y[i, j, 0] = np.exp(-0.5 * (tt / w)* (tt / w))# / (w * np.sqrt(2 * 3.14159265))
                 y[i, j, 1] = y[i, j, 0] * (-tt / w / w)
                 y[i, j, 2] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
                 y[i, j, 3] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
@@ -128,7 +129,7 @@ def _fold_exp(t_arr, w, tz, tau_arr):
 
     Returns
     -------
-    y: ndarray
+    y: ndarray(N, M, K)
        Folded exponentials for given taus.
     """
     n, m = t_arr.shape
@@ -169,6 +170,9 @@ def _exp(t_arr, w, tz, tau_arr):
     return np.exp(-rates * t_arr.T[None, ...]).T
 
 
+
+    
+
 def calc_gaussian_fold(y_arr, sigma, slice_to_fold, slice_to_calc):
     """
     Folds the data with an gaussian.
@@ -177,20 +181,6 @@ def calc_gaussian_fold(y_arr, sigma, slice_to_fold, slice_to_calc):
     ----------
     y_arr: ndarray(N,M)
         array of the data to be folded
-
-#
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     w: float
