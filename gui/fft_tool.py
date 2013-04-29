@@ -17,7 +17,6 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection,\
     RangeSelectionOverlay, LegendTool
 
 import numpy as np
-from skultrafast import dv
 
 class FFTTool(HasTraits):
     x = Array
@@ -28,6 +27,7 @@ class FFTTool(HasTraits):
     sel_range = Instance(RangeSelection)
     pd = Instance(ArrayPlotData)
     pd2 = Instance(ArrayPlotData)
+    
     freq_plot = Instance(Plot)
     v_container = Instance(VPlotContainer)
 
@@ -52,10 +52,13 @@ class FFTTool(HasTraits):
         return pd
 
     def _pd2_default(self):
-        return ArrayPlotData(x=self.x, y=self.y)
+        return ArrayPlotData(x=self.x, y=self.y, x_sel=[], y_cor=[])
+        
+    
 
     def _data_plot_default(self):
         plot = Plot(self.pd2)
+        plot.plot(('x_sel', 'y_cor'))
         k = plot.plot(('x', 'y'))
         zoom = ZoomTool(component=plot, tool_mode="box", always_on=False)
         plot.overlays.append(zoom)
@@ -75,10 +78,13 @@ class FFTTool(HasTraits):
             d = self.y[m]
             xd = self.x[m]
             win = self.func(n)
-            back = np.poly1d(np.polyfit(xd, d, 3))(xd)            
+            back = np.poly1d(np.polyfit(xd, d, 3))(xd)     
+            self.pd2.set_data('x_sel', xd)            
             y = np.abs(np.fft.fft(win * (d - back)))
+            self.pd2.set_data('y_cor', win * (d - back))
             x = np.fft.fftfreq(n, self.Fs)[:y.size / 2]
-            self.pd.set_data('freqs', dv.fs2cm(1000/x[1:]))
+            x = dv.fs2cm(1000./x)
+            self.pd.set_data('freqs', x[1:])
             self.pd.set_data('amps', y[1:y.size / 2])
 
 
@@ -95,3 +101,6 @@ class FFTTool(HasTraits):
     trait_view = View(VGroup(Item('data_plot', editor=ComponentEditor()),
         Item('freq_plot', editor=ComponentEditor()),
         Item('fft_window'), show_labels=False), resizable=True)
+
+#print dv.fi(w, 650)
+#FFTTool(x=t[104:], y=c).configure_traits()
