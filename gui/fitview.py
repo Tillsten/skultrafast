@@ -8,7 +8,7 @@ matplotlib.rcParams['font.size'] = 8
 import numpy as np
 import cPickle
 
-#from dv import concate_data
+
 
 
 class fit_viewer(object):
@@ -94,8 +94,10 @@ def make_view(name):
     return fit_viewer(c)
 
 
-#d = make_view('tmp\\fremdprobe_para_400exec_short')
-#plt.show()
+c = g()
+ux = np.where((u>0.4)^(u<-.2), np.nan, u)
+c.w, c.t, c.data = w, t, ux
+fit_viewer(c)
 #dat=np.load('tmp\\br_py2_ex_590_senk-525_0_dat.npy')
 #
 #w,t=dat[0,1:], dat[1:,0]
@@ -114,7 +116,7 @@ def make_view(name):
 #idx=np.argsort(w)
 #w.sort()
 #dats=dats[:,idx]
-#dats-=dats[:5,:].mean(0)
+#dats-=dats[:5,:].mean(0)from dv import loader_func
 #G=g()
 #G.w=w
 #G.t=t
