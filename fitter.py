@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
-from numpy.linalg import solve, qr
+from numpy.core.umath_tests import matrix_multiply
 from scipy import linalg
 #from scipy.special import erfc #errorfunction
 from scipy.optimize import leastsq
@@ -17,7 +17,7 @@ try:
 except ImportError:
     has_sklearn = False
 
-from skultrafast.base_functions import _fold_exp, _coh_gaussian
+#from skultrafast.base_functions import _fold_exp, _coh_gaussian
 from skultrafast.base_functions_cl import _fold_exp, _coh_gaussian
 
 def solve_mat(A, b_mat, method='fast'):
@@ -244,7 +244,7 @@ class Fitter(object):
             A = self.xmat[:, i, :]
             self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
             self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
-
+            
 
     def _build_xmat(self, para, is_disp_changed):
         """
