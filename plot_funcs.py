@@ -12,7 +12,8 @@ import dv, data_io, zero_finding
 #plt.rcParams['legend.labelspacing'] = 0.3
 plt.rcParams['legend.loc'] = 'best'
 
-def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False, sas=False):
+def plot_das(fitter, plot_fastest=0, plot_coh=False,
+             normed=False, sas=False, const=False):
     """Plots the decay-asscoiated  """        
     num_exp = fitter.num_exponentials
     #fitter.last_para[-num_exp:] = np.sort(fitter.last_para[-num_exp:])
@@ -33,8 +34,13 @@ def plot_das(fitter, plot_fastest=0, plot_coh=False ,normed=False, sas=False):
     plt.plot(fitter.wl, dat_to_plot, lw=2)
     plt.autoscale(1, tight=1)
     plt.axhline(0, color='grey', zorder=-10, ls='--')
-    leg = np.round(fitter.last_para[1 + llim + fitter.model_disp:], 2)
-    plt.legend([str(i)+ units['y'] for i in leg], labelspacing=0.25)
+    leg = np.round(fitter.last_para[1 + llim + fitter.model_disp:], 1)
+    leg = [str(i)+ units['y'] for i in leg]
+    if const:
+        leg[-1] = 'const'
+        
+    plt.legend(leg, labelspacing=0.25)
+    
     plt.xlabel(units['x'])
     plt.ylabel(units['z'])
     if title:
@@ -83,15 +89,18 @@ def plot_diagnostic(fitter):
     ax.set_xlim(0, 12)
 
 def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False,
-                 cm='Spectral', lw=1.5):
+                 cm='Spectral', lw=1.5, tmin=None, tmax=None):
     """
     Plots the transient spectra of an fitter object.
     """
     t = fitter.t
-    tmin, tmax = t.min(),t.max()
+    if tmin is None:
+        tmin = t.min() 
+    if tmax is None:
+        tmax = t.max() 
     if tp is None: 
-        tp = np.logspace(np.log10(0.100), np.log10(tmax), num=num_spec)
-        tp = np.hstack([-0.5, -.1, 0, tp])
+        tp = np.logspace(np.log10(max(0.100, tmin)), np.log10(tmax), num=num_spec)
+        #tp = np.hstack([-0.5, -.1, 0, tp])
     tp = np.round(tp, 2)    
     t0 = fitter.last_para[fitter.model_disp]
     if use_m:
@@ -117,7 +126,7 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False,
         p2 = plt.plot(fitter.wl, specs[:, fitter.wl.size:].T, lw=lw)    
         dv.equal_color(p1, p2)
     plt.legend([unicode(i)+u' '+units['y'] for i in np.round(tp,2)],
-                ncol=2,  labelspacing=0.25)
+                ncol=1,  labelspacing=0.25)
     plt.axhline(0, color='grey', zorder=-10, ls='--')
     plt.autoscale(1, tight=1)
     plt.xlabel(units['x'])
@@ -127,7 +136,7 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False,
 
 
 def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear',
-                    plot_res=False):
+                    plot_res=False, ncol=2):
     wls = np.array(wls)
     idx = np.argmin(np.abs(wls[:,None]-fitter.wl[None,:]), 1)    
     names = [str(i) + u' ' + units['x'] for i in np.round(fitter.wl[idx])]
@@ -146,7 +155,7 @@ def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear',
         p2 = plt.plot(t, fitter.data[:, idx + fitter.data.shape[1] / 2], 'o') 
         dv.equal_color(p1, p2)
     
-    plt.legend(names, scatterpoints=1, numpoints=1)
+    plt.legend(names, scatterpoints=1, numpoints=1, ncol=ncol)
     
     if plot_fit and hasattr(fitter,'model'):       
         plt.plot(t, fitter.model[:, idx], 'k')
