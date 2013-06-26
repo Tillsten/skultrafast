@@ -50,24 +50,29 @@ def contiuenes_reg(X, ):
     pass
     
 
-taus = np.logspace(-1, 4, 200)
-#u, o = dv.binner(200, f.wl, f.data)
-#tup = dv.tup(o, f.t[:], u[11:,:])
-k, nwl = dv.binner(100, f.wl, m.data)
-k /= k[-2:-1,:]
-tup = dv.tup(nwl, m.t[35:], k[35:,:])
+taus = np.logspace(-1, 2.5, 100)
+##u, o = dv.binner(200, f.wl, f.data)
+##tup = dv.tup(o, f.t[:], u[11:,:])
+#k, nwl = dv.binner(100, f.wl, m.data)
+#k /= k[-2:-1,:]
+tup = dv.tup(f.wl, f.t, f.data)
 
-s = lm.Lasso(fit_intercept=True, max_iter=1e5)     
+s = lm.ElasticNet(fit_intercept=True, max_iter=1e5)     
+s.l1_ratio = .99
+s.alpha = 0.01
 X = _make_base(tup, taus)  
-s.warm_start = True 
-for i, alpha in enumerate(np.linspace(0.001, 0.03, 3)):    
-    s.alpha = alpha
-    s.fit(X, tup.data)
-    subplot(3,1, i+1)
-    title(str(alpha))
-    normed = s.coef_/np.abs(s.coef_).max(0)[None,:]
-    pcolormesh(tup.wl, taus, s.coef_)
-    yscale('log')
-    #clim(-abs(s.coef_).max(), abs(s.coef_).max())
-    set_cmap(cm.RdBu)
+#s.warm_start = True 
+#for i, alpha in enumerate(np.linspace(0.001, 0.03, 3)):    
+#    #s.alpha = alpha
+s.fit(X, tup.data)
+#    subplot(3,1, i+1)
+#    title(str(alpha))
+#    normed = s.coef_/np.abs(s.coef_).max(0)[None,:]
+pcolormesh(tup.wl, taus, s.coef_.T)
+yscale('log')
+set_cmap(cm.Spectral)
+colorbar()
+clim(-abs(s.coef_).max(), abs(s.coef_).max())
 
+#
+autoscale(1, 'both', 'tight')
