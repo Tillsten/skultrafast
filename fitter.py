@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
-from numpy.core.umath_tests import matrix_multiply
+from numpy.core.umath_tests import matrix_multiply, inner1d
 from scipy import linalg
 #from scipy.special import erfc #errorfunction
 from scipy.optimize import leastsq
@@ -18,22 +18,32 @@ except ImportError:
     has_sklearn = False
 
 #from skultrafast.base_functions import _fold_exp, _coh_gaussian
-from skultrafast.base_functions_cl import _fold_exp, _coh_gaussian
+from skultrafast.base_functions_cl import _fold_exp, _coh_gaussian, _fold_exp_and_coh
 
+posv = linalg.get_lapack_funcs(('posv'))
+
+def direct_solve(a, b):
+    c, x, info = posv(a, b, lower=False,
+                      overwrite_a=True,
+                      overwrite_b=False)
+    return x
+    
 def solve_mat(A, b_mat, method='fast'):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
     """
     if method == 'fast':
-        return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
-
+        #return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
+        return direct_solve(A.T.dot(A), A.T.dot(b_mat))
+        
     elif method == 'ridge':
-        alpha = 0.001
+        alpha = 0.0001
         X = np.dot(A.T, A)
         X.flat[::A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)
-        return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
-
+        #return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
+        return direct_solve(X, Xy)
+        
     elif method == 'qr':        
         cq, r = linalg.qr_multiply(A, b_mat)
         return linalg.solve_triangular(r, cq)        
@@ -99,7 +109,7 @@ class Fitter(object):
 
         self.model_coh = model_coh
         self.model_disp = model_disp
-        self.lsq_method = 'ridge'
+        self.lsq_method = 'cho'
     
         self.num_exponentials = -1
         self.weights = None
@@ -225,13 +235,14 @@ class Fitter(object):
         """
 
         para = np.asarray(para)
+        print para
         self._check_num_expontials(para)
         try:
             m_disp = self.model_disp
             is_disp_changed = (para[:m_disp] != self.last_para[:m_disp]).any()
         except AttributeError:
             is_disp_changed = True
-        print is_disp_changed
+        
         self.last_para = para
 
         if self.model_disp and is_disp_changed:
@@ -243,8 +254,11 @@ class Fitter(object):
         for i in xrange(self.data.shape[1]):
             A = self.xmat[:, i, :]
             self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
-            self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
-            
+        
+        #self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
+        
+        self.model = inner1d( self.xmat, self.c)
+        #self.model[:, :]  = matrix_multiply(self.xmat, self.c[:, :, None]).squueze()
 
     def _build_xmat(self, para, is_disp_changed):
         """
@@ -259,14 +273,15 @@ class Fitter(object):
 
         w = para[0]
         taus = para[1:]
-        x0 = 0
+        x0 = 0.
 
         #Only calculate what is necessary.
         if idx[0] or is_disp_changed:
+            exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
             if self.model_coh:
-                self.xmat[:, :, -4:] = _coh_gaussian(self.t_mat, w, x0)
+                self.xmat[:, :, -4:] = coh
             num_exp = self.num_exponentials
-            self.xmat[:, :, :num_exp] =  _fold_exp(self.t_mat, w, x0, taus)
+            self.xmat[:, :, :num_exp] =  exps
         elif any(idx):
             print taus[idx[1:]]
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w,
