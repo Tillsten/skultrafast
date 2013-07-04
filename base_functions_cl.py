@@ -5,7 +5,7 @@ import pyopencl.array as cl_array
 
 mf = cl.mem_flags
 #PYOPENCL_COMPILER_OUTPUT=1
-plat = cl.get_platforms()[1]
+plat = cl.get_platforms()[-1]
 dev = plat.get_devices()[0]
 ctx = cl.Context([dev])
 queue = cl.CommandQueue(ctx)
