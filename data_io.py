@@ -53,12 +53,20 @@ def loader_func(name):
     print files
     import re    
     num_list = [re.findall('dat\d+', i)[0][3:] for i in files]    
+    
     endname = max(zip(map(int, num_list), files))[1]
-    print 'Loading: ' + endname
+    
     a = np.load(endname)
-    num = str(max(map(int, num_list)) - 1)
-    files = glob.glob(name + '-???_'+ num + '_' + '*dat.npy')
+    num_list = [str(int(i) - 1) for i in num_list]
+    print num_list
+    num = str(max(map(int, num_list)))
+    print num
+    print name
+    search_string = name + '-???_'+ '*' + '_' + 'dat.npy'
+    print search_string
+    files = glob.glob(search_string)
     wls = []
+    print files
     for i in files:
         print 'Loading: ' + i
         cwl = re.findall('-\d\d\d_', i)
@@ -102,19 +110,21 @@ def save_txt_das(name, fitter):
     arr = np.vstack((taus, arr))
     np.savetxt(name, arr)
 
-def make_report(fitter, info, raw=None):
+def make_report(fitter, info, raw=None, plot_fastest=1):
     import plot_funcs
     g = fitter
     name = info.get('name','')
     solvent = info.get('solvent','')    
     excitation = info.get('excitation','')
-    title = u"{} in {} excited at {}".format(name, solvent, excitation)
-    plot_funcs.a4_overview(g, 'pics\\' + name + '.png', title=title)
+    add_info = info.get('add_info', '')
+    title = u"{} in {} excited at {}. {}".format(name, solvent, excitation, add_info)
+    plot_funcs.a4_overview(g, 'pics\\' + title + '.png', title=title, 
+                           plot_fastest=plot_fastest)
     save_txt_das(name + '_-DAS.txt', g)
-    save_txt(name + '_data.txt', g.wl, g.t, g.data)
-    save_txt(name + '_fit.txt', g.wl, g.t, g.model)
+    save_txt(name + '_ex' + excitation + '_data.txt', g.wl, g.t, g.data)
+    save_txt(name + '_ex' + excitation + '_fit.txt', g.wl, g.t, g.model)
     if raw:
-        save_txt(name + '_raw.txt', *raw)
+        save_txt(name +  '_ex' + excitation + '_raw.txt', *raw)
 
 def save_txt(name, wls, t, dat):
     try:

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 *-*
-units = {'x': ' nm', 'y': ' ps', 'z': '$\\Delta$OD'}
+units = {'x': ' nm', 'y': ' ps', 'z': r'$\Delta$OD'}
 title = ""
 import matplotlib.pyplot as plt
 import numpy as np
 import dv, data_io, zero_finding
 
-#plt.rcParams['font.size']=9
-#plt.rcParams['legend.fontsize'] = 'small'
+plt.rcParams['font.size']=9
+plt.rcParams['legend.fontsize'] = 'small'
 #plt.rcParams['legend.borderpad'] = 0.1
 #plt.rcParams['legend.columnspacing'] = 0.3
 #plt.rcParams['legend.labelspacing'] = 0.3
 plt.rcParams['legend.loc'] = 'best'
+plt.rcParams['image.cmap'] = 'PRGn'
 
 def plot_das(fitter, plot_fastest=0, plot_coh=False,
              normed=False, sas=False, const=False):
@@ -98,11 +99,12 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False,
         tmin = t.min() 
     if tmax is None:
         tmax = t.max() 
-    if tp is None: 
+    if tp is None:         
         tp = np.logspace(np.log10(max(0.100, tmin)), np.log10(tmax), num=num_spec)
         #tp = np.hstack([-0.5, -.1, 0, tp])
     tp = np.round(tp, 2)    
     t0 = fitter.last_para[fitter.model_disp]
+    
     if use_m:
         data_used = fitter.m.T
     else:
@@ -113,6 +115,7 @@ def plot_spectra(fitter, tp=None, pol=False, num_spec=8, use_m=False,
         t0 = 0.
     else:
         tn = np.zeros(fitter.data.shape[1])
+
     specs = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, data_used),
                              tn, t0, tp).data    
     
@@ -164,6 +167,7 @@ def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear',
                      fitter.model[:, idx + fitter.data.shape[1] / 2], 'k')
             
     plt.autoscale(1, tight=1)
+    plt.xlim(max(-0.3, t.min()))
     plt.xlabel(units['y'])
     plt.ylabel(units['z'])
     if scale != 'linear':
@@ -185,13 +189,22 @@ def plot_residuals(fitter, wls, scale='linear'):
     if title:
         plt.title(title)
         
-def a4_overview(fitter, fname, plot_fastest=1, title=None):
+def a4_overview(fitter, fname, plot_fastest=1, linthresh=None, title=None):
+    plt.clf()
+    tup_cor = zero_finding.interpol(fitter, fitter.tn, 0.0)
     plt.ioff()    
     f=plt.figure(1, figsize=(8.3, 12))
     plt.subplot(321)
-    plt.pcolormesh(fitter.wl, fitter.t, fitter.data)
+    import matplotlib.colors as c
+    if not linthresh:
+        linthresh = abs(tup_cor.data).max() / 2.         
+    m = max(abs(tup_cor.data.min()), abs(tup_cor.data.max()))
+    sn = c.SymLogNorm(linthresh, vmin=-m, vmax=m)
+    plt.pcolormesh(tup_cor.wl, tup_cor.t, tup_cor.data, norm=sn)    
     plt.yscale('symlog')
+    plt.colorbar()
     plt.autoscale(1, tight=1)
+    plt.ylim(max(-.3, fitter.t.min()))
     plt.subplot(322)
     plt.imshow(fitter.residuals / fitter.residuals.std(0), aspect='auto')
     if title:    
@@ -200,7 +213,7 @@ def a4_overview(fitter, fname, plot_fastest=1, title=None):
     plt.subplot(323)
     plot_das(fitter, plot_fastest)
     plt.subplot(324)
-    plot_das(fitter, 1, normed=True)
+    plot_das(fitter, plot_fastest, normed=True)
     plt.subplot(325)
     plot_spectra(fitter)
     plt.subplot(326)    
@@ -210,7 +223,7 @@ def a4_overview(fitter, fname, plot_fastest=1, title=None):
     plt.gcf().set_size_inches((8.2, 12))
     plt.tight_layout()
     plt.draw_if_interactive()
-    f.savefig(fname, dpi=600)    
+    f.savefig(fname, dpi=150)    
     plt.ion()
     
 def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
@@ -223,7 +236,23 @@ def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     ax2.pcolormesh(cor.wl, cor.t, cor.data)
     ax2.set_ylim(fit_tn.min(), fit_tn.max())
     
+def sig_ratios(fitter):
+    tup = zero_finding.interpol(f, f.tn)
+    w, t, d = tup
+    i = dv.fi(t, 0.35)
+    t = t[i:]
+    d = d[i:, :]
+    pos = np.where(d > 0, d, 0).sum(1)
+    neg = np.where(d < 0, d, 0).sum(1)
+    subplot(311).plot(t, pos/neg)
+    plt.xlim(0,10)
+    subplot(312).plot(t, pos)
+    plt.xlim(0,10)
+    subplot(313).plot(t, neg)
+    plt.xlim(0,10)
     
+#sig_ratios(g)
+
 def make_legend(p, err, n):
     dig = np.floor(np.log10(err))
     l = []
