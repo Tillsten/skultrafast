@@ -167,6 +167,7 @@ def plot_transients(fitter, wls, pol=False, plot_fit=True, scale='linear',
                      fitter.model[:, idx + fitter.data.shape[1] / 2], 'k')
             
     plt.autoscale(1, tight=1)
+    plt.xlim(max(-0.3, t.min()))
     plt.xlabel(units['y'])
     plt.ylabel(units['z'])
     if scale != 'linear':
@@ -188,20 +189,22 @@ def plot_residuals(fitter, wls, scale='linear'):
     if title:
         plt.title(title)
         
-def a4_overview(fitter, fname, plot_fastest=1, linthresh=10, title=None):
+def a4_overview(fitter, fname, plot_fastest=1, linthresh=None, title=None):
     plt.clf()
     tup_cor = zero_finding.interpol(fitter, fitter.tn, 0.0)
     plt.ioff()    
     f=plt.figure(1, figsize=(8.3, 12))
     plt.subplot(321)
     import matplotlib.colors as c
-    
+    if not linthresh:
+        linthresh = abs(tup_cor.data).max() / 2.         
     m = max(abs(tup_cor.data.min()), abs(tup_cor.data.max()))
     sn = c.SymLogNorm(linthresh, vmin=-m, vmax=m)
     plt.pcolormesh(tup_cor.wl, tup_cor.t, tup_cor.data, norm=sn)    
     plt.yscale('symlog')
     plt.colorbar()
     plt.autoscale(1, tight=1)
+    plt.ylim(max(-.3, fitter.t.min()))
     plt.subplot(322)
     plt.imshow(fitter.residuals / fitter.residuals.std(0), aspect='auto')
     plt.clim(-3,3)
@@ -234,7 +237,23 @@ def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     ax2.pcolormesh(cor.wl, cor.t, cor.data)
     ax2.set_ylim(fit_tn.min(), fit_tn.max())
     
+def sig_ratios(fitter):
+    tup = zero_finding.interpol(f, f.tn)
+    w, t, d = tup
+    i = dv.fi(t, 0.35)
+    t = t[i:]
+    d = d[i:, :]
+    pos = np.where(d > 0, d, 0).sum(1)
+    neg = np.where(d < 0, d, 0).sum(1)
+    subplot(311).plot(t, pos/neg)
+    plt.xlim(0,10)
+    subplot(312).plot(t, pos)
+    plt.xlim(0,10)
+    subplot(313).plot(t, neg)
+    plt.xlim(0,10)
     
+#sig_ratios(g)
+
 def make_legend(p, err, n):
     dig = np.floor(np.log10(err))
     l = []
