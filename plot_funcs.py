@@ -227,6 +227,35 @@ def a4_overview(fitter, fname, plot_fastest=1, linthresh=None, title=None):
     f.savefig(fname, dpi=150)    
     plt.ion()
     
+def a4_overview_second_page(fitter, para, perp, fname, linthresh=None):
+    import matplotlib.gridspec as gs
+    plt.clf()
+    plt.ioff()
+    fig, axs = plt.subplots(3, 1, figsize=(8.3, 12))
+    plt.sca(axs[0])
+    plot_map(para, linthresh)
+    plt.title('parallel')
+    
+    plt.sca(axs[1])
+    plot_map(perp, linthresh)
+    plt.title('perp')
+    
+    plt.sca(axs[2])
+    
+    plt.show()
+def plot_map(tup_cor, linthresh):
+    import matplotlib.colors as c
+    if not linthresh:
+        linthresh = abs(tup_cor.data).max() / 2.         
+    m = max(abs(tup_cor.data.min()), abs(tup_cor.data.max()))
+    sn = c.SymLogNorm(linthresh, vmin=-m, vmax=m)
+
+    plt.pcolormesh(tup_cor.wl, tup_cor.t, tup_cor.data, norm=sn)
+    plt.yscale('symlog')
+    plt.colorbar()
+    plt.autoscale(1, tight=1)
+    plt.ylim(max(-.3, tup_cor.t.min()))
+    
 def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     ax1 = plt.subplot(121)
     ax1.plot(tup.wl, raw_tn)    
