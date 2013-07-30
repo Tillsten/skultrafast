@@ -127,6 +127,16 @@ def make_report(fitter, info, raw=None, plot_fastest=1):
     save_txt_das(name + '_-DAS.txt', g)
     save_txt(name + '_ex' + excitation + '_iso.txt', g.wl, g.t, g.data)
     save_txt(name + '_ex' + excitation + '_iso_fit.txt', g.wl, g.t, g.model)
+    
+    dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data),
+                                 fitter.tn, 0.0)            
+    save_txt(name + '_ex' + excitation + '_iso_timecor.txt', *dat)
+    
+    fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model),
+                                 fitter.tn, 0.0)            
+    save_txt(name + '_ex' + excitation + '_iso_fit_timecor.txt', *fit)    
+    
+    
     if raw:
         save_txt(name +  '_ex' + excitation + '_raw.txt', *raw)
     
@@ -149,6 +159,8 @@ def save_txt(name, wls, t, dat):
         print wls.shape, t.shape, dat.shape
         raise IndexError
     np.savetxt(name, arr)
+    
+
 
 def svd_filter(d, n=10):
     u, s, v = np.linalg.svd(d, full_matrices=False)
