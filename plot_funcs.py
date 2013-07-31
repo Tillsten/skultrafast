@@ -190,9 +190,10 @@ def plot_residuals(fitter, wls, scale='linear'):
         plt.title(title)
         
 def a4_overview(fitter, fname, plot_fastest=1, linthresh=None, title=None):
-    plt.clf()
+    
+    plt.ioff()
     tup_cor = zero_finding.interpol(fitter, fitter.tn, 0.0)
-    plt.ioff()    
+    
     f=plt.figure(1, figsize=(8.3, 12))
     plt.subplot(321)
     import matplotlib.colors as c
@@ -223,10 +224,54 @@ def a4_overview(fitter, fname, plot_fastest=1, linthresh=None, title=None):
     plot_transients(fitter, ind, scale='symlog')
     plt.gcf().set_size_inches((8.2, 12))
     plt.tight_layout()
-    plt.draw_if_interactive()
-    f.savefig(fname, dpi=150)    
-    plt.ion()
+    plt.draw()
     
+    if fname is not None:
+        f.savefig(fname, dpi=150)    
+        plt.close('all')
+    
+def plot_ltm_page(f, fname=None):
+    from skultrafast import lifetimemap
+    from matplotlib.colors import SymLogNorm
+    plt.ioff()
+    #plt.autoscale(True, 'both', tight=True)
+    coefs, fit, taus, tup = lifetimemap.make_ltm(f)
+    plt.figure(figsize=(12, 8.3))
+    ax = plt.subplot2grid((2,2), (0,0), colspan=2)
+    plt.sca(ax)
+
+    m = max(abs(coefs.min()), abs(coefs.max()))
+    sn = SymLogNorm(linthresh=3., vmin=-m, vmax=m)
+    plt.pcolormesh(tup.wl, taus, coefs.T, cmap='coolwarm',norm=sn)
+    #plt.clim(-abs(coefs).max(), abs(coefs).max())
+    plt.yscale('log')
+    plt.autoscale(True, 'both', tight=True)
+    plt.colorbar()
+    #plt.clabel('Amp.')
+    
+    
+    plt.ylabel(r'$\tau$')
+    plt.xlabel(r'wl / nm')
+    plt.subplot(223)
+    res = fit - tup.data
+    plt.pcolormesh(tup.wl, tup.t, res)
+    plt.subplot(224)
+    plt.plot(tup.t, tup.data[:, ::20])
+    plt.plot(tup.t, fit[:, ::20])
+    plt.autoscale(True, 'both', tight=True)
+    plt.xscale('log')
+    plt.autoscale(True, 'both', tight=True)
+    plt.xlabel('t')
+    plt.ylabel(units['y'])
+    plt.tight_layout()
+    #plt.show()
+    if fname:
+        plt.savefig(fname, dpi=300)
+        plt.close()
+    
+#f = zero_finding.interpol(g, g.tn)
+#c, f, taus, tup = make_ltm(f)    
+#plot_ltm_page(g)    
 def a4_overview_second_page(fitter, para, perp, fname, linthresh=None):
     import matplotlib.gridspec as gs
     plt.clf()

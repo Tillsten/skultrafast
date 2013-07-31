@@ -124,6 +124,8 @@ def make_report(fitter, info, raw=None, plot_fastest=1):
     title = u"{} in {} excited at {}. {}".format(name, solvent, excitation, add_info)
     plot_funcs.a4_overview(g, 'pics\\' + title + '.png', title=title, 
                            plot_fastest=plot_fastest)
+                           
+    
     save_txt_das(name + '_-DAS.txt', g)
     save_txt(name + '_ex' + excitation + '_iso.txt', g.wl, g.t, g.data)
     save_txt(name + '_ex' + excitation + '_iso_fit.txt', g.wl, g.t, g.model)
@@ -131,6 +133,7 @@ def make_report(fitter, info, raw=None, plot_fastest=1):
     dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data),
                                  fitter.tn, 0.0)            
     save_txt(name + '_ex' + excitation + '_iso_timecor.txt', *dat)
+    plot_funcs.plot_ltm_page(dat, 'pics\\'+ title + 'lft_map.png')
     
     fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model),
                                  fitter.tn, 0.0)            
@@ -147,9 +150,11 @@ def make_report(fitter, info, raw=None, plot_fastest=1):
         para = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_para),
                                  fitter.tn, 0.0)                                   
 
-        plot_funcs.a4_overview_second_page(fitter, para, perp, 'bla.png')
+        #plot_funcs.a4_overview_second_page(fitter, para, perp, 'bla.png')
         save_txt(name + '_ex' + excitation + '_para.txt', *para)
         save_txt(name + '_ex' + excitation + '_perp.txt', *perp)
+    import matplotlib.pyplot as plt
+    plt.close('all')
         
 def save_txt(name, wls, t, dat):
     try:
