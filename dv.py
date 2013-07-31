@@ -30,6 +30,9 @@ def binner(n, wl, dat):
     Returns bdata and bwl    
     
     """
+    i = np.argsort(wl)
+    wl = wl[i]
+    dat = dat[:, i]
     idx=np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
     binned=np.empty((dat.shape[0], n))
     binned_wl=np.empty(n)
