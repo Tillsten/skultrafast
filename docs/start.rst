@@ -71,7 +71,7 @@ Mostly because it needs Matlab and many Matlab-toolboxes.
 I only have access to Matlab without toolboxes, many
 people won't have any kind of access to Matlab.
 
-Also enjoying programming in Matlab after using Python
+Also after using Python enjoying programming in Matlab 
 is quite difficult.
 
 Best way to get started?
