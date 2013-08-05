@@ -5,7 +5,7 @@ Created on Wed Jul 31 15:38:47 2013
 @author: Tillsten
 """
 import numpy as np
-
+from scipy.special import erfc
 
 def _fold_exp(tt, w, tz, tau):
     """
