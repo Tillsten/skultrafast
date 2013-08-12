@@ -7,8 +7,9 @@ Created on Wed Apr 17 17:03:26 2013
 import numpy as np
 
 
-from numba import autojit, vectorize, f8, jit
+from numba import autojit, vectorize, f8, jit, prange
 from math import exp, erfc, sqrt
+#from lmmv
 sq2 = sqrt(2)
 
 @autojit
@@ -78,9 +79,9 @@ def fast_erfc(x):
     ret = 1./(bot*bot*bot*bot)
 
     if smaller:
-        return -ret + 2.
-    else:
-        return  ret
+        ret =  -ret + 2.
+    
+    return ret
 
 
 @jit('f8(f8, f8, f8, f8)', nopython=True)
@@ -89,7 +90,9 @@ def folded_fit_func(t, tz, w, k):
     Returns the value of a folded exponentials.
     Employs some domain checking for making the calculation.
 
-    Parameters
+    Parat_array = np.subtract.outer(np.linspace(-2, 50, 300),
+                                np.linspace(3, 3, 400))
+    w = 0.1meters
     ----------
     t: float
         The time.
@@ -101,15 +104,14 @@ def folded_fit_func(t, tz, w, k):
         rate of the decay.
     """
     t = t - tz
-    if t < -2.5 * w:
+    if t < -5. * w:
         return 0.
-    elif t < 2.5 * w:
+    elif t < 5. * w:
         #print -t/w + w*k/2., w, k, t
         return exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
-    elif t < 5./k:
+    elif t > 5.* w:
         return exp(k* (w*w*k/ (4.0) - t))
-    else:
-        return 0.
+
 
 @jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])
 def _fold_exp(t_arr, w, tz, tau_arr):
@@ -135,7 +137,7 @@ def _fold_exp(t_arr, w, tz, tau_arr):
     n, m = t_arr.shape
     l = tau_arr.size
     out = np.empty((l, m, n))
-    for tau_idx in range(l):
+    for tau_idx in prange(l):
         k = 1 / tau_arr[tau_idx]
         for j in range(m):
             for i in range(n):
