@@ -58,20 +58,28 @@ def test_folded_equals_exp():
     np.testing.assert_array_almost_equal(y, exp_y)      
     
     
-def test_copare_fold_funcs():
+def test_compare_fold_funcs():
     taus = np.array([1., 20., 30.])
     t_array = np.subtract.outer(np.linspace(-2, 50, 300),
-                                np.linspace(3, 3, 400))
+                                np.linspace(-1, 3, 400))
     w = 0.1
     y1 = bnp._fold_exp(t_array, w, 0, taus)
     y2 = bcl._fold_exp(t_array, w, 0, taus)
     np.testing.assert_array_almost_equal(y1, y2, 4)
     
     y3 = bnb._fold_exp(t_array, w, 0, taus)
-    np.testing.assert_array_almost_equal(y1, y3, 4)
+    np.testing.assert_array_almost_equal(y1, y3, 3)
+
+def test_compare_coh_funcs():
+    t_array = np.subtract.outer(np.linspace(-4, 4, 300),
+                                np.linspace(3, 3, 400))
+    w = 0.1
+    y1 = bnb._coh_gaussian(t_array,  w, 0.)
+    y2 = bcl._coh_gaussian(t_array,  w, 0.)
+    np.testing.assert_array_almost_equal(y1, y2, 4)
     
 if __name__ == '__main__':
-    test_copare_fold_funcs()
+    test_compare_coh_funcs()
     
 #     import matplotlib.pyplot as plt
 
@@ -81,11 +89,9 @@ if __name__ == '__main__':
 ##     plt.show()
 #     
 #     b = test_exp()
-#     print a.shape
-#     print b.shape
-##     
+#     print a.shape5
 #     plt.plot(b[:, 9, :], lw=2)
 #     plt.plot(a[:, 9, :], lw=2)
 #     plt.show()
 
-    nose.run()
+   # nose.run()

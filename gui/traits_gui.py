@@ -24,7 +24,7 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection,\
 
 from multiplotter import MultiPlotter, FitPlotter
 
-from ..fitter import Fitter
+from skultrafast.fitter import Fitter
 import skultrafast.dv as dv
 
 class Data(HasTraits):
@@ -46,13 +46,13 @@ class Data(HasTraits):
     def _spectrum_plotter_default(self):
         mp = FitPlotter(xaxis=self.wavelengths)
         mp.xlabel = "nm"
-        mp.ylabel = "OD"
+        mp.ylabel = "mOD"
         return mp
 
     def _transients_plotter_default(self):
         mp = FitPlotter(xaxis=self.times)
         mp.xlabel = "ps"
-        mp.ylabel = "OD"
+        mp.ylabel = "mOD"
         return mp
 
     def _pd_default(self):
@@ -266,7 +266,7 @@ if __name__=='__main__':
     
     #x=np.linspace(0,20,500)
     #y=np.sin(x/1.2)
-    import dv
+    
     
     a = np.loadtxt('..\\alcor_py2_ex400.txt')
     
