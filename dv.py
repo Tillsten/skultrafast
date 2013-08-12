@@ -3,7 +3,7 @@ import numpy as np
 from scipy.interpolate import splrep, splev
 from collections import namedtuple
 
-tup = namedtuple('Result','wl t data')
+tup = namedtuple('tup','wl t data')
 
 def add_to_cls(cls):
     def function_enum(fn):
