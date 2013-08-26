@@ -338,13 +338,63 @@ def do_nnls(A,b):
         out[:,i] =  nnls(A, b[:,i])[0]
     return out
 
+import lmfit
+def exp_fit(x, y, start_taus = [1], use_constant=True):
+    print y.dtype
+    num_exp = len(start_taus)
+    para = lmfit.Parameters()
+    if use_constant:
+        para.add('const', y[-1] )
+    
+    for i in range(num_exp):
+        para.add('tau' + str(i), start_taus[i])
+        y_c = y - y[-1]
+        a = y_c[fi(x, start_taus[i])]
+        para.add('amp' + str(i), a)
+        
+    def fit(p):
+        y_fit = np.zeros_like(y) 
+        if use_constant:
+            y_fit += p['const'].value
+        
+        for i in range(num_exp):
+            amp = p['amp'+str(i)].value
+            tau = p['tau'+str(i)].value
+            
+            y_fit += amp * np.exp(-x/tau)
+        
+        return y_fit
+    fit(para)
+
+    def res(p):
+        return y - fit(p)        
 
 
+    mini = lmfit.minimize(res, para)
+    lmfit.report_errors(para)
+    y_fit = fit(para)
+    return mini, y_fit 
+
+def calc_ratios(fitter, tmin=0.35, tmax=200):
+    from skultrafast import zero_finding
+    tup = zero_finding.interpol(fitter, fitter.tn)
+    w, t, d = tup
+    i = fi(t, tmin)
+    i_max = fi(t, tmax)
+    t = t[i:i_max]
+    d = d[i:i_max, :]
+    pos = np.where(d > 0, d, 0).sum(1)
+    neg = np.where(d < 0, d, 0).sum(1)
+    return t, pos, neg, pos/neg, d.sum(1)
+        
+        
 
 if __name__=='__main__':
-    u, v = als(g.data.T, 5)
-    subplot(211).plot(w, u)
-    subplot(212).plot(t, v)
+    import numpy as np
+    t, p, n, pn, total = calc_ratios(g)
+    m,yf = exp_fit(t, pn, [1, 11])
+    plot(t, pn)
+    plot(t, yf)
     #figure(1)
     #clf()
     #imshow(a-u.dot(v.T).T)
