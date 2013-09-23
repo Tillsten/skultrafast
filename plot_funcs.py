@@ -311,20 +311,37 @@ def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     ax2.pcolormesh(cor.wl, cor.t, cor.data)
     ax2.set_ylim(fit_tn.min(), fit_tn.max())
     
-def sig_ratios(fitter):
-    tup = zero_finding.interpol(f, f.tn)
-    w, t, d = tup
-    i = dv.fi(t, 0.35)
-    t = t[i:]
-    d = d[i:, :]
-    pos = np.where(d > 0, d, 0).sum(1)
-    neg = np.where(d < 0, d, 0).sum(1)
-    subplot(311).plot(t, pos/neg)
-    plt.xlim(0,10)
-    subplot(312).plot(t, pos)
-    plt.xlim(0,10)
-    subplot(313).plot(t, neg)
-    plt.xlim(0,10)
+    
+    
+
+def sig_ratios(fitter, fname=None, tmax=200, 
+               do_fit=True, start_taus=None):
+    if not start_taus:
+        start_taus = [0.5, 11]
+        
+    t, pos, neg, pn, total = dv.calc_ratios(fitter)    
+    labels = ['Positive / Negative', 'Positive',
+              'Negative', 'Total']
+    i = 0
+
+    for l, y in zip(labels, (pn, pos, neg, total)):
+        plt.subplot(2, 2, i+1)
+        i +=1 
+        plt.plot(t, y)
+        plt.title(l)
+        plt.xscale('log')
+        if do_fit:
+            mi, yf = dv.exp_fit(t, y, start_taus)
+            plt.plot(t, yf)
+            txt = ''
+            for p in mi.params.values():
+                txt += p.name + ' '
+                txt += '{0:.2f}'.format(p.value) + ' \n'
+            ax = plt.gca()
+            plt.text(0.6, 0.6, txt, transform=ax.transAxes)
+    if fname:
+        np.savetxt(fname, np.column_stack((t, pos, neg, pos/neg, d.sum(1))), 
+                   header = 't pos neg pos/neg total')
     
 #sig_ratios(g)
 
@@ -387,3 +404,6 @@ def _plot_kin_res(x):
         plot(wl, f.data[i, :],'ro')
         plot(wl, (f.data - res)[i, :],'k')
         plot(wl, res[i,:])
+        
+if __name__ == '__main__':
+    sig_ratios(f, do_fit=1)
