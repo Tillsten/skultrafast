@@ -71,6 +71,25 @@ class LassoCVParams(LmParams):
 method_dict = {'Lasso': LassoParams, 
                'LassoCV': LassoCVParams,
                }   
+               
+class PlotView(HasTraits):
+    plot_view = Enum('data', 'fit', 'map')
+    data = Instance(ArrayPlotData) 
+    left_plot = Instance(dc.Plot)
+    right_plot = Instance(dc.Plot)
+
+    def _left_plot_default(self):
+        return Plot(self.data)
+
+    def _right_plot_default(self):
+        return Plot(self.data)
+    
+    l_plot_item = Item('left_plot', editor=ComponentEditor(), show_label=False)
+    r_plot_item = Item('right_plot', editor=ComponentEditor(), show_label=False)
+    
+    view = View([HGroup(l_plot_item, r_plot_item), '@plot_view'])
+    
+    
 
 class LifeTimeMapTool(HasTraits):
     method = Enum('Lasso', 'LassoCV')
@@ -80,17 +99,15 @@ class LifeTimeMapTool(HasTraits):
     lm = Instance(LmParams)
     data = Instance(tup)    
     
-    img_plot = Instance(dc.Plot)
+    img_plot = Instance(PlotView)
     
     def _lm_default(self):
         return LassoParams(data=self.tup)
     
     def _img_plot_default(self):
-        self._plot_data = ArrayPlotData(signal=self.tup.data)
-        print self.tup.data
-        plot = dc.Plot(self._plot_data)
-        plot.img_plot('signal')
-        return plot
+        self.plot_data = ArrayPlotData(data=tup.data, t=tup.t, w=tup.wl)        
+        return PlotView(data=self.plot_data)            
+        
         
     def _method_changed(self):
         self.lm = method_dict[self.method](data=self.tup)
@@ -104,7 +121,8 @@ class LifeTimeMapTool(HasTraits):
                   Item('but_fit', show_label=False),
                   )
                   
-    plot_item = Item('img_plot', editor=ComponentEditor(), show_label=False)
+    plot_item = Item('img_plot', style='custom', show_label=False)
+    #plot_item = Item()
     view = View(HGroup(para_group, plot_item ))
 #l = LassoParams(tup=k).configure_traits()
 
