@@ -340,7 +340,7 @@ def sig_ratios(fitter, fname=None, tmax=200,
             ax = plt.gca()
             plt.text(0.6, 0.6, txt, transform=ax.transAxes)
     if fname:
-        np.savetxt(fname, np.column_stack((t, pos, neg, pos/neg, d.sum(1))), 
+        np.savetxt(fname, np.column_stack((t, pos, neg, pos/neg, total)), 
                    header = 't pos neg pos/neg total')
     
 #sig_ratios(g)
