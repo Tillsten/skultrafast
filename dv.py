@@ -24,6 +24,17 @@ def fs2cm(t):
 def cm2fs(cm):
     return  1/(cm * 3e-5)
 
+from scipy.interpolate import UnivariateSpline
+def smooth_spline(x, y, s):
+    s = UnivariateSpline(x, y, s=s)
+    return s(x)
+
+def apply_spline(t, d, s=None):
+    out = np.zeros_like(d)
+    for i in range(d.shape[1]):
+        out[:, i] =smooth_spline(t, d[:, i], s)
+    return out 
+    
 def binner(n, wl, dat):
     """ 
     Given wavelengths and data it bins the data into n-wavelenths.
@@ -72,6 +83,7 @@ def arr_polydetrend(x, t=None, deg=3):
     for i in range(x.shape[1]):
         out[:, i] = polydetrend(x[:, i], t, deg)
     return out
+
     
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
@@ -280,7 +292,6 @@ def efa(dat, n, reverse=False):
         out[i, :]=sv
     return out
 
-#from sklearn.decomposition import PCA
 def moving_efa(dat, n, ncols, method='svd'):
     out=np.zeros((dat.shape[0], n))
     #p=PCA()
@@ -296,12 +307,8 @@ def moving_efa(dat, n, ncols, method='svd'):
 from scipy.optimize import nnls
 
 
-#from sklearn.linear_model import Ridge
-#r=Ridge(1.0, False)
-
 
 def als(dat, n=5):
-
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
     v0=v.T[:n]
@@ -391,10 +398,12 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
 
 if __name__=='__main__':
     import numpy as np
-    t, p, n, pn, total = calc_ratios(g)
-    m,yf = exp_fit(t, pn, [1, 11])
-    plot(t, pn)
-    plot(t, yf)
+    ss = apply_spline(t, d[..., 0], s=9)        
+    plot(ss[:, 18])
+#    t, p, n, pn, total = calc_ratios(g)
+#    m,yf = exp_fit(t, pn, [1, 11])
+#    plot(t, pn)
+#    plot(t, yf)
     #figure(1)
     #clf()
     #imshow(a-u.dot(v.T).T)
