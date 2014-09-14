@@ -47,11 +47,13 @@ def use_sv_filter(dat, window=7, polydeg=5):
     return out
 
 @dv.add_to_cls(est)
-def use_max(dat):
+def use_max(dat, use_abs=True):
     """
     Uses the absolute maximum of the signal
     """
-    return np.argmax(np.abs(dat), 0)
+    if use_abs:
+        dat = np.abs(dat)
+    return np.argmax(dat, 0)
 
 @dv.add_to_cls(est)
 def use_first_abs(dat, val=5):

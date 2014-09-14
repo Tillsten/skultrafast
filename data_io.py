@@ -21,8 +21,8 @@ def load_datfile(datfile):
     f = lambda  s: float(s.replace(',', '.'))
     d = np.loadtxt(datfile, converters = {0:f, 1:f, 2:f, 3:f})
     return d    
-import numba
-@numba.autojit    
+
+
 def read_data(d):    
     """
     Put raw data into arrays.
@@ -76,6 +76,8 @@ def loader_func(name):
         t, w = tmp[1:,0], tmp[0,1:]
         wls.append(w)
     return t, wls, a
+    
+
 
 def concate_data(wls,dat):   
     """Puts the data from different central wavelengths into one Array"""
@@ -133,7 +135,7 @@ def make_report(fitter, info, raw=None, plot_fastest=1):
     dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data),
                                  fitter.tn, 0.0)            
     save_txt(name + '_ex' + excitation + '_iso_timecor.txt', *dat)
-    plot_funcs.plot_ltm_page(dat, 'pics\\'+ title + 'lft_map.png')
+  #  plot_funcs.plot_ltm_page(dat, 'pics\\'+ title + 'lft_map.png')
     
     fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model),
                                  fitter.tn, 0.0)            
