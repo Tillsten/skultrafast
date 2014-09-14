@@ -56,7 +56,7 @@ class LassoParams(LmParams):
     params = Group(Item('alpha'))
         
     def _fitobj_default(self):
-        return llm.Lasso(alpha = self.alpha, max_iter=self.max_iter)
+        return lm.Lasso(alpha = self.alpha, max_iter=self.max_iter)
 
     
 class LassoCVParams(LmParams):

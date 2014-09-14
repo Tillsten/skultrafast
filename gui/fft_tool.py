@@ -17,6 +17,8 @@ from chaco.tools.api import PanTool, ZoomTool, RangeSelection,\
     RangeSelectionOverlay, LegendTool
 
 import numpy as np
+from skultrafast import dv
+
 
 class FFTTool(HasTraits):
     x = Array
@@ -83,7 +85,7 @@ class FFTTool(HasTraits):
             y = np.abs(np.fft.fft(win * (d - back)))
             self.pd2.set_data('y_cor', win * (d - back))
             x = np.fft.fftfreq(n, self.Fs)[:y.size / 2]
-            x = dv.fs2cm(1000./x)
+#            x = dv.fs2cm(1000./x)
             self.pd.set_data('freqs', x[1:])
             self.pd.set_data('amps', y[1:y.size / 2])
 
