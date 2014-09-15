@@ -23,6 +23,11 @@ def fs2cm(t):
     
 def cm2fs(cm):
     return  1/(cm * 3e-5)
+    
+def dichro_to_angle(d):
+    return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
+def angle_to_dichro(x):
+    return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
 
 from scipy.interpolate import UnivariateSpline
 def smooth_spline(x, y, s):
@@ -64,12 +69,12 @@ def fi(w,x):
     else:
         return ret
 
-
 def subtract_background(dat, t, tn, offset=0.3):
+    out = np.zeros_like(dat)
     for i in range(dat.shape[1]):
         mask = (t-tn[i]) < -offset
         corr = dat[mask, i].mean()
-        dat[:, i] -= corr
+        out[:, i] = dat[:, i] -  corr
     return dat
 
 def polydetrend(x, t=None, deg=3):
@@ -84,6 +89,9 @@ def arr_polydetrend(x, t=None, deg=3):
         out[:, i] = polydetrend(x[:, i], t, deg)
     return out
 
+
+def meaner(dat, t, llim, ulim):
+    return np.mean(dat[fi(t, llim):fi(t, ulim)], 0)
     
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
@@ -161,6 +169,13 @@ def apply_sg(y, window_size, order, deriv=0):
     out = np.zeros_like(y)
     for i in range(y.shape[1]):
         out[:, i] = savitzky_golay(y[:, i], window_size, order, deriv)
+    return out
+    
+def apply_sg_scan(y, window_size, order, deriv=0):
+    out = np.zeros_like(y)
+    for s in range(y.shape[-1]):
+        for i in range(y.shape[1]):
+            out[:, i, s] = savitzky_golay(y[:, i, s], window_size, order, deriv)
     return out
 
 def calc_error(args):
@@ -306,8 +321,16 @@ def moving_efa(dat, n, ncols, method='svd'):
 
 from scipy.optimize import nnls
 
-
-
+def pfid_tau_to_w(tau):
+    """
+    Given the rise time of the pertuabed 
+    free induction decay, calculate the    
+    corresponding spectral width in cm-^1.
+    """
+    return 1/(np.pi*3e7*tau*1e-9)
+    
+print pfid_tau_to_w(1)
+    
 def als(dat, n=5):
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
@@ -346,7 +369,7 @@ def do_nnls(A,b):
     return out
 
 import lmfit
-def exp_fit(x, y, start_taus = [1], use_constant=True):
+def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None):
     print y.dtype
     num_exp = len(start_taus)
     para = lmfit.Parameters()
@@ -356,8 +379,11 @@ def exp_fit(x, y, start_taus = [1], use_constant=True):
     for i in range(num_exp):
         para.add('tau' + str(i), start_taus[i])
         y_c = y - y[-1]
-        a = y_c[fi(x, start_taus[i])]
+        a = y_c[fi(x, start_taus[i])]        
         para.add('amp' + str(i), a)
+        if amp_max is not None:
+            para['amp' + str(i)].max = amp_max
+            para['amp' + str(i)].min = -amp_max
         
     def fit(p):
         y_fit = np.zeros_like(y) 
@@ -396,10 +422,10 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
         
         
 
-if __name__=='__main__':
-    import numpy as np
-    ss = apply_spline(t, d[..., 0], s=9)        
-    plot(ss[:, 18])
+#if __name__=='__main__':
+#    import numpy as np
+#    ss = apply_spline(t, d[..., 0], s=9)        
+#    plot(ss[:, 18])
 #    t, p, n, pn, total = calc_ratios(g)
 #    m,yf = exp_fit(t, pn, [1, 11])
 #    plot(t, pn)
