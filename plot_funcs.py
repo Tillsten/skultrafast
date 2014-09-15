@@ -314,12 +314,13 @@ def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     
     
 
-def sig_ratios(fitter, fname=None, tmax=200, 
+def sig_ratios(fitter, fname=None, tmax=200,
+               tmin = 0.1,
                do_fit=True, start_taus=None):
     if not start_taus:
         start_taus = [0.5, 11]
         
-    t, pos, neg, pn, total = dv.calc_ratios(fitter)    
+    t, pos, neg, pn, total = dv.calc_ratios(fitter, tmin=tmin, tmax=tmax)    
     labels = ['Positive / Negative', 'Positive',
               'Negative', 'Total']
     i = 0
@@ -355,9 +356,9 @@ def make_legend(p, err, n):
         l.append(s)
     return l
 
-def use_cmap(pl, cmap='RdBu'):
+def use_cmap(pl, cmap='RdBu', offset=0.1):
     cm = plt.get_cmap(cmap)
-    idx = np.linspace(0, 1, len(pl))
+    idx = np.linspace(0+offset, 1-offset, len(pl))
     for i, p in enumerate(pl):
         p.set_color(cm(idx[i]))
     
@@ -406,4 +407,4 @@ def _plot_kin_res(x):
         plot(wl, res[i,:])
         
 if __name__ == '__main__':
-    sig_ratios(f, do_fit=1)
+    sig_ratios(f, do_fit=1, tmin=5., start_taus=[5])
