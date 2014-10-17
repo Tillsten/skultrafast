@@ -241,6 +241,7 @@ def _fold_exp_and_coh(t_array, w, tz, tau_arr):
     a = out.get(async=True)
     b = out_coh.get(async=True)
     
+    b /= np.abs(b).max(0)
     queue.finish()
     return a, b
     
