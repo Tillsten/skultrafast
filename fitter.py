@@ -322,6 +322,8 @@ class Fitter(object):
             else:
                 p[name].vary = False
 
+        for i in fixed_names:
+            p[i].vary = False
         if fix_long:
             p['t' + str(num_exp - 1)].vary = False
 
