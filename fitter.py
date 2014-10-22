@@ -1,44 +1,50 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
-from numpy.linalg import solve, qr
+from numpy.core.umath_tests import matrix_multiply, inner1d
 from scipy import linalg
 #from scipy.special import erfc #errorfunction
-from scipy.optimize import leastsq
+
 from scipy.stats import f #fisher
 from skultrafast import dv, zero_finding
 import lmfit
 
 LinAlgError = np.linalg.LinAlgError
-try:
-    from sklearn.linear_model.ridge import ridge_regression
-    has_sklearn = True
 
-except ImportError:
-    has_sklearn = False
 
-from skultrafast.base_functions import _fold_exp, _coh_gaussian
+#from skultrafast.base_functions import _fold_exp, _coh_gaussian
+from skultrafast.base_functions_cl import _fold_exp, _coh_gaussian, _fold_exp_and_coh
+
+posv = linalg.get_lapack_funcs(('posv'))
+
+def direct_solve(a, b):
+    c, x, info = posv(a, b, lower=False,
+                      overwrite_a=True,
+                      overwrite_b=False)
+    return x
 
 def solve_mat(A, b_mat, method='fast'):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
     """
     if method == 'fast':
-        return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
+        #return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
+        return direct_solve(A.T.dot(A), A.T.dot(b_mat))
 
     elif method == 'ridge':
         alpha = 0.001
         X = np.dot(A.T, A)
         X.flat[::A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)
-        return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
+        #return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
+        return direct_solve(X, Xy)
 
-    elif method == 'qr':        
+    elif method == 'qr':
         cq, r = linalg.qr_multiply(A, b_mat)
-        return linalg.solve_triangular(r, cq)        
-        
+        return linalg.solve_triangular(r, cq)
+
     elif method == 'cho':
-        c, l = linalg.cho_factor( A.T.dot(A))        
+        c, l = linalg.cho_factor( A.T.dot(A))
         return linalg.cho_solve((c, l), A.T.dot(b_mat))
 
     elif method == 'lstsq':
@@ -50,10 +56,10 @@ def solve_mat(A, b_mat, method='fast'):
         s.alpha = 0.004
         s.fit(A, b_mat)
         return s.coef_.T
-    
+
     else:
         raise ValueError('Unknow lsq method, use ridge, qr, fast or lasso')
-    
+
 
 
 
@@ -95,11 +101,11 @@ class Fitter(object):
         self.t = t
         self.wl = wl
         self.data = data
-
+        self.verbose = False
         self.model_coh = model_coh
         self.model_disp = model_disp
-        self.lsq_method = 'ridge'
-    
+        self.lsq_method = 'cho'
+
         self.num_exponentials = -1
         self.weights = None
 
@@ -129,15 +135,15 @@ class Fitter(object):
 
         """
         self.last_para = np.asarray(para)
-        if self._chk_for_disp_change(para): 
-            # Only calculate interpolated data if necessary:            
+        if self._chk_for_disp_change(para):
+            # Only calculate interpolated data if necessary:
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
             tup = dv.tup(self.wl, self.t, self.org)
-            self.data = zero_finding.interpol(tup, self.tn)[2]        
+            self.data = zero_finding.interpol(tup, self.tn)[2]
             self.used_disp[:] = para[:self.model_disp]
-            
+
         self.num_exponentials = self.last_para.size - self.model_disp - 1
-        if self.model_disp == 0:
+        if self.model_disp <= 1:
             self._build_xvec(para)
         self.x_vec = np.nan_to_num(self.x_vec)
         self.c = solve_mat(self.x_vec, self.data, self.lsq_method)
@@ -149,15 +155,16 @@ class Fitter(object):
             if  np.any(para[:self.model_disp] != self.used_disp):
                 return True
         return False
-                
+
 
     def _build_xvec(self, para):
         """
         Build the base (the folded functions) for given parameters.
         """
         para = np.array(para)
-        print para
-        
+        if self.verbose:
+            print para
+
         try:
             idx = (para != self._last)
         except AttributeError:
@@ -173,13 +180,17 @@ class Fitter(object):
 
         if any(idx[:2]) or self.model_disp or True:
             if self.model_coh:
-                x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
-                x_vec[:, -4:] = _coh_gaussian(self.t[:, None], w, x0).squeeze()                
-                x_vec[:, :-4] = _fold_exp(self.t[:, None], w,
-                                               x0, taus).squeeze()
+                x_vec = np.zeros((self.t.size, self.num_exponentials + 3))
+                print taus
+                a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus[tau_idx])                
+                
+                x_vec[:, -3:] = b[..., 0]
+                x_vec[:, :-3] = a[..., 0]
+                
             else:
                 x_vec = _fold_exp(self.t[:, None], w, x0, taus).squeeze()
             self.x_vec = np.nan_to_num(x_vec)
+            self.x_vec /= np.max(self.x_vec, 0)
             self._last = para.copy()
         else:
             self.x_vec[:, tau_idx] = _fold_exp(self.t, w,
@@ -230,9 +241,9 @@ class Fitter(object):
             is_disp_changed = (para[:m_disp] != self.last_para[:m_disp]).any()
         except AttributeError:
             is_disp_changed = True
-        print is_disp_changed
-        self.last_para = para
 
+        self.last_para = para
+        
         if self.model_disp and is_disp_changed:
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
             self.t_mat = self.t[:, None] - self.tn[None, :]
@@ -242,8 +253,11 @@ class Fitter(object):
         for i in xrange(self.data.shape[1]):
             A = self.xmat[:, i, :]
             self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
-            self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
+        #self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
+
+        self.model = inner1d( self.xmat, self.c)
+        #self.model[:, :]  = matrix_multiply(self.xmat, self.c[:, :, None]).squueze()
 
     def _build_xmat(self, para, is_disp_changed):
         """
@@ -258,19 +272,19 @@ class Fitter(object):
 
         w = para[0]
         taus = para[1:]
-        x0 = 0
+        x0 = 0.
 
         #Only calculate what is necessary.
         if idx[0] or is_disp_changed:
+            exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
             if self.model_coh:
-                self.xmat[:, :, -4:] = _coh_gaussian(self.t_mat, w, x0)
+                self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
-            self.xmat[:, :, :num_exp] =  _fold_exp(self.t_mat, w, x0, taus)
+            self.xmat[:, :, :num_exp] =  exps
         elif any(idx):
-            print taus[idx[1:]]
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w,
                                                  x0, taus[idx[1:]])
-        self.xmat = np.nan_to_num(self.xmat)
+        #self.xmat = np.nan_to_num(self.xmat)
         self._last = para
 
     def _check_num_expontials(self, para):
@@ -281,7 +295,7 @@ class Fitter(object):
         if new_num_exp != self.num_exponentials:
             self.num_exponentials = new_num_exp
             if self.model_disp:
-                new_num_exp += 4
+                new_num_exp += 3
             n, m = self.data.shape
             self.xmat = np.empty((n, m, new_num_exp))
             self.c = np.zeros((self.data.shape[1], self.xmat.shape[-1]))
@@ -303,14 +317,16 @@ class Fitter(object):
         p.add('w', x0[0], min=0)
         num_exp = len(x0) - 1
         for i, tau in enumerate(x0[1:]):
-            name = 't' + str(i)#    
-# 
+            name = 't' + str(i)#
+#
             p.add(name, tau, vary=True)
             if name not in fixed_names:
                 p[name].min = lower_bound
             else:
                 p[name].vary = False
- 
+
+        for i in fixed_names:
+            p[i].vary = False
         if fix_long:
             p['t' + str(num_exp - 1)].vary = False
 

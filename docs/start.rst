@@ -26,8 +26,7 @@ if anyone would like to join the project!
 
 Published results
 -----------------
-Poster on the femto 10.
-First papers using the software should follow soon.
+Poster on the Femto 10 and Time-resovled vibrational spectroscopy.
 
 
 Software prerequisites
@@ -41,8 +40,7 @@ Using the GUI introduces a lot of dependencies: It is made
 with traitsui and chaco, which both have its own stack fo
 depenencies.
 
-I am also recommending to python packages lmfit and cma-es.
-
+For maximum speed, pyopencl and 
 
 Why not TIMP or the Ultrafast Spectroscopy Modelling Toolbox?
 =============================================================
@@ -61,9 +59,9 @@ Try it out, if you don't have yet.
 But it has some warts:
 I don't like R too much. Also some parts are slower
 than necessary. I also dislike that the corresponding
-GUI is written is java, making changes unnecessarily
-complicated. Also it seems, that here is not development
-on TIMP.
+GUI is written is Java, making changes unnecessarily
+complicated. Also it seems, that there is no development
+on TIMP itself.
 
 Why not the Ultrafast Spectroscopy Modelling Toolbox?
 -----------------------------------------------------
@@ -71,7 +69,7 @@ Mostly because it needs Matlab and many Matlab-toolboxes.
 I only have access to Matlab without toolboxes, many
 people won't have any kind of access to Matlab.
 
-Also enjoying programming in Matlab after using Python
+Also after using Python enjoying programming in Matlab 
 is quite difficult.
 
 Best way to get started?

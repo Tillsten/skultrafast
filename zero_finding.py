@@ -7,7 +7,7 @@ import numpy as np
 import dv
 import scipy.ndimage as nd
 from statsmodels.api import RLM
-import plot_funcs as pl
+
 from matplotlib.pyplot import plot
 #from skultrafast.fitter import _coh_gaussian
 from scipy.linalg import lstsq
@@ -47,11 +47,13 @@ def use_sv_filter(dat, window=7, polydeg=5):
     return out
 
 @dv.add_to_cls(est)
-def use_max(dat):
+def use_max(dat, use_abs=True):
     """
     Uses the absolute maximum of the signal
     """
-    return np.argmax(np.abs(dat), 0)
+    if use_abs:
+        dat = np.abs(dat)
+    return np.argmax(dat, 0)
 
 @dv.add_to_cls(est)
 def use_first_abs(dat, val=5):
@@ -197,6 +199,7 @@ def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
     #dv.subtract_background(tup.data, tup.t, fit, 400)
     cor = interpol(tup, fit)
     if plot:
+        import plot_funcs as pl
         pl._plot_zero_finding(tup, raw_tn, fit, cor)
     return cor, fit
 

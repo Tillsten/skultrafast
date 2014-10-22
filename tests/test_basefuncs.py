@@ -6,8 +6,14 @@ Created on Sun Apr 21 20:34:15 2013
 """
 
 import nose
-from skultrafast.base_functions import fast_erfc, calc_gaussian_fold, \
-      _fold_exp, _coh_gaussian, _exp, 
+from skultrafast.base_functions_numba import fast_erfc, calc_gaussian_fold, \
+      _fold_exp, _coh_gaussian, _exp
+      
+import skultrafast.base_functions_np as bnp
+import skultrafast.base_functions_cl as bcl
+import skultrafast.base_functions_numba as bnb 
+
+#import skultrafast.fitter_cython
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 
@@ -38,32 +44,54 @@ def test_exp():
     np.testing.assert_almost_equal(np.exp(-t_array[:, 0]), y[:, 0, 0])
     
 
-def test_folded_eq_exp():
+def test_folded_equals_exp():
     """
     For t>>w exp==folded exp
     """
     taus = np.array([1., 20., 30.])
-    t_array = np.subtract.outer(np.linspace(10, 50, 300),
+    t_array = np.subtract.outer(np.linspace(40, 50, 300),
                                 np.linspace(3, 3, 400))
     w = 0.1
     y = _fold_exp(t_array, w, 0, taus)
     y2 = _fold_exp(t_array, w, 0, taus)    
-    np.testing.assert_array_almost_equal(y, ynp.exp())
+    exp_y = np.exp(-t_array[ :, :, None]/taus[ None, None,:])
+    np.testing.assert_array_almost_equal(y, exp_y)      
+    
+    
+def test_compare_fold_funcs():
+    taus = np.array([1., 20., 30.])
+    t_array = np.subtract.outer(np.linspace(-2, 50, 300),
+                                np.linspace(-1, 3, 400))
+    w = 0.1
+    y1 = bnp._fold_exp(t_array, w, 0, taus)
+    y2 = bcl._fold_exp(t_array, w, 0, taus)
+    np.testing.assert_array_almost_equal(y1, y2, 4)
+    
+    y3 = bnb._fold_exp(t_array, w, 0, taus)
+    np.testing.assert_array_almost_equal(y1, y3, 3)
 
+def test_compare_coh_funcs():
+    t_array = np.subtract.outer(np.linspace(-4, 4, 300),
+                                np.linspace(3, 3, 400))
+    w = 0.1
+    y1 = bnb._coh_gaussian(t_array,  w, 0.)
+    y2 = bcl._coh_gaussian(t_array,  w, 0.)
+    np.testing.assert_array_almost_equal(y1, y2, 4)
+    
 if __name__ == '__main__':
-     import matplotlib.pyplot as plt
+    test_compare_coh_funcs()
+    
+#     import matplotlib.pyplot as plt
 
-     a = test_fold_exp()
-#
-#     plt.plot(a[:, 0, :])
+#     a = test_fold_exp()
+##
+##     plt.plot(a[:, 0, :])
+##     plt.show()
+#     
+#     b = test_exp()
+#     print a.shape5
+#     plt.plot(b[:, 9, :], lw=2)
+#     plt.plot(a[:, 9, :], lw=2)
 #     plt.show()
-     
-     b = test_exp()
-     print a.shape
-     print b.shape
-     
-     plt.plot(b[:, 9, :], lw=2)
-     plt.plot(a[:, 9, :], lw=2)
-     plt.show()
 
-    # nose.run()
+   # nose.run()

@@ -3,7 +3,7 @@ import numpy as np
 from scipy.interpolate import splrep, splev
 from collections import namedtuple
 
-tup = namedtuple('Result','wl t data')
+tup = namedtuple('tup','wl t data')
 
 def add_to_cls(cls):
     def function_enum(fn):
@@ -24,12 +24,46 @@ def fs2cm(t):
 def cm2fs(cm):
     return  1/(cm * 3e-5)
 
+def trimmed_mean(arr, axis=-1, ratio=3.):
+    std = np.std(arr, axis, keepdims=1)
+    mean = np.mean(arr, axis, keepdims=1)  
+    idx = np.abs(arr - mean) > 3. * std
+    arr[idx] = np.nan
+    return np.nansum(arr, axis=axis) / np.sum(np.isfinite(arr), axis=axis)
+
+
+def dichro_to_angle(d):
+    return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
+def angle_to_dichro(x):
+    return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
+
+from scipy.interpolate import UnivariateSpline
+
+def smooth_spline(x, y, s):
+    s = UnivariateSpline(x, y, s=s)
+    return s(x)
+    
+def svd_filter(d, n=6):
+    u, s, v = np.linalg.svd(d, full_matrices=0)
+    s[n:] = 0
+    f = np.dot(u, np.diag(s).dot(v))
+    return f
+    
+def apply_spline(t, d, s=None):
+    out = np.zeros_like(d)
+    for i in range(d.shape[1]):
+        out[:, i] =smooth_spline(t, d[:, i], s)
+    return out 
+    
 def binner(n, wl, dat):
     """ 
     Given wavelengths and data it bins the data into n-wavelenths.
     Returns bdata and bwl    
     
     """
+    i = np.argsort(wl)
+    wl = wl[i]
+    dat = dat[:, i]
     idx=np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
     binned=np.empty((dat.shape[0], n))
     binned_wl=np.empty(n)
@@ -50,13 +84,13 @@ def fi(w,x):
     else:
         return ret
 
-
 def subtract_background(dat, t, tn, offset=0.3):
+    out = np.zeros_like(dat)
     for i in range(dat.shape[1]):
         mask = (t-tn[i]) < -offset
         corr = dat[mask, i].mean()
-        dat[:, i] -= corr
-    return dat
+        out[:, i] = dat[:, i] -  corr
+    return out
 
 def polydetrend(x, t=None, deg=3):
     t = t or np.arange(x.shape[0])
@@ -69,6 +103,10 @@ def arr_polydetrend(x, t=None, deg=3):
     for i in range(x.shape[1]):
         out[:, i] = polydetrend(x[:, i], t, deg)
     return out
+
+
+def meaner(dat, t, llim, ulim):
+    return np.mean(dat[fi(t, llim):fi(t, ulim)], 0)
     
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
@@ -146,6 +184,13 @@ def apply_sg(y, window_size, order, deriv=0):
     out = np.zeros_like(y)
     for i in range(y.shape[1]):
         out[:, i] = savitzky_golay(y[:, i], window_size, order, deriv)
+    return out
+    
+def apply_sg_scan(y, window_size, order, deriv=0):
+    out = np.zeros_like(y)
+    for s in range(y.shape[-1]):
+        for i in range(y.shape[1]):
+            out[:, i, s] = savitzky_golay(y[:, i, s], window_size, order, deriv)
     return out
 
 def calc_error(args):
@@ -277,7 +322,6 @@ def efa(dat, n, reverse=False):
         out[i, :]=sv
     return out
 
-#from sklearn.decomposition import PCA
 def moving_efa(dat, n, ncols, method='svd'):
     out=np.zeros((dat.shape[0], n))
     #p=PCA()
@@ -292,13 +336,17 @@ def moving_efa(dat, n, ncols, method='svd'):
 
 from scipy.optimize import nnls
 
-
-#from sklearn.linear_model import Ridge
-#r=Ridge(1.0, False)
-
-
+def pfid_tau_to_w(tau):
+    """
+    Given the rise time of the pertuabed 
+    free induction decay, calculate the    
+    corresponding spectral width in cm-^1.
+    """
+    return 1/(np.pi*3e7*tau*1e-9)
+    
+print pfid_tau_to_w(1)
+    
 def als(dat, n=5):
-
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
     v0=v.T[:n]
@@ -335,13 +383,68 @@ def do_nnls(A,b):
         out[:,i] =  nnls(A, b[:,i])[0]
     return out
 
+import lmfit
+def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None):
+    print y.dtype
+    num_exp = len(start_taus)
+    para = lmfit.Parameters()
+    if use_constant:
+        para.add('const', y[-1] )
+    
+    for i in range(num_exp):
+        para.add('tau' + str(i), start_taus[i])
+        y_c = y - y[-1]
+        a = y_c[fi(x, start_taus[i])]        
+        para.add('amp' + str(i), a)
+        if amp_max is not None:
+            para['amp' + str(i)].max = amp_max
+            para['amp' + str(i)].min = -amp_max
+        
+    def fit(p):
+        y_fit = np.zeros_like(y) 
+        if use_constant:
+            y_fit += p['const'].value
+        
+        for i in range(num_exp):
+            amp = p['amp'+str(i)].value
+            tau = p['tau'+str(i)].value
+            
+            y_fit += amp * np.exp(-x/tau)
+        
+        return y_fit
+    fit(para)
+
+    def res(p):
+        return y - fit(p)        
 
 
+    mini = lmfit.minimize(res, para)
+    lmfit.report_errors(para)
+    y_fit = fit(para)
+    return mini, y_fit 
 
-if __name__=='__main__':
-    u, v = als(g.data.T, 5)
-    subplot(211).plot(w, u)
-    subplot(212).plot(t, v)
+def calc_ratios(fitter, tmin=0.35, tmax=200):
+    from skultrafast import zero_finding
+    tup = zero_finding.interpol(fitter, fitter.tn)
+    w, t, d = tup
+    i = fi(t, tmin)
+    i_max = fi(t, tmax)
+    t = t[i:i_max]
+    d = d[i:i_max, :]
+    pos = np.where(d > 0, d, 0).sum(1)
+    neg = np.where(d < 0, d, 0).sum(1)
+    return t, pos, neg, pos/neg, d.sum(1)
+        
+        
+
+#if __name__=='__main__':
+#    import numpy as np
+#    ss = apply_spline(t, d[..., 0], s=9)        
+#    plot(ss[:, 18])
+#    t, p, n, pn, total = calc_ratios(g)
+#    m,yf = exp_fit(t, pn, [1, 11])
+#    plot(t, pn)
+#    plot(t, yf)
     #figure(1)
     #clf()
     #imshow(a-u.dot(v.T).T)
