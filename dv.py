@@ -23,17 +23,32 @@ def fs2cm(t):
     
 def cm2fs(cm):
     return  1/(cm * 3e-5)
-    
+
+def trimmed_mean(arr, axis=-1, ratio=3.):
+    std = np.std(arr, axis, keepdims=1)
+    mean = np.mean(arr, axis, keepdims=1)  
+    idx = np.abs(arr - mean) > 3. * std
+    arr[idx] = np.nan
+    return np.nansum(arr, axis=axis) / np.sum(np.isfinite(arr), axis=axis)
+
+
 def dichro_to_angle(d):
     return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
 def angle_to_dichro(x):
     return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
 
 from scipy.interpolate import UnivariateSpline
+
 def smooth_spline(x, y, s):
     s = UnivariateSpline(x, y, s=s)
     return s(x)
-
+    
+def svd_filter(d, n=6):
+    u, s, v = np.linalg.svd(d, full_matrices=0)
+    s[n:] = 0
+    f = np.dot(u, np.diag(s).dot(v))
+    return f
+    
 def apply_spline(t, d, s=None):
     out = np.zeros_like(d)
     for i in range(d.shape[1]):
@@ -75,7 +90,7 @@ def subtract_background(dat, t, tn, offset=0.3):
         mask = (t-tn[i]) < -offset
         corr = dat[mask, i].mean()
         out[:, i] = dat[:, i] -  corr
-    return dat
+    return out
 
 def polydetrend(x, t=None, deg=3):
     t = t or np.arange(x.shape[0])
