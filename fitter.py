@@ -180,10 +180,13 @@ class Fitter(object):
 
         if any(idx[:2]) or self.model_disp or True:
             if self.model_coh:
-                x_vec = np.zeros((self.t.size, self.num_exponentials + 4))
-                x_vec[:, -4:] = _coh_gaussian(self.t[:, None], w, x0).squeeze()
-                x_vec[:, :-4] = _fold_exp(self.t[:, None], w,
-                                               x0, taus).squeeze()
+                x_vec = np.zeros((self.t.size, self.num_exponentials + 3))
+                print taus
+                a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus[tau_idx])                
+                
+                x_vec[:, -3:] = b[..., 0]
+                x_vec[:, :-3] = a[..., 0]
+                
             else:
                 x_vec = _fold_exp(self.t[:, None], w, x0, taus).squeeze()
             self.x_vec = np.nan_to_num(x_vec)
@@ -240,7 +243,7 @@ class Fitter(object):
             is_disp_changed = True
 
         self.last_para = para
-        print para
+        
         if self.model_disp and is_disp_changed:
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
             self.t_mat = self.t[:, None] - self.tn[None, :]
@@ -275,7 +278,7 @@ class Fitter(object):
         if idx[0] or is_disp_changed:
             exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
             if self.model_coh:
-                self.xmat[:, :, -4:] = coh
+                self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
             self.xmat[:, :, :num_exp] =  exps
         elif any(idx):
@@ -292,7 +295,7 @@ class Fitter(object):
         if new_num_exp != self.num_exponentials:
             self.num_exponentials = new_num_exp
             if self.model_disp:
-                new_num_exp += 4
+                new_num_exp += 3
             n, m = self.data.shape
             self.xmat = np.empty((n, m, new_num_exp))
             self.c = np.zeros((self.data.shape[1], self.xmat.shape[-1]))
