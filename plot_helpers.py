@@ -6,8 +6,9 @@ Created on Tue May 27 15:35:22 2014
 """
 
 import matplotlib.pyplot as plt
-#plt.rcParams['savefig.dpi'] = 90
-#plt.rcParams['figure.figsize'] = (6, 4)
+
+plt.rcParams['savefig.dpi'] = 120
+plt.rcParams['figure.figsize'] = (6, 4)
 import skultrafast.dv as dv
 import numpy as np
 
@@ -22,6 +23,30 @@ plt.rcParams['axes.color_cycle'] =  tableau20[::2]
 
 
 
+
+
+def ir_mode():
+    global freq_label
+    global inv_freq
+    global freq_unit
+    freq_label = 'Wavenumber / cm$^{-1}$'
+    inv_freq = False
+    freq_unit = 'cm$^{-1}$'    
+
+
+def vis_mode():
+    global freq_label
+    global inv_freq
+    global freq_unit
+    freq_label = 'Wavelengths / nm'
+    inv_freq = False
+    freq_unit = 'nm'    
+
+
+vis_mode()
+time_label = 'Delay time  / ps'    
+sig_label = 'Absorbance change / mOD'
+
 def make_angle_plot(wl, t, para, senk, t_range):
     p = para
     s = senk
@@ -34,12 +59,12 @@ def make_angle_plot(wl, t, para, senk, t_range):
     ax.plot(wl, sd)
 
     ax.axhline(0, c='k')
-    ax.legend(['parallel', 'perpendicular'], columnspacing=0.3, ncol=2, frameon=0)
+    ax.legend(['Parallel', 'Perpendicular'], columnspacing=0.3, ncol=2, frameon=0)
 
     ax.xaxis.tick_top()
-    ax.set_ylabel('$\\Delta$abs / mOD')
+    ax.set_ylabel(sig_label)
     ax.xaxis.set_label_position('top')
-    ax.text(0.05, 0.1,  'signal average\nfor %.1f...%.0f ps'%t_range,
+    ax.text(0.05, 0.1,  'Signal average\nfor %.1f...%.0f ps'%t_range,
             transform=ax.transAxes)
             #horizontalalignment='center')
 
@@ -49,7 +74,7 @@ def make_angle_plot(wl, t, para, senk, t_range):
 
     ax2.plot(wl, ang, 'o-')
     ax2.set_ylim(0, 90)
-    ax2.set_ylabel('angle / degrees')
+    ax2.set_ylabel('Angle / Degrees')
     ax3 = plt.twinx()
     ax3.plot(wl, ang, lw=0)
     ax2.invert_xaxis()
@@ -64,8 +89,8 @@ def make_angle_plot(wl, t, para, senk, t_range):
     ax3.yaxis.set_ticks(to_angle(ratio_ticks))
     ax3.yaxis.set_ticklabels([i for i in ratio_ticks])
     ax3.set_ylabel('$A_\\parallel  / A_\\perp$')
-    ax2.set_xlabel('wavenumber / cm$^{-1}$')
-    ax2.set_title('angle calculated from dichroic ratio', fontsize='x-small')
+    ax2.set_xlabel()
+    ax2.set_title('Angle calculated from dichroic ratio', fontsize='x-small')
     plt.tight_layout(rect=[0, 0, 1, 1], h_pad=0)
     return ax, ax2, ax3
 
@@ -84,9 +109,9 @@ def make_angle_plot(wl, t, para, senk, t_range):
 
     ax.invert_xaxis()
     #ax.xaxis.tick_top()
-    ax.set_ylabel('$\\Delta$abs / mOD')
+    ax.set_ylabel(sig_label)
     ax.xaxis.set_label_position('top')
-    ax.text(0.05, 0.05,  'signal average\nfor %.1f...%.1f ps'%t_range,
+    ax.text(0.05, 0.05,  'Signal average\nfor %.1f...%.1f ps'%t_range,
             transform=ax.transAxes)
     ax.legend(['parallel', 'perpendicular', 'angle'], columnspacing=0.3, ncol=3, frameon=0)
             #horizontalalignment='center')
@@ -105,10 +130,10 @@ def lbl_spec(ax=None):
     if ax is None:
         ax = plt.gca()
 
-    ax.set_xlabel('frequency / cm$^{-1}$')
-    ax.set_ylabel('$\\Delta$abs  / mOD')
-
-    ax.invert_xaxis()
+    ax.set_xlabel(freq_label)
+    ax.set_ylabel(sig_label)
+    if inv_freq:
+        ax.invert_xaxis()
     ax.axhline(0, c='k', zorder=1.5)
 
     plt.minorticks_on()
@@ -118,11 +143,34 @@ def lbl_trans(ax=None):
     if ax is None:
         ax = plt.gca()
 
-    ax.set_xlabel('t / ps')
-    ax.set_ylabel('$\\Delta$abs  / mOD')
-    ax.axhline(0, c='k', zorder=1.5)
+    ax.set_xlabel(time_label)
+    ax.set_ylabel(sig_label)
+    ax.axhline(0, c='k', zorder=1.5)    
     plt.minorticks_on()
 
+def plot_trans(tup, wls, symlog=True):
+    wl, t, d = tup
+    ulim = -np.inf
+    llim = np.inf
+    plotted_vals = []
+    for i in wls:
+        idx = dv.fi(wl, i)
+        dat = d[:, idx]
+        plotted_vals.append(dat)
+        plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit))
+    
+    ulim = np.percentile(plotted_vals, 98.) + 0.1
+    llim = np.percentile(plotted_vals, 2.) - 0.1
+    plt.xlabel(time_label)
+    plt.ylabel(sig_label)
+    plt.ylim(llim, ulim)
+    if symlog:
+        plt.xscale('symlog')
+    plt.axhline(0, color='k', lw=0.5, zorder=1.9)
+    plt.xlim(-.5,)
+    plt.legend(loc='best', ncol=2)
+    
+    
 def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle'],
               markers = ['o', '^']):
     if ax is None:
@@ -147,23 +195,26 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
     if len(p) == 1:
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
 
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
 ma = np.ma
 
-def nice_map(wl, t, d, norm=None):
+def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None, 
+             **kwargs):
     if not norm:
-        norm = mpl.colors.SymLogNorm(10)
-    plt.contourf(wf, t, f, 15, norm=norm, cmap='Spectral')
-    plt.colorbar(pad=0.02)
-    plt.contour(wf, t, f, 15, norm=norm, colors='black', lw=.5, linestyles='solid')
+        norm = SymLogNorm(linthresh, linscale=linscale)
+    con = plt.contourf(wl, t, d, lvls, norm=norm, cmap='coolwarm', **kwargs)
+    cb = plt.colorbar(pad=0.02)
+    cb.set_label(sig_label)
+    plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
 
-    plt.yscale('symlog')
+    plt.yscale('symlog', linthreshy=1, linscaley=1, suby=[2,3,4,5,6,7,8,9])
     plt.ylim(-.5, )
-
+    plt.xlabel(freq_label)
+    plt.ylabel(time_label)
+    return con 
 
 class MidPointNorm(Normalize):
-
     def __init__(self, midpoint=0, vmin=None, vmax=None, clip=False):
         Normalize.__init__(self,vmin, vmax, clip)
         self.midpoint = midpoint
