@@ -29,7 +29,9 @@ def trimmed_mean(arr, axis=-1, ratio=3.):
     mean = np.mean(arr, axis, keepdims=1)  
     idx = np.abs(arr - mean) > 3. * std
     arr[idx] = np.nan
-    return np.nansum(arr, axis=axis) / np.sum(np.isfinite(arr), axis=axis)
+    mean = np.nanmean(arr, axis)
+    std = np.nanstd(arr, axis)
+    return mean, std
 
 
 def dichro_to_angle(d):
@@ -436,7 +438,8 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
     return t, pos, neg, pos/neg, d.sum(1)
         
         
-
+def make_fi(data_to_search):
+    return lambda x: fi(data_to_search, x)
 #if __name__=='__main__':
 #    import numpy as np
 #    ss = apply_spline(t, d[..., 0], s=9)        
