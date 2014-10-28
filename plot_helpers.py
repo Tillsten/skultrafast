@@ -20,7 +20,12 @@ tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
 
 tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
 plt.rcParams['axes.color_cycle'] =  tableau20[::2]
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+plt.rcParams['savefig.dpi'] = 100
 
+from matplotlib.colors import Normalize, SymLogNorm
+import  matplotlib.cbook as cbook
+ma = np.ma
 
 
 
@@ -58,9 +63,13 @@ def vis_mode():
     freq_unit = 'nm'    
 
 
+
+
 vis_mode()
 time_label = 'Delay time  / ps'    
+time_unit = 'ps'
 sig_label = 'Absorbance change / mOD'
+inv_freq = False
 
 def make_angle_plot(wl, t, para, senk, t_range):
     p = para
@@ -109,7 +118,7 @@ def make_angle_plot(wl, t, para, senk, t_range):
     plt.tight_layout(rect=[0, 0, 1, 1], h_pad=0)
     return ax, ax2, ax3
 
-def make_angle_plot(wl, t, para, senk, t_range):
+def make_angle_plot2(wl, t, para, senk, t_range):
     p = para
     s = senk
     t0, t1 = dv.fi(t, t_range[0]), dv.fi(t, t_range[1])
@@ -164,7 +173,7 @@ def lbl_trans(ax=None):
     plt.minorticks_on()
 
 def plot_trans(tup, wls, symlog=True):
-    wl, t, d = tup
+    wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
     llim = np.inf
     plotted_vals = []
@@ -187,11 +196,11 @@ def plot_trans(tup, wls, symlog=True):
     
     
 def plot_spec(tup, t_list):
-    wl, t, d = tup        
+    wl, t, d = tup.wl, tup.t, tup.data        
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]        
-        plt.plot(wl, dat, label='%.1f %s'%(t[idx], time_label), lw=2)
+        plt.plot(wl, dat, label='%.1f %s'%(t[idx], time_unit), lw=2)
     
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
     #llim = np.percentile(plotted_vals, 2.) - 0.1
@@ -199,7 +208,7 @@ def plot_spec(tup, t_list):
     plt.ylabel(sig_label)
     plt.autoscale(1, 'x', 1)        
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)    
-    plt.legend(loc='best', ncol=2)
+    plt.legend(loc='best', ncol=2,  title='Delay time')
     
     
 def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle'],
@@ -226,10 +235,6 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
     if len(p) == 1:
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
 
-from matplotlib.colors import Normalize, SymLogNorm
-import  matplotlib.cbook as cbook
-ma = np.ma
-
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None, 
              **kwargs):
     if not norm:
@@ -244,6 +249,54 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
     plt.xlabel(freq_label)
     plt.ylabel(time_label)
     return con 
+
+
+def nice_lft_map(tup, taus, coefs):
+    plt.figure(1, figsize=(6, 4))    
+    ax = plt.subplot(111)
+    norm = SymLogNorm(linthresh=.1)
+    #norm = MidPointNorm(0)
+    
+    m = np.abs(coefs[:, :]).max()
+    ax.pcolormesh(tup.wl, taus[:], coefs[:, :], cmap=cm.coolwarm, vmin=-m, vmax=m, norm=norm)
+    cb = ax.colorbar(pad=0.01)
+    
+    cb.set_label('Amplitude')
+    ax.set_yscale('log')
+    plt.autoscale(1, 'both', 'tight')
+    ax.set_ylim(None, 60)
+    ax.set_xlabel(freq_label)
+    ax.set_ylabel('Decay constant / ps')
+    ax.set_title('Lifetime-map')
+    if inv_freq:
+        ax.invert_xaxis()
+    divider = make_axes_locatable(ax)
+    if 0:
+        axt = divider.append_axes("right", size=1.3, sharey=ax, 
+                                  pad=0.1)
+
+        pos = np.where(out[0]>0, out[0], 0).sum(0)
+        neg = np.where(out[0]<0, out[0], 0).sum(0)
+        print pos.shape
+        axt.plot(pos, taus)
+        axt.plot(neg, taus)
+        #axt.plot(out[0].T[:, wi(1513):].sum(1), taus)
+        #axt.plot(3*out[0].T[:, :wi(1513)].sum(1), taus)
+        plt.autoscale(1, 'both', 'tight')
+    if 0:
+        axt = divider.append_axes("top", size=1, sharex=ax, 
+                              pad=0.1)
+        axt.plot(tup.wl, out[0].T[:dv.fi(taus, 0.2), :].sum(0))
+        axt.plot(tup.wl, out[0].T[dv.fi(taus, 0.3):dv.fi(taus, 1), :].sum(0))
+        axt.plot(tup.wl, out[0].T[dv.fi(taus, 1):dv.fi(taus, 5), :].sum(0))
+        axt.plot(tup.wl, out[0].T[dv.fi(taus, 5):dv.fi(taus, 10), :].sum(0))
+
+        axt.xaxis.tick_top()
+        axt.axhline(0, c='k', zorder=1.9)
+    plt.autoscale(1, 'x', 'tight')
+    
+    
+
 
 class MidPointNorm(Normalize):
     def __init__(self, midpoint=0, vmin=None, vmax=None, clip=False):

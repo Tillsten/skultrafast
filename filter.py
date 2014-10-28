@@ -20,7 +20,7 @@ def svd_filter(tup, n=6):
     n:
         number of svd components used.
     """
-    wl, t, d = tup
+    wl, t, d = tup.wl, tup.t, tup.d
     u, s, v = np.linalg.svd(d, full_matrices=0)
     s[n:] = 0
     f = np.dot(u, np.diag(s).dot(v))
@@ -30,7 +30,7 @@ def uniform_filter(tup, sigma=(2, 2)):
     """
     Apply an uniform filter to data.
     """
-    wl, t, d = tup
+    wl, t, d = tup.wl, tup.t, tup.d
     f = nd.uniform_filter(d, mode="nearest")
     return dv.tup(wl, t, f)
     
@@ -51,17 +51,36 @@ def sg_filter(tup, window_length=11, polyorder=2, deriv=0, axis=0):
         nonnegative integer. The default is 0.
                        
     """
-    wl, t, d = tup
+    wl, t, d = tup.wl, tup.t, tup.d
     f = sig.savgol_filter(d, window_length, polyorder, axis=axis, 
                           mode='nearest')
     return dv.tup(wl, t, f)
     
-def bin_channels(tup, n=200):
+def bin_channels(tup, n=200, method=np.mean):
     """
     Bin the data onto n-channels.
     """
-    wl, t, d = tup
-    binned_d, binned_wl = dv.binner(n, wl, d)
+    
+    def binner(n, wl, dat):
+        """ 
+        Given wavelengths and data it bins the data into n-wavelenths.
+        Returns bdata and bwl    
+        
+        """
+        i = np.argsort(wl)
+        wl = wl[i]
+        dat = dat[:, i]
+        idx = np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
+        binned = np.empty((dat.shape[0], n))
+        binned_wl = np.empty(n)
+        for i in range(n):        
+            binned[:,i] = method(dat[:,idx[i]:idx[i+1]],1)
+            binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
+        return binned, binned_wl
+
+
+    wl, t, d = tup.wl, tup.t, tup.d
+    binned_d, binned_wl = binner(n, wl, d)
     return dv.tup(binned_wl, t, binned_d)
 
 
