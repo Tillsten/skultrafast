@@ -21,8 +21,7 @@ def load_datfile(datfile):
     f = lambda  s: float(s.replace(',', '.'))
     d = np.loadtxt(datfile, converters = {0:f, 1:f, 2:f, 3:f})
     return d    
-import numba
-@numba.autojit    
+  
 def read_data(d):    
     """
     Put raw data into arrays.
