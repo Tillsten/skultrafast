@@ -24,13 +24,17 @@ def fs2cm(t):
 def cm2fs(cm):
     return  1/(cm * 3e-5)
 
-def trimmed_mean(arr, axis=-1, ratio=3.):
+def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     std = np.std(arr, axis, keepdims=1)
-    mean = np.mean(arr, axis, keepdims=1)  
+    mean = np.median(arr, axis, keepdims=1)  
     idx = np.abs(arr - mean) > 3. * std
+    n = np.sqrt(np.sum(~idx, axis))
+    if not use_sem:
+        n = 1
     arr[idx] = np.nan
+    
     mean = np.nanmean(arr, axis)
-    std = np.nanstd(arr, axis)
+    std = np.nanstd(arr, axis, ddof=1)/n
     return mean, std
 
 

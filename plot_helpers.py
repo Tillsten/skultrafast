@@ -71,6 +71,39 @@ time_unit = 'ps'
 sig_label = 'Absorbance change / mOD'
 inv_freq = False
 
+def plot_singular_values(dat):
+    u, s, v = np.linalg.svd(dat)
+    plt.vlines(np.arange(len(s)), 0, s, lw=3)
+    plt.plot(np.arange(len(s)), s, 'o')
+    plt.xlim(-1, 30)
+    plt.ylim(1, )
+    plt.yscale('log')
+    plt.minorticks_on()
+    plt.title('Singular values')
+    plt.xlabel('N')
+    plt.ylabel('Value')
+
+def plot_svd_components(tup, n=4, from_t = None):    
+    wl, t, d = tup.wl, tup.t, tup.data
+    if from_t:
+        idx = dv.fi(t, from_t)
+        t = t[idx:]
+        d = d[idx:, :]
+    u, s, v = np.linalg.svd(d)
+    ax1 = plt.subplot(311)
+    ax1.set_xlim(-1, t.max())
+    ax1.set_xscale('symlog')    
+    lbl_trans()
+    plt.minorticks_off()
+    ax2 = plt.subplot(312)
+    lbl_spec()
+    plt.ylabel('')
+    for i in range(n):
+        ax1.plot(t,u.T[i] )
+        ax2.plot(wl,v[i] )
+    plt.subplot(313)
+    plot_singular_values(d)
+
 def make_angle_plot(wl, t, para, senk, t_range):
     p = para
     s = senk
