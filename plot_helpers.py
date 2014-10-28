@@ -24,7 +24,22 @@ plt.rcParams['axes.color_cycle'] =  tableau20[::2]
 
 
 
+class Data(object):
+    def __init__(self, tup, name=''):
+        self.tup = tup
+        self.name = name
 
+    def plot_spec(self, t_list, *args, **kwargs):
+        plot_spec(self.tup, t_list, *args, **kwargs)
+
+    def plot_trans(self, wl_list, *args, **kwargs):
+        plot_trans(self.tup, wl_list, *args, **kwargs)
+        
+    def plot_map(self, *args, **kwargs):
+        tup = self.tup
+        nice_map(tup.wl, tup.t, tup.data, *args, **kwargs)
+        
+        
 def ir_mode():
     global freq_label
     global inv_freq
@@ -157,7 +172,7 @@ def plot_trans(tup, wls, symlog=True):
         idx = dv.fi(wl, i)
         dat = d[:, idx]
         plotted_vals.append(dat)
-        plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit))
+        plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), lw=2)
     
     ulim = np.percentile(plotted_vals, 98.) + 0.1
     llim = np.percentile(plotted_vals, 2.) - 0.1
@@ -168,6 +183,22 @@ def plot_trans(tup, wls, symlog=True):
         plt.xscale('symlog')
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)
     plt.xlim(-.5,)
+    plt.legend(loc='best', ncol=2)
+    
+    
+def plot_spec(tup, t_list):
+    wl, t, d = tup        
+    for i in t_list:
+        idx = dv.fi(t, i)
+        dat = d[idx, :]        
+        plt.plot(wl, dat, label='%.1f %s'%(t[idx], time_label), lw=2)
+    
+    #ulim = np.percentile(plotted_vals, 98.) + 0.1
+    #llim = np.percentile(plotted_vals, 2.) - 0.1
+    plt.xlabel(time_label)
+    plt.ylabel(sig_label)
+    plt.autoscale(1, 'x', 1)        
+    plt.axhline(0, color='k', lw=0.5, zorder=1.9)    
     plt.legend(loc='best', ncol=2)
     
     
