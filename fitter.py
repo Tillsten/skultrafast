@@ -12,8 +12,14 @@ import lmfit
 LinAlgError = np.linalg.LinAlgError
 
 
-#from skultrafast.base_functions import _fold_exp, _coh_gaussian
-from skultrafast.base_functions_cl import _fold_exp, _coh_gaussian, _fold_exp_and_coh
+try:
+    from skultrafast.base_functions_cl import (_fold_exp, 
+                                               _coh_gaussian,
+                                               _fold_exp_and_coh)
+except ImportError:    
+    from skultrafast.base_functions_numba import (_fold_exp, 
+                                                  _fold_exp_and_coh, 
+                                                  _coh_gaussian)
 
 posv = linalg.get_lapack_funcs(('posv'))
 
