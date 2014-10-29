@@ -8,9 +8,9 @@ import numpy as np
 
 
 from numba import autojit, vectorize, njit, jit
-from math import exp, erfc, sqrt
+import math 
 #from lmmv
-sq2 = sqrt(2)
+sq2 = math.sqrt(2)
 
 @jit
 def _coh_gaussian(ta, w, tz):
@@ -116,9 +116,9 @@ def folded_fit_func(t, tz, w, k):
         return 0.
     elif t < 5. * w:
         #print -t/w + w*k/2., w, k, t
-        return exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
+        return np.exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
     elif t > 5.* w:
-        return exp(k* (w*w*k/ (4.0) - t))
+        return np.exp(k* (w*w*k/ (4.0) - t))
 
 
 @jit
@@ -145,14 +145,25 @@ def _fold_exp(t_arr, w, tz, tau_arr):
     n, m = t_arr.shape
     l = tau_arr.size
     out = np.empty((l, m, n))
+    _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n)    
+    return out.T
+
+@njit
+def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
     for tau_idx in range(l):
         k = 1 / tau_arr[tau_idx]
         for j in range(m):
-            for i in range(n):
-                out[tau_idx, j, i] = folded_fit_func(t_arr[i, j], -tz, w, k)
-    return out.T
-
-
+            for i in range(n):                 
+                t = t_arr[i, j] - tz
+                if t < -5. * w:
+                    ret = 0
+                elif t < 5. * w:
+                    #print -t/w + w*k/2., w, k, t
+                    ret =  np.exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
+                elif t > 5.* w:
+                    ret = np.exp(k* (w*w*k/ (4.0) - t))
+                out[tau_idx, j, i] = ret
+                
 #jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])
 def _exp(t_arr, w, tz, tau_arr):
     """

@@ -237,7 +237,7 @@ def plot_spec(tup, t_list):
     
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
     #llim = np.percentile(plotted_vals, 2.) - 0.1
-    plt.xlabel(time_label)
+    plt.xlabel(freq_label)
     plt.ylabel(sig_label)
     plt.autoscale(1, 'x', 1)        
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)    
@@ -287,12 +287,12 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
 def nice_lft_map(tup, taus, coefs):
     plt.figure(1, figsize=(6, 4))    
     ax = plt.subplot(111)
-    norm = SymLogNorm(linthresh=.1)
+    norm = SymLogNorm(linthresh=0.3)
     #norm = MidPointNorm(0)
     
     m = np.abs(coefs[:, :]).max()
-    ax.pcolormesh(tup.wl, taus[:], coefs[:, :], cmap=cm.coolwarm, vmin=-m, vmax=m, norm=norm)
-    cb = ax.colorbar(pad=0.01)
+    c = ax.pcolormesh(tup.wl, taus[:], coefs[:, :], cmap='bwr', vmin=-m, vmax=m, norm=norm)
+    cb = plt.colorbar(c, pad=0.01)
     
     cb.set_label('Amplitude')
     ax.set_yscale('log')
