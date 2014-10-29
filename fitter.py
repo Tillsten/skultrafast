@@ -59,7 +59,7 @@ def solve_mat(A, b_mat, method='fast'):
     elif method == 'lasso':
         import sklearn.linear_model as lm
         s = lm.Lasso(fit_intercept=False)
-        s.alpha = 0.004
+        s.alpha = 0.008
         s.fit(A, b_mat)
         return s.coef_.T
 
