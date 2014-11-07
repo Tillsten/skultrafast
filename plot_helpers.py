@@ -53,7 +53,6 @@ def ir_mode():
     inv_freq = False
     freq_unit = 'cm$^{-1}$'    
 
-
 def vis_mode():
     global freq_label
     global inv_freq
@@ -61,9 +60,6 @@ def vis_mode():
     freq_label = 'Wavelengths / nm'
     inv_freq = False
     freq_unit = 'nm'    
-
-
-
 
 vis_mode()
 time_label = 'Delay time  / ps'    
@@ -330,6 +326,24 @@ def nice_lft_map(tup, taus, coefs):
     
     
 
+def plot_coef_spec(taus, wl, coefs, div):
+    tau_coefs = coefs[:, :len(taus)]    
+    div.append(taus.max()+1)
+    ti = dv.make_fi(taus)
+    last_idx = 0    
+    non_zeros = ~(coefs.sum(0) == 0)
+    for i in div:
+        idx = ti(i) 
+        cur_taus = taus[last_idx:idx]
+        cur_nonzeros = non_zeros[last_idx:idx]
+        lbl = "%.1f ps"%cur_taus[cur_nonzeros].mean()
+        plt.plot(wl, tau_coefs[:, last_idx:idx].sum(-1), label=lbl)        
+        last_idx = ti(i)        
+    
+    plt.plot(wl, coefs[:, -1])           
+    plt.legend()
+    lbl_spec()
+    plt.title("Spectrum of lft-parts")
 
 class MidPointNorm(Normalize):
     def __init__(self, midpoint=0, vmin=None, vmax=None, clip=False):
