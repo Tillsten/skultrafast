@@ -27,7 +27,7 @@ def cm2fs(cm):
 def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     std = np.std(arr, axis, keepdims=1)
     mean = np.median(arr, axis, keepdims=1)  
-    idx = np.abs(arr - mean) > 3. * std
+    idx = np.abs(arr - mean) > ratio * std
     n = np.sqrt(np.sum(~idx, axis))
     if not use_sem:
         n = 1
@@ -84,7 +84,7 @@ def weighted_binner(n, wl, dat, std):
     return binned, binned_wl, binned_std
     
     
-def binner(n, wl, dat):
+def binner(n, wl, dat, func=np.mean):
     """ 
     Given wavelengths and data it bins the data into n-wavelenths.
     Returns bdata and bwl    
@@ -97,7 +97,7 @@ def binner(n, wl, dat):
     binned=np.empty((dat.shape[0], n))
     binned_wl=np.empty(n)
     for i in range(n):
-        binned[:,i]=np.mean(dat[:,idx[i]:idx[i+1]],1)
+        binned[:,i]=func(dat[:,idx[i]:idx[i+1]],1)
         binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
