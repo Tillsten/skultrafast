@@ -65,10 +65,10 @@ def fit_spectrum(x, y, start_peaks_list,
     paras = lmfit.Parameters()
     for i, (x0, A, w) in enumerate(start_peaks_list):
         si = str(i)
-        paras.add('A_para_' + si, A, max=amp_bounds[1], min=amp_bounds[0])
-        paras.add('A_winkel_' + si, 52, max=90, min=0)
+        paras.add('Amp_' + si, A, max=amp_bounds[1], min=amp_bounds[0])
+        paras.add('Angle_' + si, 52, max=90, min=0)
         paras.add('x0_'+ si, x0)
-        paras.add('w_'+ si, w, min=0, max=wmax)
+        paras.add('width_'+ si, w, min=0, max=wmax)
 
 
     def residuals(p, x, y, peak_func):    

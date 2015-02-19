@@ -40,6 +40,7 @@ def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
 
 def dichro_to_angle(d):
     return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
+
 def angle_to_dichro(x):
     return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
 
@@ -122,7 +123,8 @@ def subtract_background(dat, t, tn, offset=0.3):
     return out
 
 def polydetrend(x, t=None, deg=3):
-    t = t or np.arange(x.shape[0])
+    if t is None:
+        t = np.arange(x.shape[0])
     p = np.polyfit(t, x, deg)
     yf = np.poly1d(p)(t)
     return x - yf
