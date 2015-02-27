@@ -21,9 +21,9 @@ def plot_das(fitter, plot_fastest=0, plot_coh=False,
     
     
     if plot_coh or not fitter.model_coh:
-        ulim = fitter.num_exponentials
+        ulim = fitter.c.size
     else:
-        ulim = -4
+        ulim = fitter.num_exponentials
 
     llim = plot_fastest
     
