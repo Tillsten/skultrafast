@@ -193,10 +193,12 @@ def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
     """
     Fully automatic timezero correction.
     """
-    idx = method(tup.data, **kwargs)
+    idx = method(tup.data, **kwargs)    
     raw_tn = tup.t[idx]
-    fit, p = robust_fit_tz(tup.wl, raw_tn, deg)
+    no_nan = ~np.any(np.isnan(tup.data), 0)
+    fit, p = robust_fit_tz(tup.wl[no_nan], raw_tn[no_nan], deg)
     #dv.subtract_background(tup.data, tup.t, fit, 400)
+    fit = np.polyval(p, tup.wl)
     cor = interpol(tup, fit)
     if plot:
         import plot_funcs as pl
