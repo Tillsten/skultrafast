@@ -27,7 +27,7 @@ def cm2fs(cm):
 def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     std = np.std(arr, axis, keepdims=1)
     mean = np.median(arr, axis, keepdims=1)  
-    idx = np.abs(arr - mean) > 3. * std
+    idx = np.abs(arr - mean) > ratio * std
     n = np.sqrt(np.sum(~idx, axis))
     if not use_sem:
         n = 1
@@ -40,6 +40,7 @@ def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
 
 def dichro_to_angle(d):
     return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
+
 def angle_to_dichro(x):
     return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
 
@@ -61,7 +62,30 @@ def apply_spline(t, d, s=None):
         out[:, i] =smooth_spline(t, d[:, i], s)
     return out 
     
-def binner(n, wl, dat):
+
+def weighted_binner(n, wl, dat, std):
+    """ 
+    Given wavelengths and data it bins the data into n-wavelenths.
+    Returns bdata and bwl    
+    
+    """
+    i = np.argsort(wl)
+    wl = wl[i]
+    dat = dat[:, i]
+    idx = np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
+    binned = np.empty((dat.shape[0], n))
+    binned_std = np.empty_like(binned)
+    binned_wl = np.empty(n)
+    for i in range(n):       
+        data = dat[:,idx[i]:idx[i+1]]
+        weights = 1/std[:,idx[i]:idx[i+1]]**2
+        binned[:,i] = np.average(data, 1, weights)
+        binned_std[:, i] = np.average(std[:,idx[i]:idx[i+1]], 1, weights)
+        binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
+    return binned, binned_wl, binned_std
+    
+    
+def binner(n, wl, dat, func=np.mean):
     """ 
     Given wavelengths and data it bins the data into n-wavelenths.
     Returns bdata and bwl    
@@ -74,7 +98,7 @@ def binner(n, wl, dat):
     binned=np.empty((dat.shape[0], n))
     binned_wl=np.empty(n)
     for i in range(n):
-        binned[:,i]=np.mean(dat[:,idx[i]:idx[i+1]],1)
+        binned[:,i]=func(dat[:,idx[i]:idx[i+1]],1)
         binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
@@ -99,7 +123,8 @@ def subtract_background(dat, t, tn, offset=0.3):
     return out
 
 def polydetrend(x, t=None, deg=3):
-    t = t or np.arange(x.shape[0])
+    if t is None:
+        t = np.arange(x.shape[0])
     p = np.polyfit(t, x, deg)
     yf = np.poly1d(p)(t)
     return x - yf

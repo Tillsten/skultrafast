@@ -53,17 +53,13 @@ def ir_mode():
     inv_freq = True
     freq_unit = 'cm$^{-1}$'    
 
-
 def vis_mode():
     global freq_label
     global inv_freq
     global freq_unit
-    freq_label = 'Wavelengths / nm'
+    freq_label = 'Wavelength / nm'
     inv_freq = False
     freq_unit = 'nm'    
-
-
-
 
 vis_mode()
 time_label = 'Delay time  / ps'    
@@ -220,17 +216,22 @@ def plot_trans(tup, wls, symlog=True, marker=None):
         plotted_vals.append(dat)
         plt.plot(t, dat, marker=marker, label='%.1f %s'%(wl[idx], freq_unit), lw=2)
     
-    ulim = np.percentile(plotted_vals, 98.) + 0.1
-    llim = np.percentile(plotted_vals, 2.) - 0.1
+    ulim = np.percentile(plotted_vals, 99.) + 0.5
+    llim = np.percentile(plotted_vals, 1.) - 0.5
     plt.xlabel(time_label)
     plt.ylabel(sig_label)
     plt.ylim(llim, ulim)
     if symlog:
         plt.xscale('symlog')
+        plt.axvline(1, c='k', lw=0.5, zorder=1.9)
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)
     plt.xlim(-.5,)
-    plt.legend(loc='best', ncol=2)
+    plt.legend(loc='best', ncol=2, title='Wavelength')
     
+    
+def plot_diff(tup, t0, t_list):
+    diff = tup.data - tup.data[dv.fi(tup.t, t0), :]
+    plot_spec(dv.tup(tup.wl, tup.t, diff), t_list)
     
 def plot_spec(tup, t_list):
     wl, t, d = tup.wl, tup.t, tup.data        
@@ -352,6 +353,24 @@ def plot_freqs(tup, wl, from_t, to_t):
     ax3.set_xlabel('freq / cm$^{-1}$')
 
 
+def plot_coef_spec(taus, wl, coefs, div):
+    tau_coefs = coefs[:, :len(taus)]    
+    div.append(taus.max()+1)
+    ti = dv.make_fi(taus)
+    last_idx = 0    
+    non_zeros = ~(coefs.sum(0) == 0)
+    for i in div:
+        idx = ti(i) 
+        cur_taus = taus[last_idx:idx]
+        cur_nonzeros = non_zeros[last_idx:idx]
+        lbl = "%.1f ps"%cur_taus[cur_nonzeros].mean()
+        plt.plot(wl, tau_coefs[:, last_idx:idx].sum(-1), label=lbl)        
+        last_idx = ti(i)        
+    
+    plt.plot(wl, coefs[:, -1])           
+    plt.legend()
+    lbl_spec()
+    plt.title("Spectrum of lft-parts")
 
 class MidPointNorm(Normalize):
     def __init__(self, midpoint=0, vmin=None, vmax=None, clip=False):
