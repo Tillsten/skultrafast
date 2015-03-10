@@ -6,22 +6,19 @@ from scipy import linalg
 #from scipy.special import erfc #errorfunction
 
 from scipy.stats import f #fisher
-from skultrafast import dv, zero_finding
+import dv, zero_finding
 import lmfit
 
 LinAlgError = np.linalg.LinAlgError
 
 
-try:
-    from skultrafast.base_functions_cl import (_fold_exp, 
-                                               _coh_gaussian,
-                                               _fold_exp_and_coh)
-except ImportError:    
-    from skultrafast.base_functions_numba import (_fold_exp, 
-                                                  _fold_exp_and_coh, 
-                                                  _coh_gaussian)
+
+from base_functions import (_fold_exp, 
+                                        _coh_gaussian,
+                                        _fold_exp_and_coh)
 
 posv = linalg.get_lapack_funcs(('posv'))
+ridge_alpha = 0.01
 
 def direct_solve(a, b):
     c, x, info = posv(a, b, lower=False,
@@ -59,7 +56,7 @@ def solve_mat(A, b_mat, method='fast'):
     elif method == 'lasso':
         import sklearn.linear_model as lm
         s = lm.Lasso(fit_intercept=False)
-        s.alpha = 0.008
+        s.alpha = ridge_alpha
         s.fit(A, b_mat)
         return s.coef_.T
 
@@ -401,46 +398,3 @@ def mod_dof_f(dof):
         return f_compare(N, P + dof, chi, old_chi, Nfix)
     return f_mod
 
-
-if __name__ == '__main__':
-    pass
-    #import pymc
-#
-#    coef = np.zeros((2, 400))
-#    coef[0, :] = -np.arange(-300, 100) ** 2 / 100.
-#    coef[1, :] = np.arange(-200, 200) ** 2 / 100.
-#    t = np.linspace(0, 30, 300)
-#    g = Fitter(np.arange(400), t, 0, False)
-#    g.build_xvec([0.1, 0.3, 5, 16])
-#    dat = np.dot(g.x_vec, coef)
-#
-#    dat += 10 * (np.random.random(dat.shape) - 0.5)
-#    dat = dat * (1 + (np.random.random(dat.shape) - 0.5) * 0.20)
-#    g = Fitter(np.arange(400), t, dat, 2, False, False)
-#    x0 = [0.5, 0.2, 4, 20]
-
-    #a = g.start_pymc(x0, [(0.2, 20), (0.2, 20)])
-    #b = pymc.MCMC(a)
-    #b.isample(10000, 1000)
-    #pymc.Matplot.plot(b)
-    #    #a=g.start_cmafit(x0)
-#    a = g.start_lmfit(x0)
- #   a.leastsq()
-#    lmfit.printfuncs.report_errors(a.params)
-#    #ar=g.chi_search(a[0])
-#    import matplotlib.pyplot as plt
-#
-##    def plotxy(a):
-##        plt.plot(a[:,0],a[:,1])
-##    #
-##    for i in range(len(a[0])-1):
-##        plt.subplot(2,2,i+1)
-##        plotxy(ar[i])
-#plt.tight_layout()
-#plot_das(g,1)
-#plot_diagnostic(g)
-#plot_spectra(g)
-#wls=[30,70,100]
-#plot_transients(g,wls)
-#plt.show()
-#best=leastsq(g.varpro,x0, full_output=True)
