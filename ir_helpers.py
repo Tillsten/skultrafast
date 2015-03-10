@@ -6,14 +6,16 @@ Created on Tue Jul 01 19:51:56 2014
 """
 import numpy as np
 import skultrafast.dv as dv
-from scipy.stats import trim_mean
+from scipy.stats import trim_mean, linregress
+
 
 def scan_correction(dn, tidx):
     for j in [0, 1]:
         null_spek =  dn[tidx:, :, j, 0].mean(0)
+        null_std = dn[tidx:, :, j, 0].std(0)
         for i in range(0, dn.shape[-1], 2):
             spec = dn[tidx:, :, j, i].mean(0)
-            c = np.linalg.lstsq(spec[:, None], null_spek[:, None])
+            c = np.linalg.lstsq(spec[:, None], null_spek[:, None])            
             dn[:, :, j, i] *= c[0][0]
 
         null_spek =  dn[tidx:, :, j, 1].mean(0)
@@ -27,7 +29,8 @@ def load(fname):
     f = np.load(fname)
     t = f['t']/1000.
     wl = f['wl']
-    wl =-(np.arange(32)-16)*1.3 + 1e7/wl[16]
+    for i in range(wl.shape[1]):        
+        wl[:, i] =-(np.arange(32)-16)*1.15 + 1e7/wl[16, i]
     data = -f['data']
     return t, wl, data
 
@@ -102,7 +105,7 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
     elif wiener < 0:
         d = nd.uniform_filter1d(d, -wiener, 0, mode='nearest')
     if do_scan_correction:
-        d = scan_correction(d, dv.fi(t, 1))
+        d = scan_correction(d, dv.fi(t, 4))
 
     #d, back0 = back_correction(d, use_robust=1)
     #back1 = back0
@@ -115,7 +118,7 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
 
     #gr -> vert -> parallel zum 0. scan
     fi = lambda x, ax=-1: trim_mean(x, trunc_scans,  ax)
-
+    fi = lambda x, ax=-1: np.median(x, ax)
     if start_det0_is_para:
         para_0 = fi(d[..., 0, ::2])
         senk_0 = fi(d[..., 0, 1::2])
