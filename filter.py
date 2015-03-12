@@ -31,9 +31,18 @@ def uniform_filter(tup, sigma=(2, 2)):
     Apply an uniform filter to data.
     """
     wl, t, d = tup.wl, tup.t, tup.data
-    f = nd.uniform_filter(d, mode="nearest")
+    f = nd.uniform_filter(d, size=sigma, mode="nearest")
     return dv.tup(wl, t, f)
-    
+
+
+def gaussian_filter(tup, sigma=(2, 2)):
+    """
+    Apply an uniform filter to data.
+    """
+    wl, t, d = tup.wl, tup.t, tup.data
+    f = nd.gaussian_filter(d, sigma=sigma, mode="nearest")
+    return dv.tup(wl, t, f)
+
 def sg_filter(tup, window_length=11, polyorder=2, deriv=0, axis=0):
     """
     Apply a Savitzky-Golay filter to a tup.

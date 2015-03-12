@@ -21,13 +21,16 @@ def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=True):
     return out.squeeze()
      
 
-def start_ltm(tup, taus, w=0.1,  alpha=0.001, **kwargs):
-    X = _make_base(tup, taus, w=w)
+def start_ltm(tup, taus, w=0.1,  add_coh=False,
+              add_const=False, verbose=False, **kwargs):
+    X = _make_base(tup, taus, w=w, 
+                   add_const=add_const, 
+                   add_coh=add_coh)
     
-    mod = lm.ElasticNet(alpha=alpha,  **kwargs)
+    mod = lm.Lasso(**kwargs)
     mod.max_iter = 5e4
     mod.verbose = 0
-    mod.fit_intercept = 1
+    mod.fit_intercept = 0
     mod.normalize = 1
     mod.warm_start = 1
 
@@ -36,6 +39,8 @@ def start_ltm(tup, taus, w=0.1,  alpha=0.001, **kwargs):
     alphas = np.empty(tup.data.shape[1])    
         
     for i in range(tup.data.shape[1]):
+        if verbose: 
+            print i,
         mod.fit(X, tup.data[:, i])
         coefs[:, i] = mod.coef_.copy()
         fit[:, i] = mod.predict(X)
