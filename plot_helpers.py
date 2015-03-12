@@ -260,13 +260,20 @@ def plot_ints(tup, wls, symlog=True, norm=False):
 def plot_diff(tup, t0, t_list):
     diff = tup.data - tup.data[dv.fi(tup.t, t0), :]
     plot_spec(dv.tup(tup.wl, tup.t, diff), t_list)
-    
+
+def time_formatter(time, unit):
+    mag = np.floor(np.log10(time))
+    if mag > 0:
+        return '%d %s'%(time, unit)
+    else:
+        return '%1.2f %s'%(time, unit)
+        
 def plot_spec(tup, t_list):
     wl, t, d = tup.wl, tup.t, tup.data        
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]        
-        plt.plot(wl, dat, label='%.1f %s'%(t[idx], time_unit), lw=line_width)
+        plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), lw=linewidth)
     
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
     #llim = np.percentile(plotted_vals, 2.) - 0.1
@@ -301,7 +308,8 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
     if len(p) == 1:
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
 
-def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None, 
+def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,  
+             linscaley=1,
              **kwargs):
     if norm is None:
         norm = SymLogNorm(linthresh, linscale=linscale)
@@ -310,7 +318,7 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
     cb.set_label(sig_label)
     plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
 
-    plt.yscale('symlog', linthreshy=1, linscaley=1, suby=[2,3,4,5,6,7,8,9])
+    plt.yscale('symlog', linthreshy=1, linscaley=linscaley, suby=[2,3,4,5,6,7,8,9])
     plt.ylim(-.5, )
     plt.xlabel(freq_label)
     plt.ylabel(time_label)
@@ -375,9 +383,9 @@ def plot_freqs(tup, wl, from_t, to_t):
     ax2.plot(tl, dt)
     ax3 = plt.subplot(313)
     f = abs(np.fft.fft(dt, 2*dt.size))
-    freqs = np.fft.fftfreq(2*dt.size, tup.t[ti(from_t)-1]-tup.t[ti(from_t)])
-    n = freqs.size/2+1
-    ax3.plot(dv.fs2cm(1000/freqs[n:]), f[n:])
+    freqs = np.fft.fftfreq(2*dt.size, tup.t[ti(from_t)+1]-tup.t[ti(from_t)])
+    n = freqs.size/2
+    ax3.plot(dv.fs2cm(1000/freqs[:n]), f[:n])
     ax3.set_xlabel('freq / cm$^{-1}$')
 
 
