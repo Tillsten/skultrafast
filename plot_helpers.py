@@ -303,7 +303,7 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
 
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None, 
              **kwargs):
-    if not norm:
+    if norm is None:
         norm = SymLogNorm(linthresh, linscale=linscale)
     con = plt.contourf(wl, t, d, lvls, norm=norm, cmap='coolwarm', **kwargs)
     cb = plt.colorbar(pad=0.02)
@@ -321,7 +321,7 @@ def nice_lft_map(tup, taus, coefs):
     plt.figure(1, figsize=(6, 4))    
     ax = plt.subplot(111)
     #norm = SymLogNorm(linthresh=0.3)
-    #norm = MidPointNorm(0)
+    norm = MidPointNorm(0)
     
     m = np.abs(coefs[:, :]).max()
     c = ax.pcolormesh(tup.wl, taus[:], coefs[:, :], cmap='bwr', vmin=-m, vmax=m, norm=norm)
@@ -391,12 +391,12 @@ def plot_coef_spec(taus, wl, coefs, div):
         idx = ti(i) 
         cur_taus = taus[last_idx:idx]
         cur_nonzeros = non_zeros[last_idx:idx]
-        lbl = "%.1f ps"%cur_taus[cur_nonzeros].mean()
+        lbl = "%.1f - %.1f ps"%(taus[last_idx], taus[idx])
         plt.plot(wl, tau_coefs[:, last_idx:idx].sum(-1), label=lbl)        
         last_idx = ti(i)        
     
     plt.plot(wl, coefs[:, -1])           
-    plt.legend()
+    plt.legend(title='Decay regions')
     lbl_spec()
     plt.title("Spectrum of lft-parts")
 
