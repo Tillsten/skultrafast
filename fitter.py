@@ -26,6 +26,8 @@ def direct_solve(a, b):
                       overwrite_b=False)
     return x
 
+
+alpha = 0.001
 def solve_mat(A, b_mat, method='fast'):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
@@ -35,7 +37,7 @@ def solve_mat(A, b_mat, method='fast'):
         return direct_solve(A.T.dot(A), A.T.dot(b_mat))
 
     elif method == 'ridge':
-        alpha = 0.001
+        
         X = np.dot(A.T, A)
         X.flat[::A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)

@@ -6,9 +6,6 @@ Created on Tue May 27 15:35:22 2014
 """
 
 import matplotlib.pyplot as plt
-
-plt.rcParams['savefig.dpi'] = 120
-plt.rcParams['figure.figsize'] = (6, 4)
 import skultrafast.dv as dv
 import numpy as np
 
@@ -21,7 +18,7 @@ tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
 tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
 plt.rcParams['axes.color_cycle'] =  tableau20[::2]
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-plt.rcParams['savefig.dpi'] = 100
+
 
 from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
@@ -66,6 +63,7 @@ time_label = 'Delay time  / ps'
 time_unit = 'ps'
 sig_label = 'Absorbance change / mOD'
 inv_freq = False
+line_width = 1
 
 def plot_singular_values(dat):
     u, s, v = np.linalg.svd(dat)
@@ -205,16 +203,19 @@ def lbl_trans(ax=None):
     ax.axhline(0, c='k', zorder=1.5)    
     plt.minorticks_on()
 
-def plot_trans(tup, wls, symlog=True, marker=None):
+def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
     llim = np.inf
-    plotted_vals = []
+    plotted_vals = []    
     for i in wls:
         idx = dv.fi(wl, i)
         dat = d[:, idx]
+        if norm:
+            dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
+            
         plotted_vals.append(dat)
-        plt.plot(t, dat, marker=marker, label='%.1f %s'%(wl[idx], freq_unit), lw=2)
+        plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), marker=marker, **kwargs)
     
     ulim = np.percentile(plotted_vals, 99.) + 0.5
     llim = np.percentile(plotted_vals, 1.) - 0.5
@@ -228,6 +229,33 @@ def plot_trans(tup, wls, symlog=True, marker=None):
     plt.xlim(-.5,)
     plt.legend(loc='best', ncol=2, title='Wavelength')
     
+def plot_ints(tup, wls, symlog=True, norm=False):
+    wl, t, d = tup.wl, tup.t, tup.data
+    ulim = -np.inf
+    llim = np.inf
+    plotted_vals = []    
+    for i in wls:
+        wl1, wl2 = i        
+        idx1, idx2 = sorted([dv.fi(wl, wl1), dv.fi(wl, wl2)])        
+        dat = d[:, idx1:idx2].mean(-1)
+        if norm:
+            dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
+            
+        
+        plotted_vals.append(dat)
+        plt.plot(t, dat, label='%.1f %s'%(wl[idx1:idx2].mean(), freq_unit), lw=line_width)
+    
+    ulim = np.percentile(plotted_vals, 99.) + 0.5
+    llim = np.percentile(plotted_vals, 1.) - 0.5
+    plt.xlabel(time_label)
+    plt.ylabel(sig_label)
+    plt.ylim(llim, ulim)
+    if symlog:
+        plt.xscale('symlog')
+        plt.axvline(1, c='k', lw=0.5, zorder=1.9)
+    plt.axhline(0, color='k', lw=0.5, zorder=1.9)
+    plt.xlim(-.5,)
+    plt.legend(loc='best', ncol=2, title='Wavelength')
     
 def plot_diff(tup, t0, t_list):
     diff = tup.data - tup.data[dv.fi(tup.t, t0), :]
@@ -238,7 +266,7 @@ def plot_spec(tup, t_list):
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]        
-        plt.plot(wl, dat, label='%.1f %s'%(t[idx], time_unit), lw=2)
+        plt.plot(wl, dat, label='%.1f %s'%(t[idx], time_unit), lw=line_width)
     
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
     #llim = np.percentile(plotted_vals, 2.) - 0.1
@@ -292,7 +320,7 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
 def nice_lft_map(tup, taus, coefs):
     plt.figure(1, figsize=(6, 4))    
     ax = plt.subplot(111)
-    norm = SymLogNorm(linthresh=0.3)
+    #norm = SymLogNorm(linthresh=0.3)
     #norm = MidPointNorm(0)
     
     m = np.abs(coefs[:, :]).max()
