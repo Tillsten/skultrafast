@@ -24,7 +24,7 @@ from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
 ma = np.ma
 
-
+linewidth = 2
 
 class Data(object):
     def __init__(self, tup, name=''):
