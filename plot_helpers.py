@@ -69,6 +69,7 @@ def plot_singular_values(dat):
     u, s, v = np.linalg.svd(dat)
     plt.vlines(np.arange(len(s)), 0, s, lw=3)
     plt.plot(np.arange(len(s)), s, 'o')
+    
     plt.xlim(-1, 30)
     plt.ylim(1, )
     plt.yscale('log')
@@ -86,6 +87,7 @@ def plot_svd_components(tup, n=4, from_t = None):
     u, s, v = np.linalg.svd(d)
     ax1 = plt.subplot(311)
     ax1.set_xlim(-1, t.max())
+    
     ax1.set_xscale('symlog')    
     lbl_trans()
     plt.minorticks_off()
@@ -93,10 +95,12 @@ def plot_svd_components(tup, n=4, from_t = None):
     lbl_spec()
     plt.ylabel('')
     for i in range(n):
-        ax1.plot(t,u.T[i] )
+        ax1.plot(t,u.T[i], label=str(i) )
         ax2.plot(wl,v[i] )
+    ax1.legend()
     plt.subplot(313)
     plot_singular_values(d)
+    plt.tight_layout()
 
 def make_angle_plot(wl, t, para, senk, t_range):
     p = para
@@ -199,7 +203,7 @@ def lbl_trans(ax=None):
     ax.axhline(0, c='k', zorder=1.5)    
     plt.minorticks_on()
 
-def plot_trans(tup, wls, symlog=True, norm=False, **kwargs):
+def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
     llim = np.inf
@@ -211,7 +215,7 @@ def plot_trans(tup, wls, symlog=True, norm=False, **kwargs):
             dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
             
         plotted_vals.append(dat)
-        plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), **kwargs)
+        plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), marker=marker, **kwargs)
     
     ulim = np.percentile(plotted_vals, 99.) + 0.5
     llim = np.percentile(plotted_vals, 1.) - 0.5
@@ -357,7 +361,25 @@ def nice_lft_map(tup, taus, coefs):
         axt.axhline(0, c='k', zorder=1.9)
     plt.autoscale(1, 'x', 'tight')
     
-    
+
+def plot_freqs(tup, wl, from_t, to_t):    
+    ti = dv.make_fi(tup.t)
+    wi = dv.make_fi(tup.wl)
+    tl = tup.t[ti(from_t):ti(to_t)]
+    trans = tup.data[ti(from_t):ti(to_t), wi(wl)]
+    ax1 = plt.subplot(311)
+    ax1.plot(tl, trans)    
+    dt = dv.polydetrend(trans, deg=2)
+    ax1.plot(tl, -dt+trans)
+    ax2 = plt.subplot(312)
+    ax2.plot(tl, dt)
+    ax3 = plt.subplot(313)
+    f = abs(np.fft.fft(dt, 2*dt.size))
+    freqs = np.fft.fftfreq(2*dt.size, tup.t[ti(from_t)-1]-tup.t[ti(from_t)])
+    n = freqs.size/2+1
+    ax3.plot(dv.fs2cm(1000/freqs[n:]), f[n:])
+    ax3.set_xlabel('freq / cm$^{-1}$')
+
 
 def plot_coef_spec(taus, wl, coefs, div):
     tau_coefs = coefs[:, :len(taus)]    
@@ -440,3 +462,55 @@ class MidPointNorm(Normalize):
                 return  val*abs(vmin-midpoint) + midpoint
             else:
                 return  val*abs(vmax-midpoint) + midpoint
+                
+
+def fit_semiconductor(t, data, sav_n=11, sav_deg=4):    
+    from scipy.signal import savgol_filter
+    from scipy.optimize import leastsq
+    ger =   data.sum(2).mean(-1).squeeze()    
+    plt.subplot(121)
+    plt.title('Germanium sum')
+    plt.plot(t, ger[:,  0])
+    plt.plot(t, ger[:,  1])
+    plt.plot(t, savgol_filter(ger[:, 0], sav_n, sav_deg, 0))
+    plt.plot(t, savgol_filter(ger[:, 1], sav_n, sav_deg, 0))
+    plt.xlim(-1, 3)
+    plt.subplot(122)
+    plt.title('First dervitate')
+    derv0 = savgol_filter(ger[:, 0, ], sav_n, sav_deg, 1)
+    derv1 = savgol_filter(ger[:, 1, ], sav_n, sav_deg, 1)
+    plt.plot(t , derv0)
+    plt.plot(t , derv1)
+    plt.xlim(-.8, .8)
+    plt.ylim(0, 700)
+    plt.minorticks_on()
+    plt.grid(1)
+
+    def gaussian(p, ch, res=True):
+        
+        i, j = dv.fi(t, -.8), dv.fi(t, .8)
+        w = p[0]
+        A = p[1]
+        x0 = p[2]
+        fit = A*np.exp(-(t[i:j]-x0)**2/(2*w**2))
+        if res:
+            return fit-savgol_filter(ger[:, ch, ], sav_n, sav_deg, 1)[i:j]
+        else:
+            return fit
+
+
+
+    x0 = leastsq(gaussian, [.2, max(derv0), 0], 0)
+    plt.plot(t[dv.fi(t, -.8):dv.fi(t, .8)], gaussian(x0[0], 0, 0), '--k', )
+    plt.text(0.05, 0.8, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
+             transform=plt.gca().transAxes)
+    
+    x0 = leastsq(gaussian, [.2, max(derv1), 0], 1)
+    plt.plot(t[dv.fi(t, -.8):dv.fi(t, .8)], gaussian(x0[0], 1, 0), '--b', )
+    
+    plt.xlim(-.8, .8)
+    plt.minorticks_on()
+    plt.grid(0)
+    plt.tight_layout()
+    plt.text(0.5, 0.8, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
+             transform=plt.gca().transAxes)
