@@ -27,11 +27,11 @@ def start_ltm(tup, taus, w=0.1,  add_coh=False,
                    add_const=add_const, 
                    add_coh=add_coh)
     
-    mod = lm.Lasso(**kwargs)
+    mod = lm.ElasticNet(**kwargs)
     mod.max_iter = 5e4
     mod.verbose = 0
     mod.fit_intercept = 0
-    mod.normalize = 1
+    mod.normalize = 0
     mod.warm_start = 1
 
     coefs = np.empty((X.shape[1], tup.data.shape[1]))

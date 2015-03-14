@@ -374,12 +374,26 @@ def plot_freqs(tup, wl, from_t, to_t):
     ax2 = plt.subplot(312)
     ax2.plot(tl, dt)
     ax3 = plt.subplot(313)
-    f = abs(np.fft.fft(dt, 2*dt.size))
-    freqs = np.fft.fftfreq(2*dt.size, tup.t[ti(from_t)-1]-tup.t[ti(from_t)])
     n = freqs.size/2+1
     ax3.plot(dv.fs2cm(1000/freqs[n:]), f[n:])
     ax3.set_xlabel('freq / cm$^{-1}$')
 
+def plot_fft(x, y, min_amp=0.2, order=1, padding=2, ax=None):
+    from scipy.signal import argrelmax
+    if ax is None:
+        ax = plt.gca()
+    f = abs(np.fft.fft(y, padding*y.size))    
+    freqs = np.fft.fftfreq(padding*x.size, x[1]-x[0])
+    n = freqs.size/2+1
+    fr_cm = -dv.fs2cm(1000/freqs[n:])
+    print fr_cm.shape
+    ax.plot(fr_cm, f[n:])
+    ax.set_xlabel('Wavenumber / cm$^{-1}$')
+    ax.set_ylabel('FFT amplitude')
+    for i in argrelmax(f[n:], order=1)[0]:     
+        if f[n+i]>min_amp:
+            ax.text(fr_cm[i], f[n+i], '%d'%fr_cm[i], ha='center')
+    
 
 def plot_coef_spec(taus, wl, coefs, div):
     tau_coefs = coefs[:, :len(taus)]    
