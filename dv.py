@@ -32,7 +32,7 @@ def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     if not use_sem:
         n = 1
     arr[idx] = np.nan
-    
+    print np.isnan(arr).sum()
     mean = np.nanmean(arr, axis)
     std = np.nanstd(arr, axis, ddof=1)/n
     return mean, std
@@ -234,7 +234,14 @@ def calc_error(args):
     sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof) for i in range(len(p))])
     return p, sigma
 
-#
+def min_pulse_length(width_in_cm, shape='gauss'):
+    width_hz = width_in_cm * 3e10 
+    print width_hz
+    if shape == 'gauss':
+        return (0.44 / width_hz) / 1e-15
+
+    
+    
 def wavelength2rgb(w):
     """
     Converts a wavelength to a RGB color.
@@ -423,7 +430,7 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None):
         para.add('const', y[-1] )
     
     for i in range(num_exp):
-        para.add('tau' + str(i), start_taus[i])
+        para.add('tau' + str(i), start_taus[i], min=0)
         y_c = y - y[-1]
         a = y_c[fi(x, start_taus[i])]        
         para.add('amp' + str(i), a)

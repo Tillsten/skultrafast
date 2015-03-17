@@ -19,6 +19,7 @@ tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
 plt.rcParams['axes.color_cycle'] =  tableau20[::2]
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+linewidth = 2
 
 from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
@@ -229,7 +230,7 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     plt.xlim(-.5,)
     plt.legend(loc='best', ncol=2, title='Wavelength')
     
-def plot_ints(tup, wls, symlog=True, norm=False):
+def plot_ints(tup, wls, factors=None, symlog=True, norm=False):
     wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
     llim = np.inf
@@ -386,11 +387,11 @@ def plot_freqs(tup, wl, from_t, to_t):
     ax3.plot(dv.fs2cm(1000/freqs[:n]), f[:n])
     ax3.set_xlabel('freq / cm$^{-1}$')
 
-def plot_fft(x, y, min_amp=0.2, order=1, padding=2, ax=None):
+def plot_fft(x, y, min_amp=0.2, order=1, padding=2, power=1, ax=None):
     from scipy.signal import argrelmax
     if ax is None:
         ax = plt.gca()
-    f = abs(np.fft.fft(y, padding*y.size))    
+    f = abs(np.fft.fft(y, padding*y.size))**power    
     freqs = np.fft.fftfreq(padding*x.size, x[1]-x[0])
     n = freqs.size/2+1
     fr_cm = -dv.fs2cm(1000/freqs[n:])
@@ -416,7 +417,7 @@ def plot_coef_spec(taus, wl, coefs, div):
         lbl = "%.1f - %.1f ps"%(taus[last_idx], taus[idx])
         plt.plot(wl, tau_coefs[:, last_idx:idx].sum(-1), label=lbl)        
         last_idx = ti(i)        
-    
+        plt.Axes.text()
     plt.plot(wl, coefs[:, -1])           
     plt.legend(title='Decay regions')
     lbl_spec()
