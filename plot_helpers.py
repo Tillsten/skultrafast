@@ -33,14 +33,14 @@ class Data(object):
         self.name = name
 
     def plot_spec(self, t_list, *args, **kwargs):
-        plot_spec(self.tup, t_list, *args, **kwargs)
+        return plot_spec(self.tup, t_list, *args, **kwargs)
 
     def plot_trans(self, wl_list, *args, **kwargs):
-        plot_trans(self.tup, wl_list, *args, **kwargs)
+        return plot_trans(self.tup, wl_list, *args, **kwargs)
         
     def plot_map(self, *args, **kwargs):
         tup = self.tup
-        nice_map(tup.wl, tup.t, tup.data, *args, **kwargs)
+        return nice_map(tup.wl, tup.t, tup.data, *args, **kwargs)
         
         
 def ir_mode():
@@ -63,6 +63,7 @@ vis_mode()
 time_label = 'Delay time  / ps'    
 time_unit = 'ps'
 sig_label = 'Absorbance change / mOD'
+vib_label = 'Wavenumber / cm$^{-1}$'    
 inv_freq = False
 line_width = 1
 
@@ -212,8 +213,13 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     for i in wls:
         idx = dv.fi(wl, i)
         dat = d[:, idx]
-        if norm:
+        if norm is True:
             dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
+        elif norm is False:
+            pass
+        else:
+            dat = dat / dat[dv.fi(t, norm)]
+        
             
         plotted_vals.append(dat)
         plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), marker=marker, **kwargs)
@@ -229,7 +235,12 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)
     plt.xlim(-.5,)
     plt.legend(loc='best', ncol=2, title='Wavelength')
-    
+
+def mean_tup(tup, time):
+    wl, t, d = tup.wl, tup.t, tup.data    
+    new_dat = tup.data /  tup.data[dv.fi(t, time), :]
+    return dv.tup(wl, t, new_dat)
+
 def plot_ints(tup, wls, factors=None, symlog=True, norm=False):
     wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
@@ -238,13 +249,17 @@ def plot_ints(tup, wls, factors=None, symlog=True, norm=False):
     for i in wls:
         wl1, wl2 = i        
         idx1, idx2 = sorted([dv.fi(wl, wl1), dv.fi(wl, wl2)])        
-        dat = d[:, idx1:idx2].mean(-1)
-        if norm:
+        dat = np.trapz(d[:, idx1:idx2], wl[idx1:idx2]) / np.ptp(wl[idx1:idx2])
+        if norm is True:
             dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
-            
+        elif norm is False:
+            pass
+        else:
+            dat = dat / dat[dv.fi(t, norm)]
         
         plotted_vals.append(dat)
-        plt.plot(t, dat, label='%.1f %s'%(wl[idx1:idx2].mean(), freq_unit), lw=line_width)
+        label = 'Integral from {0} - {1} {2}'.format(wl1, wl2, freq_unit)
+        plt.plot(t, dat, label=label, lw=line_width)
     
     ulim = np.percentile(plotted_vals, 99.) + 0.5
     llim = np.percentile(plotted_vals, 1.) - 0.5
@@ -269,12 +284,13 @@ def time_formatter(time, unit):
     else:
         return '%1.2f %s'%(time, unit)
         
-def plot_spec(tup, t_list):
+def plot_spec(tup, t_list, **kwargs):
     wl, t, d = tup.wl, tup.t, tup.data        
+    li = []
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]        
-        plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), lw=linewidth)
+        li+= plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), **kwargs)
     
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
     #llim = np.percentile(plotted_vals, 2.) - 0.1
@@ -283,7 +299,7 @@ def plot_spec(tup, t_list):
     plt.autoscale(1, 'x', 1)        
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)    
     plt.legend(loc='best', ncol=2,  title='Delay time')
-    
+    return li
     
 def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle'],
               markers = ['o', '^']):
@@ -537,3 +553,18 @@ def fit_semiconductor(t, data, sav_n=11, sav_deg=4):
     plt.tight_layout()
     plt.text(0.5, 0.8, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
              transform=plt.gca().transAxes)
+             
+def nsf(num, n=1):
+    """n-Significant Figures"""
+    if num > 10:
+        return str(int(num))
+    if num > 1:
+        return '%.1f'%num
+    if num < 1:
+        return '%.2f'%num
+    
+def symticks(ax, linthresh=1, linstep=0.2):
+    l,r = ax.get_xlim()
+    ticks = list(np.arange(l, linthresh, linstep)) + [1, 10, 100]
+    ax.xaxis.set_ticks(ticks)
+    ax.xaxis.set_ticklabels(ticks)
