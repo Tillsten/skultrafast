@@ -11,28 +11,30 @@ from scipy.stats import trim_mean, linregress
 
 def scan_correction(dn, tidx):
     for j in [0, 1]:
-        null_spek =  dn[tidx:, :, j, 0].mean(0)
+        null_spek =  trim_mean(dn[tidx:, :, j, 0], 0.2, 0)
         null_std = dn[tidx:, :, j, 0].std(0)
         for i in range(0, dn.shape[-1], 2):
-            spec = dn[tidx:, :, j, i].mean(0)
+            spec = trim_mean(dn[tidx:, :, j, i], 0.2, 0)
             c = np.linalg.lstsq(spec[:, None], null_spek[:, None])            
             dn[:, :, j, i] *= c[0][0]
 
-        null_spek =  dn[tidx:, :, j, 1].mean(0)
+        null_spek =   trim_mean(dn[tidx:, :, j, 1], 0.2, 0)
         for i in range(1, dn.shape[-1], 2):
-            spec = dn[tidx:, :, j, i].mean(0)
+            spec = trim_mean(dn[tidx:, :, j, i], 0.2, 0)
             c = np.linalg.lstsq(spec[:, None], null_spek[:, None])
+            print c[0][0]
             dn[:, :, j, i] *= c[0][0]
     return dn
 
-def load(fname):
+def load(fname, recalc_wl=None):
     f = np.load(fname)
     t = f['t']/1000.
     wl = f['wl']
-    for i in range(wl.shape[1]):        
-        wl[:, i] =-(np.arange(32)-16)*1.15 + 1e7/wl[16, i]
+    if recalc_wl is not None:
+        for i in range(wl.shape[1]):        
+            wl[:, i] =-(np.arange(32)-16)*recalc_wl + wl[16, i]
     data = -f['data']
-    return t, wl, data
+    return t, 1e7/wl, data
 
 def calc_fac(a, b, tidx):
     a =  a[tidx:, :].mean(0)[:, None]
@@ -95,7 +97,7 @@ def back_correction(d, n=10, use_robust=True):
 import scipy.signal as sig
 import scipy.ndimage as nd
 def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_det0_is_para=True,
-                     do_scan_correction=True, do_iso_correction=True, plot=True, n=10):
+                     do_scan_correction=True, do_iso_correction=True, plot=0, n=10):
     d = d.copy()
     #d[..., 0, :]= shift_linear_part(d[..., 0, :])
     #d[..., 1, :] = shift_linear_part(d[..., 1, :], 2, t)
@@ -104,21 +106,25 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
         d = sig.wiener(d, (wiener, 1, 1, 1))
     elif wiener < 0:
         d = nd.uniform_filter1d(d, -wiener, 0, mode='nearest')
-    if do_scan_correction:
-        d = scan_correction(d, dv.fi(t, 4))
 
     #d, back0 = back_correction(d, use_robust=1)
     #back1 = back0
+    if do_scan_correction:
+        d = scan_correction(d, dv.fi(t, 0.3))
     fi = lambda x, ax=0: trim_mean(x, trunc_back, ax)
-    back0 = fi(fi(d[:n, ..., 0, :], ax=0), ax=-1)
-    back1 = fi(fi(d[:n, ..., 1, :], ax=0), ax=-1)
+    back0 = fi(d[:n, ..., 0, :], ax=0).mean(-1)
+    back1 = fi(d[:n, ..., 1, :], ax=0).mean(-1)
+
+    
+
     d[..., 0, :] -= back0.reshape(1, 32, -1)
     d[..., 1, :] -= back1.reshape(1, 32, -1)
 
 
-    #gr -> vert -> parallel zum 0. scan
+    #gr -> vert -> parallel zum 0. scan    
+        
     fi = lambda x, ax=-1: trim_mean(x, trunc_scans,  ax)
-    fi = lambda x, ax=-1: np.median(x, ax)
+    #fi = lambda x, ax=-1: np.median(x, ax)
     if start_det0_is_para:
         para_0 = fi(d[..., 0, ::2])
         senk_0 = fi(d[..., 0, 1::2])

@@ -26,7 +26,7 @@ def create_prior(params):
         return 0 if is_ok else -np.inf
     return bounds_prior
 
-def create_lnliklihood(mini, sigma=None):
+def create_lnliklihood(mini, use_t=False, sigma=None):
     """create a normal-likihood from the residuals"""
     def lnprob(vals, sigma=sigma):
         for v, p in zip(vals, [p for p in mini.params.values() if p.vary]):
@@ -38,7 +38,12 @@ def create_lnliklihood(mini, sigma=None):
             sigma = vals[-1]
             if sigma <= 0:
                 return -np.inf
-        val = -0.5*np.sum(np.log(2*np.pi*sigma**2) + (residuals/sigma)**2)
+        if use_t:
+            from scipy.stats import  t, norm
+            val = t.logpdf(residuals, df=5, scale=sigma).sum()
+            
+        else:
+            val = -0.5*np.sum(np.log(2*np.pi*sigma**2) + (residuals/sigma)**2)
         return val
     return lnprob
 
@@ -54,7 +59,7 @@ def starting_guess(mini, estimate_sigma=True):
         vals.append(mini.residual.std())
     return vals
 
-def create_all(mini, sigma=None):
+def create_all(mini, use_t=False, sigma=None):
     """
     creates the log-poposterior function from a minimizer.
     sigma should is either None or an array with the
@@ -64,7 +69,7 @@ def create_all(mini, sigma=None):
     """
     sigma_given = not sigma is None
     lnprior = create_prior(mini.params)
-    lnprob = create_lnliklihood(mini, sigma=sigma)
+    lnprob = create_lnliklihood(mini, use_t=use_t, sigma=sigma)
     guess = starting_guess(mini, not sigma_given)
     if sigma_given:
         func = lambda x: lnprior(x[:]) + lnprob(x)
@@ -73,14 +78,16 @@ def create_all(mini, sigma=None):
     return func, guess
     
     
-def get_errors(m, steps=2000):
-    lnfunc, guess = create_all(m)
+def get_errors(m, steps=2000, use_t=False):
+    lnfunc, guess = create_all(m, use_t=use_t)
     nwalkers, ndim = 40, len(guess)
-    p0 = emcee.utils.sample_ball(guess, 0.01*np.array(guess), nwalkers)
+    p0 = emcee.utils.sample_ball(guess, 0.2*np.array(guess), nwalkers)
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnfunc)
     steps = steps
     sampler.run_mcmc(p0, steps)
-    for i, p in enumerate(m.params):
+    para = m.params
+    not_fixed = [p for p in para if para[p].vary]
+    for i, p in enumerate(not_fixed):
         m.params[p].value = guess[i]
     return sampler
 
