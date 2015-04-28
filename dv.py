@@ -180,7 +180,14 @@ def calc_error(args):
     sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof) for i in range(len(p))])
     return p, sigma
 
-#
+def min_pulse_length(width_in_cm, shape='gauss'):
+    width_hz = width_in_cm * 3e10 
+    print width_hz
+    if shape == 'gauss':
+        return (0.44 / width_hz) / 1e-15
+
+    
+    
 def wavelength2rgb(w):
     """
     Converts a wavelength to a RGB color.
@@ -369,7 +376,7 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None,
         para.add('const', y[-1] )
     
     for i in range(num_exp):
-        para.add('tau' + str(i), start_taus[i])
+        para.add('tau' + str(i), start_taus[i], min=0)
         y_c = y - y[-1]
         a = y_c[fi(x, start_taus[i])]        
         para.add('amp' + str(i), a)

@@ -11,27 +11,28 @@ from scipy.stats import trim_mean, linregress
 
 def scan_correction(dn, tidx):
     for j in [0, 1]:
-        null_spek =  dn[tidx:, :, j, 0].mean(0)
+        null_spek =  trim_mean(dn[tidx:, :, j, 0], 0.2, 0)
         null_std = dn[tidx:, :, j, 0].std(0)
         for i in range(0, dn.shape[-1], 2):
-            spec = dn[tidx:, :, j, i].mean(0)
+            spec = trim_mean(dn[tidx:, :, j, i], 0.2, 0)
             c = np.linalg.lstsq(spec[:, None], null_spek[:, None])            
             dn[:, :, j, i] *= c[0][0]
 
-        null_spek =  dn[tidx:, :, j, 1].mean(0)
+        null_spek =   trim_mean(dn[tidx:, :, j, 1], 0.2, 0)
         for i in range(1, dn.shape[-1], 2):
-            spec = dn[tidx:, :, j, i].mean(0)
+            spec = trim_mean(dn[tidx:, :, j, i], 0.2, 0)
             c = np.linalg.lstsq(spec[:, None], null_spek[:, None])
+            print c[0][0]
             dn[:, :, j, i] *= c[0][0]
     return dn
 
-def load(fname, recalc_wl=True):
+def load(fname, recalc_wl=None):
     f = np.load(fname)
     t = f['t']/1000.
     wl = f['wl']
-    if recalc_wl:
+    if recalc_wl is not None:
         for i in range(wl.shape[1]):        
-            wl[:, i] = (np.arange(32)-16)*8.4 + wl[16, i]
+            wl[:, i] =-(np.arange(32)-16)*recalc_wl + wl[16, i]
     data = -f['data']
     return t, 1e7/wl, data
 
@@ -114,6 +115,8 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
 
     #d, back0 = back_correction(d, use_robust=1)
     #back1 = back0
+    if do_scan_correction:
+        d = scan_correction(d, dv.fi(t, 0.3))
     fi = lambda x, ax=0: trim_mean(x, trunc_back, ax)
     back0 = fi(d[:n, ..., 0, :], ax=0)
     back1 = fi(d[:n, ..., 1, :], ax=0)
@@ -125,7 +128,8 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
         d = scan_correction(d, dv.fi(t, 0))
 
 
-    #gr -> vert -> parallel zum 0. scan
+    #gr -> vert -> parallel zum 0. scan    
+        
     fi = lambda x, ax=-1: trim_mean(x, trunc_scans,  ax)
     fi = lambda x: dv.trimmed_mean(x, ratio=trunc_scans)[0]
     #fi = lambda x, ax=-1: np.median(x, ax)
