@@ -19,6 +19,7 @@ tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
 plt.rcParams['axes.color_cycle'] =  tableau20[::2]
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+linewidth = 2
 
 from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
@@ -39,7 +40,7 @@ class Data(object):
         
     def plot_map(self, *args, **kwargs):
         tup = self.tup
-        nice_map(tup.wl, tup.t, tup.data, *args, **kwargs)
+        return nice_map(tup.wl, tup.t, tup.data, *args, **kwargs)
         
         
 def ir_mode():
@@ -62,6 +63,7 @@ vis_mode()
 time_label = 'Delay time  / ps'    
 time_unit = 'ps'
 sig_label = 'Absorbance change / mOD'
+vib_label = 'Wavenumber / cm$^{-1}$'    
 inv_freq = False
 line_width = 1
 
@@ -210,8 +212,13 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     for i in wls:
         idx = dv.fi(wl, i)
         dat = d[:, idx]
-        if norm:
+        if norm is True:
             dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
+        elif norm is False:
+            pass
+        else:
+            dat = dat / dat[dv.fi(t, norm)]
+        
             
         plotted_vals.append(dat)
         plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), marker=marker, **kwargs)
@@ -227,8 +234,13 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)
     plt.xlim(-.5,)
     plt.legend(loc='best', ncol=2, title='Wavelength')
-    
-def plot_ints(tup, wls, symlog=True, norm=False):
+
+def mean_tup(tup, time):
+    wl, t, d = tup.wl, tup.t, tup.data    
+    new_dat = tup.data /  tup.data[dv.fi(t, time), :]
+    return dv.tup(wl, t, new_dat)
+
+def plot_ints(tup, wls, factors=None, symlog=True, norm=False):
     wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
     llim = np.inf
@@ -236,13 +248,17 @@ def plot_ints(tup, wls, symlog=True, norm=False):
     for i in wls:
         wl1, wl2 = i        
         idx1, idx2 = sorted([dv.fi(wl, wl1), dv.fi(wl, wl2)])        
-        dat = d[:, idx1:idx2].mean(-1)
-        if norm:
+        dat = np.trapz(d[:, idx1:idx2], wl[idx1:idx2]) / np.ptp(wl[idx1:idx2])
+        if norm is True:
             dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
-            
+        elif norm is False:
+            pass
+        else:
+            dat = dat / dat[dv.fi(t, norm)]
         
         plotted_vals.append(dat)
-        plt.plot(t, dat, label='%.1f %s'%(wl[idx1:idx2].mean(), freq_unit), lw=line_width)
+        label = 'Integral from {0} - {1} {2}'.format(wl1, wl2, freq_unit)
+        plt.plot(t, dat, label=label, lw=line_width)
     
     ulim = np.percentile(plotted_vals, 99.) + 0.5
     llim = np.percentile(plotted_vals, 1.) - 0.5
@@ -269,11 +285,11 @@ def time_formatter(time, unit):
         
 def plot_spec(tup, t_list, **kwargs):
     wl, t, d = tup.wl, tup.t, tup.data   
-    lines = []     
+    li = []
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]        
-        l, = plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), 
+        li+= plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), **kwargs)
                       lw=linewidth, **kwargs)
         lines.append(l)
     
@@ -284,8 +300,7 @@ def plot_spec(tup, t_list, **kwargs):
     plt.autoscale(1, 'x', 1)        
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)    
     plt.legend(loc='best', ncol=2,  title='Delay time')
-    return lines
-    
+    return li
     
 def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle'],
               markers = ['o', '^']):
@@ -386,8 +401,6 @@ def plot_freqs(tup, wl, from_t, to_t, taus=[1]):
     
     #ax1.plot(tl, -dt+trans)
     #ax2 = plt.subplot(312)
-    #dt = dt/np.ptp(dt)    
-    #ax2.plot(tl, dt)
     ax3 = plt.subplot(111)
     
     f = abs(np.fft.fft(np.kaiser(dt.size, 4)*dt, dt.size*2))
@@ -396,6 +409,22 @@ def plot_freqs(tup, wl, from_t, to_t, taus=[1]):
     ax3.plot(dv.fs2cm(1000/freqs[1:n]), f[1:n])
     ax3.set_xlabel('freq / cm$^{-1}$')
     return dv.fs2cm(1000/freqs[1:n]), f[1:n]
+    
+def plot_fft(x, y, min_amp=0.2, order=1, padding=2, power=1, ax=None):
+    from scipy.signal import argrelmax
+    if ax is None:
+        ax = plt.gca()
+    f = abs(np.fft.fft(y, padding*y.size))**power    
+    freqs = np.fft.fftfreq(padding*x.size, x[1]-x[0])
+    n = freqs.size/2+1
+    fr_cm = -dv.fs2cm(1000/freqs[n:])
+    print fr_cm.shape
+    ax.plot(fr_cm, f[n:])
+    ax.set_xlabel('Wavenumber / cm$^{-1}$')
+    ax.set_ylabel('FFT amplitude')
+    for i in argrelmax(f[n:], order=1)[0]:     
+        if f[n+i]>min_amp:
+            ax.text(fr_cm[i], f[n+i], '%d'%fr_cm[i], ha='center')
     
 
 def plot_coef_spec(taus, wl, coefs, div):
@@ -411,7 +440,7 @@ def plot_coef_spec(taus, wl, coefs, div):
         lbl = "%.1f - %.1f ps"%(taus[last_idx], taus[idx])
         plt.plot(wl, tau_coefs[:, last_idx:idx].sum(-1), label=lbl)        
         last_idx = ti(i)        
-    
+        plt.Axes.text()
     plt.plot(wl, coefs[:, -1])           
     plt.legend(title='Decay regions')
     lbl_spec()
@@ -531,3 +560,18 @@ def fit_semiconductor(t, data, sav_n=11, sav_deg=4):
     plt.tight_layout()
     plt.text(0.5, 0.8, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
              transform=plt.gca().transAxes)
+             
+def nsf(num, n=1):
+    """n-Significant Figures"""
+    if num > 10:
+        return str(int(num))
+    if num > 1:
+        return '%.1f'%num
+    if num < 1:
+        return '%.2f'%num
+    
+def symticks(ax, linthresh=1, linstep=0.2):
+    l,r = ax.get_xlim()
+    ticks = list(np.arange(l, linthresh, linstep)) + [1, 10, 100]
+    ax.xaxis.set_ticks(ticks)
+    ax.xaxis.set_ticklabels(ticks)
