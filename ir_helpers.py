@@ -25,14 +25,15 @@ def scan_correction(dn, tidx):
             dn[:, :, j, i] *= c[0][0]
     return dn
 
-def load(fname):
+def load(fname, recalc_wl=True):
     f = np.load(fname)
     t = f['t']/1000.
     wl = f['wl']
-    for i in range(wl.shape[1]):        
-        wl[:, i] =-(np.arange(32)-16)*1.15 + 1e7/wl[16, i]
+    if recalc_wl:
+        for i in range(wl.shape[1]):        
+            wl[:, i] = (np.arange(32)-16)*8.4 + wl[16, i]
     data = -f['data']
-    return t, wl, data
+    return t, 1e7/wl, data
 
 def calc_fac(a, b, tidx):
     a =  a[tidx:, :].mean(0)[:, None]
@@ -42,7 +43,7 @@ def calc_fac(a, b, tidx):
 
 def shift_linear_part(p, steps, t):
     "Shift the linear part of the array by steps"
-    lp = dv.fi(t, -2), dv.fi(t, 3)
+    lp = dv.fi(t, -1), dv.fi(t, 3)
     p = p.copy()
     p[lp[0]+steps:lp[1], ...] = p[lp[0]:lp[1]-steps, ...]
     return p
@@ -95,30 +96,39 @@ def back_correction(d, n=10, use_robust=True):
 import scipy.signal as sig
 import scipy.ndimage as nd
 def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_det0_is_para=True,
-                     do_scan_correction=True, do_iso_correction=True, plot=True, n=10):
+                     do_scan_correction=True, do_iso_correction=True, plot=1, n=10):
     d = d.copy()
     #d[..., 0, :]= shift_linear_part(d[..., 0, :])
-    #d[..., 1, :] = shift_linear_part(d[..., 1, :], 2, t)
+    #d[..., 1, :] = shift_linear_part(d[..., 1, :], 1, t)
 
-    if wiener > 1:
+    if wiener == 'svd':
+        for i in range(d.shape[-1]):
+            d[:, :, 0, i] = dv.svd_filter(d[:, :, 0, i], 5)
+            d[:, :, 1, i] = dv.svd_filter(d[:, :, 1, i], 5)
+    elif wiener > 1:
         d = sig.wiener(d, (wiener, 1, 1, 1))
     elif wiener < 0:
         d = nd.uniform_filter1d(d, -wiener, 0, mode='nearest')
-    if do_scan_correction:
-        d = scan_correction(d, dv.fi(t, 4))
+    
+
 
     #d, back0 = back_correction(d, use_robust=1)
     #back1 = back0
     fi = lambda x, ax=0: trim_mean(x, trunc_back, ax)
-    back0 = fi(fi(d[:n, ..., 0, :], ax=0), ax=-1)
-    back1 = fi(fi(d[:n, ..., 1, :], ax=0), ax=-1)
-    d[..., 0, :] -= back0.reshape(1, 32, -1)
-    d[..., 1, :] -= back1.reshape(1, 32, -1)
+    back0 = fi(d[:n, ..., 0, :], ax=0)
+    back1 = fi(d[:n, ..., 1, :], ax=0)
+    back = 0.5*(back0+back1).mean(-1)
+    d[..., 0, :] -= back.reshape(1, 32, -1)
+    d[..., 1, :] -= back.reshape(1, 32, -1)
+    
+    if do_scan_correction:
+        d = scan_correction(d, dv.fi(t, 0))
 
 
     #gr -> vert -> parallel zum 0. scan
     fi = lambda x, ax=-1: trim_mean(x, trunc_scans,  ax)
-    fi = lambda x, ax=-1: np.median(x, ax)
+    fi = lambda x: dv.trimmed_mean(x, ratio=trunc_scans)[0]
+    #fi = lambda x, ax=-1: np.median(x, ax)
     if start_det0_is_para:
         para_0 = fi(d[..., 0, ::2])
         senk_0 = fi(d[..., 0, 1::2])
@@ -156,6 +166,7 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
         plt.legend(['iso_rest', 'back0', 'back1'])
         plt.subplot(122)
         mean_spec(wl, t, [iso_0, iso_factor*iso_1], (1, 100))
+        mean_spec(wl, t, [para, senk], (1, 100), color='r')
         plt.legend(['iso_0', 'iso_1 * %.2f'%iso_factor])
 
     return iso, para, senk
