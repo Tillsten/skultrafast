@@ -32,10 +32,10 @@ class Data(object):
         self.name = name
 
     def plot_spec(self, t_list, *args, **kwargs):
-        plot_spec(self.tup, t_list, *args, **kwargs)
+        return plot_spec(self.tup, t_list, *args, **kwargs)
 
     def plot_trans(self, wl_list, *args, **kwargs):
-        plot_trans(self.tup, wl_list, *args, **kwargs)
+        return plot_trans(self.tup, wl_list, *args, **kwargs)
         
     def plot_map(self, *args, **kwargs):
         tup = self.tup
@@ -143,8 +143,7 @@ def make_angle_plot(wl, t, para, senk, t_range):
     ratio_ticks = np.array([0.5, 0.7, 1., 1.5, 2., 2.5, 3.])
     ax3.yaxis.set_ticks(to_angle(ratio_ticks))
     ax3.yaxis.set_ticklabels([i for i in ratio_ticks])
-    ax3.set_ylabel('$A_\\parallel  / A_\\perp$')
-    ax2.set_xlabel()
+    ax3.set_ylabel('$A_\\parallel  / A_\\perp$')    
     ax2.set_title('Angle calculated from dichroic ratio', fontsize='x-small')
     plt.tight_layout(rect=[0, 0, 1, 1], h_pad=0)
     return ax, ax2, ax3
@@ -263,17 +262,20 @@ def plot_diff(tup, t0, t_list):
 
 def time_formatter(time, unit):
     mag = np.floor(np.log10(time))
-    if mag > 0:
+    if mag > -1:
         return '%d %s'%(time, unit)
     else:
         return '%1.2f %s'%(time, unit)
         
-def plot_spec(tup, t_list):
-    wl, t, d = tup.wl, tup.t, tup.data        
+def plot_spec(tup, t_list, **kwargs):
+    wl, t, d = tup.wl, tup.t, tup.data   
+    lines = []     
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]        
-        plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), lw=linewidth)
+        l, = plt.plot(wl, dat, label=time_formatter(t[idx], time_unit), 
+                      lw=linewidth, **kwargs)
+        lines.append(l)
     
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
     #llim = np.percentile(plotted_vals, 2.) - 0.1
@@ -282,6 +284,7 @@ def plot_spec(tup, t_list):
     plt.autoscale(1, 'x', 1)        
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)    
     plt.legend(loc='best', ncol=2,  title='Delay time')
+    return lines
     
     
 def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle'],
@@ -296,7 +299,8 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
         for i, d in enumerate(p):
             t0, t1 = dv.fi(t, x), dv.fi(t, y)
             pd = d[t0:t1, :].mean(0)
-            ax.plot(wl, pd, color=color[j], marker=markers[i],
+            lw = 2 if i == 0 else 1
+            ax.plot(wl, pd, color=color[j], marker=markers[i], lw=lw,
                     mec='none', ms=5)
 
         ax.text(0.8, 0.1+j*0.04,'%.1f ps'%t[t0:t1].mean(),
@@ -309,11 +313,11 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
 
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,  
-             linscaley=1,
+             linscaley=1, cmap='coolwarm',
              **kwargs):
     if norm is None:
         norm = SymLogNorm(linthresh, linscale=linscale)
-    con = plt.contourf(wl, t, d, lvls, norm=norm, cmap='coolwarm', **kwargs)
+    con = plt.contourf(wl, t, d, lvls, norm=norm, cmap=cmap,  **kwargs)
     cb = plt.colorbar(pad=0.02)
     cb.set_label(sig_label)
     plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
@@ -370,24 +374,29 @@ def nice_lft_map(tup, taus, coefs):
     plt.autoscale(1, 'x', 'tight')
     
 
-def plot_freqs(tup, wl, from_t, to_t):    
+def plot_freqs(tup, wl, from_t, to_t, taus=[1]):    
     ti = dv.make_fi(tup.t)
     wi = dv.make_fi(tup.wl)
     tl = tup.t[ti(from_t):ti(to_t)]
     trans = tup.data[ti(from_t):ti(to_t), wi(wl)]
-    ax1 = plt.subplot(311)
-    ax1.plot(tl, trans)    
-    dt = dv.polydetrend(trans, deg=2)
-    ax1.plot(tl, -dt+trans)
-    ax2 = plt.subplot(312)
-    ax2.plot(tl, dt)
-    ax3 = plt.subplot(313)
-    f = abs(np.fft.fft(dt, 2*dt.size))
-    freqs = np.fft.fftfreq(2*dt.size, tup.t[ti(from_t)+1]-tup.t[ti(from_t)])
+    
+    #ax1 = plt.subplot(311)
+    #ax1.plot(tl, trans)    
+    dt = dv.exp_detrend(trans, tl, taus)
+    
+    #ax1.plot(tl, -dt+trans)
+    #ax2 = plt.subplot(312)
+    #dt = dt/np.ptp(dt)    
+    #ax2.plot(tl, dt)
+    ax3 = plt.subplot(111)
+    
+    f = abs(np.fft.fft(np.kaiser(dt.size, 4)*dt, dt.size*2))
+    freqs = np.fft.fftfreq(dt.size*2, tup.t[ti(from_t)+1]-tup.t[ti(from_t)])
     n = freqs.size/2
-    ax3.plot(dv.fs2cm(1000/freqs[:n]), f[:n])
+    ax3.plot(dv.fs2cm(1000/freqs[1:n]), f[1:n])
     ax3.set_xlabel('freq / cm$^{-1}$')
-
+    return dv.fs2cm(1000/freqs[1:n]), f[1:n]
+    
 
 def plot_coef_spec(taus, wl, coefs, div):
     tau_coefs = coefs[:, :len(taus)]    
@@ -475,7 +484,7 @@ class MidPointNorm(Normalize):
 def fit_semiconductor(t, data, sav_n=11, sav_deg=4):    
     from scipy.signal import savgol_filter
     from scipy.optimize import leastsq
-    ger =   data.sum(2).mean(-1).squeeze()    
+    ger =   data[..., -1].sum(2).squeeze()    
     plt.subplot(121)
     plt.title('Germanium sum')
     plt.plot(t, ger[:,  0])
