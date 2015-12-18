@@ -4,11 +4,11 @@ Created on Wed Nov 28 18:34:30 2012
 
 @author: tillsten
 """
-
+from __future__ import print_function
 import numpy as np
 
 
-def vbload(fname = 'C:\Users\Tillsten\Documents\weisslicht.dat'):
+def vbload(fname = r'C:\Users\Tillsten\Documents\weisslicht.dat'):
     """
     loads a old vb file
     """
@@ -51,7 +51,7 @@ def loader_func(name):
     files = glob.glob(name + '_dat?.npy') + glob.glob(name + '_dat??.npy')
     if len(files) == 0:
         raise IOError('No file found.')
-    print files
+    
     import re    
     num_list = [re.findall('dat\d+', i)[0][3:] for i in files]    
     
@@ -59,17 +59,16 @@ def loader_func(name):
     
     a = np.load(endname)
     num_list = [str(int(i) - 1) for i in num_list]
-    print num_list
+    
     num = str(max(map(int, num_list)))
-    print num
-    print name
+    
     search_string = name + '-???_'+ '*' + '_' + 'dat.npy'
-    print search_string
+    
     files = glob.glob(search_string)
     wls = []
-    print files
+    
     for i in files:
-        print 'Loading: ' + i
+    
         cwl = re.findall('-\d\d\d_', i)
         tmp = np.load(i)
         t, w = tmp[1:,0], tmp[0,1:]
@@ -161,7 +160,7 @@ def save_txt(name, wls, t, dat):
         tmp = np.vstack((wls[None, :], dat))
         arr = np.hstack((np.vstack((0,t[:,None])), tmp))
     except ValueError:
-        print wls.shape, t.shape, dat.shape
+        print('Shapes wl:', wls.shape, 't', t.shape, 'd', dat.shape)
         raise IndexError
     np.savetxt(name, arr)
     
