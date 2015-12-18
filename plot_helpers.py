@@ -90,9 +90,10 @@ def plot_svd_components(tup, n=4, from_t = None):
     ax1 = plt.subplot(311)
     ax1.set_xlim(-1, t.max())
 
-    ax1.set_xscale('symlog')
-    lbl_trans()
+    
+    lbl_trans()    
     plt.minorticks_off()
+    ax1.set_xscale('symlog')
     ax2 = plt.subplot(312)
     lbl_spec()
     plt.ylabel('')
@@ -229,9 +230,9 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     llim = np.percentile(plotted_vals, 1.) - 0.5
     plt.xlabel(time_label)
     plt.ylabel(sig_label)
-    plt.ylim(llim, ulim)
+    #plt.ylim(llim, ulim)
     if symlog:
-        plt.xscale('symlog')
+        plt.xscale('symlog', linthreshx=1)
         plt.axvline(1, c='k', lw=0.5, zorder=1.9)
     plt.axhline(0, color='k', lw=0.5, zorder=1.9)
     plt.xlim(-.5,)
@@ -346,16 +347,33 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
     plt.xlabel(freq_label)
     plt.ylabel(time_label)
     return con
+    
+def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
+             linscaley=1, cmap='coolwarm',
+             **kwargs):
+    if norm is None:
+        norm = SymLogNorm(linthresh, linscale=linscale)
+    con = plt.contourf(wl, t, d, lvls, norm=norm, cmap=cmap,  **kwargs)
+    cb = plt.colorbar(pad=0.02)
+    cb.set_label(sig_label)
+    plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
+
+    plt.scale('symlog', linthreshy=1, linscaley=linscaley, suby=[2,3,4,5,6,7,8,9])
+    plt.ylim(-.5, )
+    plt.xlabel(freq_label)
+    plt.ylabel(time_label)
+    return con
 
 
-def nice_lft_map(tup, taus, coefs):
+def nice_lft_map(tup, taus, coefs, **kwargs):
+    cmap = kwargs.pop('cmap', 'bwr')
     plt.figure(1, figsize=(6, 4))
     ax = plt.subplot(111)
     #norm = SymLogNorm(linthresh=0.3)
-    norm = MidPointNorm(0)
+    norm = kwargs.pop('norm', MidPointNorm(0))
 
     m = np.abs(coefs[:, :]).max()
-    c = ax.pcolormesh(tup.wl, taus[:], coefs[:, :], cmap='bwr', vmin=-m, vmax=m, norm=norm)
+    c = ax.pcolormesh(tup.wl, taus[:], coefs[:, :], cmap=cmap, vmin=-m, vmax=m, norm=norm, **kwargs)
     cb = plt.colorbar(c, pad=0.01)
 
     cb.set_label('Amplitude')
@@ -514,56 +532,61 @@ class MidPointNorm(Normalize):
                 return  val*abs(vmax-midpoint) + midpoint
 
 
-def fit_semiconductor(t, data, sav_n=11, sav_deg=4):
+def fit_semiconductor(t, data, sav_n=11, sav_deg=4, mode='sav'):
     from scipy.signal import savgol_filter
+    from scipy.ndimage import gaussian_filter1d
     from scipy.optimize import leastsq
     ger =   data[..., -1].sum(2).squeeze()
     plt.subplot(121)
     plt.title('Germanium sum')
     plt.plot(t, ger[:,  0])
     plt.plot(t, ger[:,  1])
-    plt.plot(t, savgol_filter(ger[:, 0], sav_n, sav_deg, 0))
-    plt.plot(t, savgol_filter(ger[:, 1], sav_n, sav_deg, 0))
+    if mode =='sav':
+        plt.plot(t, savgol_filter(ger[:, 0], sav_n, sav_deg, 0))
+        plt.plot(t, savgol_filter(ger[:, 1], sav_n, sav_deg, 0))
     plt.xlim(-1, 3)
     plt.subplot(122)
     plt.title('First dervitate')
-    derv0 = savgol_filter(ger[:, 0, ], sav_n, sav_deg, 1)
-    derv1 = savgol_filter(ger[:, 1, ], sav_n, sav_deg, 1)
+    if mode == 'sav':
+        derv0 = savgol_filter(ger[:, 0], sav_n, sav_deg, 1)
+        derv1 = savgol_filter(ger[:, 1], sav_n, sav_deg, 1)
+    elif mode == 'gauss':
+        derv0 =  gaussian_filter1d(ger[:, 0], sav_n, order=1)
+        derv1 =  gaussian_filter1d(ger[:, 1], sav_n, order=1)
     plt.plot(t , derv0)
     plt.plot(t , derv1)
     plt.xlim(-.8, .8)
     plt.ylim(0, 700)
     plt.minorticks_on()
     plt.grid(1)
-
+    tr = .4
     def gaussian(p, ch, res=True):
 
-        i, j = dv.fi(t, -.8), dv.fi(t, .8)
+        i, j = dv.fi(t, -tr), dv.fi(t, tr)
         w = p[0]
         A = p[1]
         x0 = p[2]
         fit = A*np.exp(-(t[i:j]-x0)**2/(2*w**2))
         if res:
-            return fit-savgol_filter(ger[:, ch, ], sav_n, sav_deg, 1)[i:j]
+            return fit-ch[i:j]
         else:
             return fit
 
 
+    x0 = leastsq(gaussian, [.2, max(derv0), 0], derv0)
+    plt.plot(t[dv.fi(t, -tr):dv.fi(t, tr)], gaussian(x0[0], 0, 0), '--k', )
+    plt.text(0.05, 0.9, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
+             transform=plt.gca().transAxes, va='top')
 
-    x0 = leastsq(gaussian, [.2, max(derv0), 0], 0)
-    plt.plot(t[dv.fi(t, -.8):dv.fi(t, .8)], gaussian(x0[0], 0, 0), '--k', )
-    plt.text(0.05, 0.8, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
-             transform=plt.gca().transAxes)
-
-    x0 = leastsq(gaussian, [.2, max(derv1), 0], 1)
-    plt.plot(t[dv.fi(t, -.8):dv.fi(t, .8)], gaussian(x0[0], 1, 0), '--b', )
+    x0 = leastsq(gaussian, [.2, max(derv1), 0], derv1)
+    plt.plot(t[dv.fi(t, -tr):dv.fi(t, tr)], gaussian(x0[0], 1, 0), '--b', )
 
     plt.xlim(-.8, .8)
     plt.minorticks_on()
     plt.grid(0)
     plt.tight_layout()
-    plt.text(0.5, 0.8, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
-             transform=plt.gca().transAxes)
+    plt.text(0.5, 0.9, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
+             transform=plt.gca().transAxes, va='top')
 
 def nsf(num, n=1):
     """n-Significant Figures"""

@@ -314,7 +314,7 @@ def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     
     
 
-def sig_ratios(fitter, fname=None, tmax=200,
+def sig_ratios(fitter, fname=None, tmax=300,
                tmin = 0.1,
                do_fit=True, start_taus=None):
     if not start_taus:
@@ -339,7 +339,7 @@ def sig_ratios(fitter, fname=None, tmax=200,
                 txt += p.name + ' '
                 txt += '{0:.2f}'.format(p.value) + ' \n'
             ax = plt.gca()
-            plt.text(0.6, 0.6, txt, transform=ax.transAxes)
+            plt.text(0.95, 0.95, txt, transform=ax.transAxes, va='top', ha='right')
     if fname:
         np.savetxt(fname, np.column_stack((t, pos, neg, pos/neg, total)), 
                    header = 't pos neg pos/neg total')

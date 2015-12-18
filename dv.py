@@ -406,8 +406,8 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None,
 
     mini = lmfit.minimize(res, para)
     if verbose:
-        lmfit.report_errors(para)
-    y_fit = fit(para)
+        lmfit.report_errors(mini.params)
+    y_fit = fit(mini.params)
     return mini, y_fit
 
 def calc_ratios(fitter, tmin=0.35, tmax=200):
@@ -418,8 +418,11 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
     i_max = fi(t, tmax)
     t = t[i:i_max]
     d = d[i:i_max, :]
-    pos = np.where(d > 0, d, 0).sum(1)
-    neg = np.where(d < 0, d, 0).sum(1)
+    
+    pos = np.where(d > 0, d, 0)
+    neg = np.where(d < 0, d, 0)
+    pos = np.trapz(pos, w)
+    neg = np.trapz(neg, w)
     return t, pos, neg, pos/neg, d.sum(1)
 
 
