@@ -4,7 +4,7 @@ Contains functions to find the time-zero and to interpolate the data.
 """
 
 import numpy as np
-import dv
+import skultrafast.dv as dv
 import scipy.ndimage as nd
 from statsmodels.api import RLM
 
@@ -29,8 +29,7 @@ def use_diff(dat, smooth=0):
     """
     Use numerical diff.
     """
-    if smooth != 0:
-        print smooth
+    if smooth != 0:        
         dat = nd.gaussian_filter(dat, smooth)
     derivate = np.diff(dat, 1, 0)
     return np.argmax(np.abs(derivate), 0)
@@ -79,7 +78,7 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
         y = dat[:n, i]
         f = lambda p: _fit_func(t, y, -p[0], p[1], tau)
         f_sum = lambda p: (f(p)**2).sum()
-        print f_sum([w0, tn[i]])
+        
         try:
             if not np.isnan(o) and False:
                 k = o + np.diff(tn)[i]
@@ -87,7 +86,7 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
             else:
                 k = tn[i]
                 w = w0
-            print k
+            
             #o, w = leastsq(f, list([k, w0]))[0][:2]
             # = opt.minimize(f_sum, [k,w], method='BFGS')
             #x = cma.fmin(f_sum, [o, w0], 0.03, bounds=[(0,0.04),(5, 0.2)], restarts=1, verb_log=0)
@@ -129,7 +128,7 @@ def robust_fit_tz(wl, tn, degree=3):
 
 
 
-import ransac
+from skultrafast import ransac
 
 def find_time_zero(d, value, method='abs', polydeg=3, *args):
     """
@@ -201,7 +200,7 @@ def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
     fit = np.polyval(p, tup.wl)
     cor = interpol(tup, fit)
     if plot:
-        import plot_funcs as pl
+        from . import plot_funcs as pl
         pl._plot_zero_finding(tup, raw_tn, fit, cor)
     return cor, fit
 
