@@ -18,7 +18,7 @@ from base_functions import (_fold_exp,
                                         _fold_exp_and_coh)
 
 posv = linalg.get_lapack_funcs(('posv'))
-ridge_alpha = 0.01
+ridge_alpha = 0.001
 
 def direct_solve(a, b):
     c, x, info = posv(a, b, lower=False,
@@ -278,7 +278,7 @@ class Fitter(object):
         w = para[0]
         taus = para[1:]
         x0 = 0.
-
+        
         #Only calculate what is necessary.
         if idx[0] or is_disp_changed:
             exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
@@ -286,7 +286,7 @@ class Fitter(object):
                 self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
             self.xmat[:, :, :num_exp] =  exps
-        elif any(idx):
+        elif any(idx):                  
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w,
                                                  x0, taus[idx[1:]])
         #self.xmat = np.nan_to_num(self.xmat)
