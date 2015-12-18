@@ -1,9 +1,10 @@
 # -*- coding: utf-8 *-*
+from __future__ import print_function, absolute_import
 units = {'x': ' nm', 'y': ' ps', 'z': r'$\Delta$OD'}
 title = ""
 import matplotlib.pyplot as plt
 import numpy as np
-import dv, data_io, zero_finding
+from skultrafast import dv, data_io, zero_finding
 
 plt.rcParams['font.size']=9
 plt.rcParams['legend.fontsize'] = 'small'
@@ -392,7 +393,7 @@ def _plot_kin_res(x):
     for i in g.nodes():
         for j in g[i]:        
             g[i][j]['tau'] = '%2d'%g.edge[i][j]['tau']
-            print g[i][j]['tau']
+            print(g[i][j]['tau'])
 
     pos = {'S1_hot':(0, 3), 'S1_warm':(0,2.3),  'S1':(0, 1.5),
            'T_hot':(1, 1.5), 'T1':(1,1), 'S0': (0,0)}

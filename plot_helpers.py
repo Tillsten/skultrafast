@@ -358,7 +358,7 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
     cb.set_label(sig_label)
     plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
 
-    plt.scale('symlog', linthreshy=1, linscaley=linscaley, suby=[2,3,4,5,6,7,8,9])
+    plt.yscale('symlog', linthreshy=1, linscaley=linscaley, suby=[2,3,4,5,6,7,8,9])
     plt.ylim(-.5, )
     plt.xlabel(freq_label)
     plt.ylabel(time_label)
@@ -391,8 +391,7 @@ def nice_lft_map(tup, taus, coefs, **kwargs):
                                   pad=0.1)
 
         pos = np.where(out[0]>0, out[0], 0).sum(0)
-        neg = np.where(out[0]<0, out[0], 0).sum(0)
-        print pos.shape
+        neg = np.where(out[0]<0, out[0], 0).sum(0)        
         axt.plot(pos, taus)
         axt.plot(neg, taus)
         #axt.plot(out[0].T[:, wi(1513):].sum(1), taus)
@@ -440,7 +439,7 @@ def plot_fft(x, y, min_amp=0.2, order=1, padding=2, power=1, ax=None):
     freqs = np.fft.fftfreq(padding*x.size, x[1]-x[0])
     n = freqs.size/2+1
     fr_cm = -dv.fs2cm(1000/freqs[n:])
-    print fr_cm.shape
+    
     ax.plot(fr_cm, f[n:])
     ax.set_xlabel('Wavenumber / cm$^{-1}$')
     ax.set_ylabel('FFT amplitude')

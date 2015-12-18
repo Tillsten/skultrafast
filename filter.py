@@ -4,7 +4,7 @@ This module contains various filters and binning methods. All take
 a dv tup and return a tup.
 """
 
-import dv
+from . import dv
 import numpy as np
 import scipy.ndimage as nd
 import scipy.signal as sig
