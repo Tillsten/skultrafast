@@ -23,6 +23,10 @@ def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=True):
 
 def start_ltm(tup, taus, w=0.1,  add_coh=False,
               add_const=False, verbose=False, **kwargs):
+    """
+    Returns mod, coefs, fit, alphas
+
+    """
     X = _make_base(tup, taus, w=w, 
                    add_const=add_const, 
                    add_coh=add_coh)

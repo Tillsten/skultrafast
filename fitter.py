@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 from numpy.core.umath_tests import matrix_multiply, inner1d
 from scipy import linalg
 #from scipy.special import erfc #errorfunction
 
 from scipy.stats import f #fisher
-import dv, zero_finding
+from . import dv, zero_finding
 import lmfit
-
+from lmfit import report_errors
 LinAlgError = np.linalg.LinAlgError
 
 
 
-from base_functions import (_fold_exp, 
-                                        _coh_gaussian,
-                                        _fold_exp_and_coh)
+from .base_functions import (_fold_exp, 
+                             _coh_gaussian,
+                             _fold_exp_and_coh)
 
 posv = linalg.get_lapack_funcs(('posv'))
-ridge_alpha = 0.01
+ridge_alpha = 0.001
 
 def direct_solve(a, b):
     c, x, info = posv(a, b, lower=False,
@@ -168,7 +168,7 @@ class Fitter(object):
         """
         para = np.array(para)
         if self.verbose:
-            print para
+            print(para)
 
         try:
             idx = (para != self._last)
@@ -186,7 +186,7 @@ class Fitter(object):
         if any(idx[:2]) or self.model_disp or True:
             if self.model_coh:
                 x_vec = np.zeros((self.t.size, self.num_exponentials + 3))
-                print taus
+                print(taus)
                 a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus[tau_idx])                
                 
                 x_vec[:, -3:] = b[..., 0]
@@ -255,7 +255,7 @@ class Fitter(object):
 
         self._build_xmat(para[self.model_disp:], is_disp_changed)
 
-        for i in xrange(self.data.shape[1]):
+        for i in range(self.data.shape[1]):
             A = self.xmat[:, i, :]
             self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
 
@@ -278,7 +278,7 @@ class Fitter(object):
         w = para[0]
         taus = para[1:]
         x0 = 0.
-
+        
         #Only calculate what is necessary.
         if idx[0] or is_disp_changed:
             exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
@@ -286,7 +286,7 @@ class Fitter(object):
                 self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
             self.xmat[:, :, :num_exp] =  exps
-        elif any(idx):
+        elif any(idx):                  
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w,
                                                  x0, taus[idx[1:]])
         #self.xmat = np.nan_to_num(self.xmat)
@@ -353,7 +353,7 @@ class Fitter(object):
         out = cma.fmin(self.res_sum, x0, 2, verb_log=0, verb_disp=50,
                        restarts=restarts, tolfun=1e-6, tolfacupx=1e9)
         for pi in (out[0]):
-            print "{0: .3f} +- {1:.4f}".format(pi, np.exp(pi))
+            print("{0: .3f} +- {1:.4f}".format(pi, np.exp(pi)))
         return out
 
 def start_pymc(fitter, x0, bounds):
