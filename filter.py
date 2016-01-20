@@ -4,7 +4,7 @@ This module contains various filters and binning methods. All take
 a dv tup and return a tup.
 """
 
-import dv
+from . import dv
 import numpy as np
 import scipy.ndimage as nd
 import scipy.signal as sig
@@ -26,6 +26,11 @@ def svd_filter(tup, n=6):
     f = np.dot(u, np.diag(s).dot(v))
     return dv.tup(wl, t, f)
     
+def wiener(tup, size=(3,3), noise=None):
+    wl, t, d = tup.wl, tup.t, tup.data
+    f = sig.wiener(d, size, noise=noise)    
+    return dv.tup(wl, t, f)
+
 def uniform_filter(tup, sigma=(2, 2)):
     """
     Apply an uniform filter to data.
@@ -123,4 +128,5 @@ def cut_tup(tup, from_t=None, to_t=None, from_wl=None, to_wl=None):
         to_wl = wl.max()+1
     t0, t1 = dv.fi(t, from_t), dv.fi(t, to_t)
     w0, w1 = dv.fi(wl, from_wl), dv.fi(wl, to_wl)
+    w0, w1 = sorted(w0, w1)
     return dv.tup(wl[w0:w1], t[t0:t1], d[t0:t1, w0:w1])

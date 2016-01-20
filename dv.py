@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import numpy as np
 import scipy.stats as st
 import scipy.signal as sig
@@ -30,12 +31,14 @@ def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     std = np.std(arr, axis, keepdims=1)
     std = np.std(st.trimboth(arr, 0.1, axis), keepdims=1)
     mean = np.mean(st.trimboth(arr, 0.1, axis), keepdims=1)
+    #std = np.std(st.trimboth(arr, 0.1, axis), keepdims=1)
+    #mean = np.mean(st.trimboth(arr, 0.1, axis), keepdims=1)
     idx = np.abs(arr - mean) > ratio * std
     n = np.sqrt(np.sum(~idx, axis))
     if not use_sem:
         n = 1
     arr[idx] = np.nan
-    print np.sum(idx)/arr.shape[1]
+        
     mean = np.nanmean(arr, axis)
     std = np.nanstd(arr, axis, ddof=1)/n
     return mean, std
@@ -159,8 +162,7 @@ def apply_sg(y, window_size, order, deriv=0):
 
 import scipy.ndimage as nd
 def apply_sg_scan(y, window_size, order, deriv=0):
-    out = np.zeros_like(y)
-    print y.shape
+    out = np.zeros_like(y)    
     c = sig.savgol_coeffs(window_size, order, deriv=0)
 #    for s in range(y.shape[-1]):
 #        for i in range(y.shape[1]):
@@ -181,7 +183,6 @@ def calc_error(args):
 
 def min_pulse_length(width_in_cm, shape='gauss'):
     width_hz = width_in_cm * 3e10
-    print width_hz
     if shape == 'gauss':
         return (0.44 / width_hz) / 1e-15
 
@@ -300,9 +301,8 @@ def efa(dat, n, reverse=False):
 
     out=np.zeros((data.shape[0], n))
     for i in range(6, data.shape[0]):
-        sv = svds(data[:i, :], min(i,n))[1]
-        print sv
-        out[i, :]=sv
+        sv = svds(data[:i, :], min(i,n))[1]        
+        out[i, :] = sv
     return out
 
 def moving_efa(dat, n, ncols, method='svd'):
@@ -327,8 +327,6 @@ def pfid_tau_to_w(tau):
     """
     return 1/(np.pi*3e7*tau*1e-9)
 
-print pfid_tau_to_w(1)
-
 def als(dat, n=5):
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
@@ -352,7 +350,7 @@ def als(dat, n=5):
             if abs(res-res_n) < 0.001:
                 break
             else:
-                print i, res_n
+                print(i, res_n)
                 res = res_n
     return u0.T, v0.T
 
@@ -361,7 +359,7 @@ def als(dat, n=5):
 def do_nnls(A,b):
     n = b.shape[1]
     out = np.zeros((A.shape[1], n))
-    for i in xrange(n):
+    for i in range(n):
         #mls.bounded_lsq(A.T, b[:,i], np.zeros((A.shape[1],1)), np.ones((A.shape[1],1))).shape
         out[:,i] =  nnls(A, b[:,i])[0]
     return out
@@ -405,8 +403,8 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
 
     mini = lmfit.minimize(res, para)
     if verbose:
-        lmfit.report_errors(para)
-    y_fit = fit(para)
+        lmfit.report_errors(mini.params)
+    y_fit = fit(mini.params)
     return mini, y_fit
 
 def calc_ratios(fitter, tmin=0.35, tmax=200):
@@ -417,8 +415,11 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
     i_max = fi(t, tmax)
     t = t[i:i_max]
     d = d[i:i_max, :]
-    pos = np.where(d > 0, d, 0).sum(1)
-    neg = np.where(d < 0, d, 0).sum(1)
+    
+    pos = np.where(d > 0, d, 0)
+    neg = np.where(d < 0, d, 0)
+    pos = np.trapz(pos, w)
+    neg = np.trapz(neg, w)
     return t, pos, neg, pos/neg, d.sum(1)
 
 

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 *-*
+from __future__ import print_function, absolute_import
 units = {'x': ' nm', 'y': ' ps', 'z': r'$\Delta$OD'}
 title = ""
 import matplotlib.pyplot as plt
 import numpy as np
-import dv, data_io, zero_finding
+from skultrafast import dv, data_io, zero_finding
 
 plt.rcParams['font.size']=9
 plt.rcParams['legend.fontsize'] = 'small'
@@ -314,7 +315,7 @@ def _plot_zero_finding(tup, raw_tn, fit_tn, cor):
     
     
 
-def sig_ratios(fitter, fname=None, tmax=200,
+def sig_ratios(fitter, fname=None, tmax=300,
                tmin = 0.1,
                do_fit=True, start_taus=None):
     if not start_taus:
@@ -339,7 +340,7 @@ def sig_ratios(fitter, fname=None, tmax=200,
                 txt += p.name + ' '
                 txt += '{0:.2f}'.format(p.value) + ' \n'
             ax = plt.gca()
-            plt.text(0.6, 0.6, txt, transform=ax.transAxes)
+            plt.text(0.95, 0.95, txt, transform=ax.transAxes, va='top', ha='right')
     if fname:
         np.savetxt(fname, np.column_stack((t, pos, neg, pos/neg, total)), 
                    header = 't pos neg pos/neg total')
@@ -392,7 +393,7 @@ def _plot_kin_res(x):
     for i in g.nodes():
         for j in g[i]:        
             g[i][j]['tau'] = '%2d'%g.edge[i][j]['tau']
-            print g[i][j]['tau']
+            print(g[i][j]['tau'])
 
     pos = {'S1_hot':(0, 3), 'S1_warm':(0,2.3),  'S1':(0, 1.5),
            'T_hot':(1, 1.5), 'T1':(1,1), 'S0': (0,0)}
