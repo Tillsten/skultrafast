@@ -15,14 +15,14 @@ def scan_correction(dn, tidx):
         null_std = dn[tidx:, :, j, 0].std(0)
         for i in range(0, dn.shape[-1], 2):
             spec = trim_mean(dn[tidx:, :, j, i], 0.2, 0)
-            c = np.linalg.lstsq(spec[:, None], null_spek[:, None])            
+            c = np.linalg.lstsq(spec[:, None], null_spek[:, None])
             dn[:, :, j, i] *= c[0][0]
 
         null_spek =   trim_mean(dn[tidx:, :, j, 1], 0.2, 0)
         for i in range(1, dn.shape[-1], 2):
             spec = trim_mean(dn[tidx:, :, j, i], 0.2, 0)
             c = np.linalg.lstsq(spec[:, None], null_spek[:, None])
-            print c[0][0]
+            #print c[0][0]
             dn[:, :, j, i] *= c[0][0]
     return dn
 
@@ -31,7 +31,7 @@ def load(fname, recalc_wl=None):
     t = f['t']/1000.
     wl = f['wl']
     if recalc_wl is not None:
-        for i in range(wl.shape[1]):        
+        for i in range(wl.shape[1]):
             wl[:, i] =-(np.arange(32)-16)*recalc_wl + wl[16, i]
     data = -f['data']
     return t, 1e7/wl, data
@@ -87,7 +87,7 @@ def back_correction(d, n=10, use_robust=True):
         c2 = np.linalg.lstsq(mean_back[:, None], scan_means[:, 1, : ])[0]
 
 
-    print c1.shape
+    #print c1.shape
 
     d[..., 0, :] -= mean_back[:, None].dot(c1)[None, :,  :]
     d[..., 1, :] -= mean_back[:, None].dot(c2)[None, :,  :]
@@ -110,7 +110,7 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
         d = sig.wiener(d, (wiener, 1, 1, 1))
     elif wiener < 0:
         d = nd.uniform_filter1d(d, -wiener, 0, mode='nearest')
-    
+
 
 
     #d, back0 = back_correction(d, use_robust=1)
@@ -123,13 +123,13 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
     back = 0.5*(back0+back1).mean(-1)
     d[..., 0, :] -= back.reshape(1, 32, -1)
     d[..., 1, :] -= back.reshape(1, 32, -1)
-    
+
     if do_scan_correction:
         d = scan_correction(d, dv.fi(t, 0))
 
 
-    #gr -> vert -> parallel zum 0. scan    
-        
+    #gr -> vert -> parallel zum 0. scan
+
     fi = lambda x, ax=-1: trim_mean(x, trunc_scans,  ax)
     fi = lambda x: dv.trimmed_mean(x, ratio=trunc_scans)[0]
     #fi = lambda x, ax=-1: np.median(x, ax)

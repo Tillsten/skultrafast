@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This modul build a kinetic matrix from given transtions between 
+This modul build a kinetic matrix from given transtions between
 compartments.
 """
 import sympy, cython
@@ -11,13 +11,13 @@ class Transition(object):
     """
     Represents a transtion between comparments.
     """
-    def __init__(self, from_comp, to_comp, 
-                 tau=None, rate=None, qu_yield=None):         
-        self.rate = sympy.Symbol(from_comp + '_' + to_comp, real=True, 
+    def __init__(self, from_comp, to_comp,
+                 tau=None, rate=None, qu_yield=None):
+        self.rate = sympy.Symbol(from_comp + '_' + to_comp, real=True,
                                  positive=True)
         self.from_comp = from_comp
         self.to_comp = to_comp
-        self.qu_yield = qu_yield or 1. 
+        self.qu_yield = qu_yield or 1.
 
 
 class Model(object):
@@ -26,45 +26,49 @@ class Model(object):
     """
     def __init__(self):
         self.transitions = []
-    
+
     def add_trans(self, *args, **kwargs):
         """
         Creates a transiton and adds it to self
         """
         trans = Transition(*args, **kwargs)
         self.transitions.append(trans)
-        
+
     def build_matrix(self):
         """model.add_trans('d', 'e')
         Builds the n x n k-matrix
         """
         comp = get_comparments(self.transitions)
         idx_dict = dict(enumerate(comp))
-        inv_idx = dict(zip(idx_dict.values(), idx_dict.keys()))        
+        inv_idx = dict(zip(idx_dict.values(), idx_dict.keys()))
         mat = sympy.zeros((len(comp), len(comp)))
-        #for i, comp in idx_dict.iteritems():                     
+        #for i, comp in idx_dict.iteritems():
         for t in self.transitions:
             i = inv_idx[t.from_comp]
             mat[i, i] = mat[i, i] - t.rate
-            mat[inv_idx[t.to_comp], i] = t.rate 
+            mat[inv_idx[t.to_comp], i] = t.rate
             if t.qu_yield != 1. :
                 mat[inv_idx[t.to_comp], i] = t.rate * t.qu_yield
         self.mat = mat
         return mat
-    
+
     def get_compartments(self):
         return get_comparments(self.transitions)
-        
+
     def get_func(self, y0):
         """
         Gives back a function (compiled with cython)
-        """        
+        """
         A = self.build_matrix()
-        ts = sympy.Symbol('ts', real=True)   
-        expA = (A*ts).exp()            
-        fun = expA * y0          
+        ts = sympy.Symbol('ts', real=True)
+        expA = sympy.exp(A*ts)
+        print expA
+        fun = expA * y0
+        print fun
         r, e = sympy.cse(fun)
+        #print r, e
         e_sim = [i.simplify() for i in e]
+        print e_sim
         prog_str = _make_progstr(self.transitions, fun, e, r)
         self.prog_str = prog_str
         self.fun = fun
@@ -75,33 +79,30 @@ class Model(object):
             return ret
         return sol_fun #autowrap(fun,'C', backend='CYTHON', tempdir='..')
 
-    
+
     def get_trans(self, y0, taus, t):
         """
         Return the solution
         """
-        import scipy.linalg as la
         symbols = get_symbols(self.transitions)
-                
         k = np.array(self.mat.subs(zip(symbols, taus))).astype('float')
-        
         o = np.zeros((len(t), k.shape[0]))
-        
+
         for i in xrange(t.shape[0]):
             o[i, :] = la.expm(k * t[i]).dot(y0)[:, 0]
-        
+
         return o
        #pass  print mat.
 
 import scipy.linalg as la
-    
+
 
 def _make_appy_sym(sym):
     l = []
     for i, s in enumerate(sym):
         l.append(str(s) + '= 1/p[{}]\n'.format(i))
     return ''.join(l)
-        
+
 def get_comparments(list_trans):
     """
     Getting a list of transtions, return the compartments
@@ -113,13 +114,13 @@ def get_comparments(list_trans):
         if trans.to_comp not in l:
             l.append(trans.to_comp)
     return l
-    
+
 def get_symbols(list_trans):
     """
     Return the used symbols
     """
     return [t.rate for t in list_trans]
-    
+
 if __name__ == '__main__':
     model = Model()
     model.add_trans('a', 'b')
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     #plot(t, model.exp_solution(y0, t))
     print get_comparments(model.transitions)
     print model.build_matrix()
-    
-    #fu = model.get_func(y0)
+
+    fu = model.get_func(y0)
     tau = np.array([1., 10., 100, 300, 10000, 10000])
     model.get_trans(y0, tau, t)
