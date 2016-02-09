@@ -10,11 +10,11 @@ import scipy.ndimage as nd
 import scipy.signal as sig
 
 def svd_filter(tup, n=6):
-    """ 
+    """
     Only use the first n-components.
-    
+
     Parameters
-    ----------    
+    ----------
     tup:
         data object.
     n:
@@ -25,10 +25,10 @@ def svd_filter(tup, n=6):
     s[n:] = 0
     f = np.dot(u, np.diag(s).dot(v))
     return dv.tup(wl, t, f)
-    
+
 def wiener(tup, size=(3,3), noise=None):
     wl, t, d = tup.wl, tup.t, tup.data
-    f = sig.wiener(d, size, noise=noise)    
+    f = sig.wiener(d, size, noise=noise)
     return dv.tup(wl, t, f)
 
 def uniform_filter(tup, sigma=(2, 2)):
@@ -51,7 +51,7 @@ def gaussian_filter(tup, sigma=(2, 2)):
 def sg_filter(tup, window_length=11, polyorder=2, deriv=0, axis=0):
     """
     Apply a Savitzky-Golay filter to a tup.
-    
+
     Parameter
     ---------
     tup:
@@ -61,25 +61,25 @@ def sg_filter(tup, window_length=11, polyorder=2, deriv=0, axis=0):
     polyorder:
         The order of local polynomial. Must be smaller than window_length.
     deriv:
-        The order of the derivative to compute. This must be a 
+        The order of the derivative to compute. This must be a
         nonnegative integer. The default is 0.
-                       
+
     """
     wl, t, d = tup.wl, tup.t, tup.data
-    f = sig.savgol_filter(d, window_length, polyorder, axis=axis, 
+    f = sig.savgol_filter(d, window_length, polyorder, axis=axis,
                           mode='nearest')
     return dv.tup(wl, t, f)
-    
+
 def bin_channels(tup, n=200, method=np.mean):
     """
     Bin the data onto n-channels.
     """
-    
+
     def binner(n, wl, dat):
-        """ 
+        """
         Given wavelengths and data it bins the data into n-wavelenths.
-        Returns bdata and bwl    
-        
+        Returns bdata and bwl
+
         """
         i = np.argsort(wl)
         wl = wl[i]
@@ -87,7 +87,7 @@ def bin_channels(tup, n=200, method=np.mean):
         idx = np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
         binned = np.empty((dat.shape[0], n))
         binned_wl = np.empty(n)
-        for i in range(n):        
+        for i in range(n):
             binned[:,i] = method(dat[:,idx[i]:idx[i+1]],1)
             binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
         return binned, binned_wl
@@ -98,10 +98,10 @@ def bin_channels(tup, n=200, method=np.mean):
     return dv.tup(binned_wl, t, binned_d)
 
 def weighted_binner(n, wl, dat, std):
-    """ 
+    """
     Given wavelengths and data it bins the data into n-wavelenths.
-    Returns bdata and bwl    
-    
+    Returns bdata and bwl
+
     """
     i = np.argsort(wl)
     wl = wl[i]
@@ -109,13 +109,13 @@ def weighted_binner(n, wl, dat, std):
     idx = np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
     binned = np.empty((dat.shape[0], n))
     binned_wl = np.empty(n)
-    for i in range(n):       
+    for i in range(n):
         data = dat[:,idx[i]:idx[i+1]]
         weights = 1/std[:,idx[i]:idx[i+1]]
         binned[:,i] = np.average(data, 1, weights)
         binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
-    
+
 def cut_tup(tup, from_t=None, to_t=None, from_wl=None, to_wl=None):
     wl, t, d = tup.wl, tup.t, tup.data
     if not from_t:
@@ -130,3 +130,8 @@ def cut_tup(tup, from_t=None, to_t=None, from_wl=None, to_wl=None):
     w0, w1 = dv.fi(wl, from_wl), dv.fi(wl, to_wl)
     w0, w1 = sorted(w0, w1)
     return dv.tup(wl[w0:w1], t[t0:t1], d[t0:t1, w0:w1])
+
+
+def norm_tup(tup, min_div=3):
+    wl, t, d = tup.wl, tup.t, tup.data
+    np.max(d)
