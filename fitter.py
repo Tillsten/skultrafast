@@ -13,7 +13,7 @@ LinAlgError = np.linalg.LinAlgError
 
 
 
-from .base_functions import (_fold_exp, 
+from .base_functions import (_fold_exp,
                              _coh_gaussian,
                              _fold_exp_and_coh)
 
@@ -37,7 +37,7 @@ def solve_mat(A, b_mat, method='fast'):
         return direct_solve(A.T.dot(A), A.T.dot(b_mat))
 
     elif method == 'ridge':
-        
+
         X = np.dot(A.T, A)
         X.flat[::A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)
@@ -58,6 +58,13 @@ def solve_mat(A, b_mat, method='fast'):
     elif method == 'lasso':
         import sklearn.linear_model as lm
         s = lm.Lasso(fit_intercept=False)
+        s.alpha = ridge_alpha
+        s.fit(A, b_mat)
+        return s.coef_.T
+
+    elif method == 'enet':
+        import sklearn.linear_model as lm
+        s = lm.ElasticNet(fit_intercept=False, l1_ratio=0.2)
         s.alpha = ridge_alpha
         s.fit(A, b_mat)
         return s.coef_.T
@@ -187,11 +194,11 @@ class Fitter(object):
             if self.model_coh:
                 x_vec = np.zeros((self.t.size, self.num_exponentials + 3))
                 print(taus)
-                a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus[tau_idx])                
-                
+                a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus[tau_idx])
+
                 x_vec[:, -3:] = b[..., 0]
                 x_vec[:, :-3] = a[..., 0]
-                
+
             else:
                 x_vec = _fold_exp(self.t[:, None], w, x0, taus).squeeze()
             self.x_vec = np.nan_to_num(x_vec)
@@ -248,7 +255,7 @@ class Fitter(object):
             is_disp_changed = True
 
         self.last_para = para
-        
+
         if self.model_disp and is_disp_changed:
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
             self.t_mat = self.t[:, None] - self.tn[None, :]
@@ -278,7 +285,7 @@ class Fitter(object):
         w = para[0]
         taus = para[1:]
         x0 = 0.
-        
+
         #Only calculate what is necessary.
         if idx[0] or is_disp_changed:
             exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
@@ -286,7 +293,7 @@ class Fitter(object):
                 self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
             self.xmat[:, :, :num_exp] =  exps
-        elif any(idx):                  
+        elif any(idx):
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w,
                                                  x0, taus[idx[1:]])
         #self.xmat = np.nan_to_num(self.xmat)
