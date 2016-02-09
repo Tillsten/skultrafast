@@ -90,8 +90,8 @@ def plot_svd_components(tup, n=4, from_t = None):
     ax1 = plt.subplot(311)
     ax1.set_xlim(-1, t.max())
 
-    
-    lbl_trans()    
+
+    lbl_trans()
     plt.minorticks_off()
     ax1.set_xscale('symlog')
     ax2 = plt.subplot(312)
@@ -347,7 +347,7 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
     plt.xlabel(freq_label)
     plt.ylabel(time_label)
     return con
-    
+
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
              linscaley=1, cmap='coolwarm',
              **kwargs):
@@ -391,7 +391,7 @@ def nice_lft_map(tup, taus, coefs, **kwargs):
                                   pad=0.1)
 
         pos = np.where(out[0]>0, out[0], 0).sum(0)
-        neg = np.where(out[0]<0, out[0], 0).sum(0)        
+        neg = np.where(out[0]<0, out[0], 0).sum(0)
         axt.plot(pos, taus)
         axt.plot(neg, taus)
         #axt.plot(out[0].T[:, wi(1513):].sum(1), taus)
@@ -439,7 +439,7 @@ def plot_fft(x, y, min_amp=0.2, order=1, padding=2, power=1, ax=None):
     freqs = np.fft.fftfreq(padding*x.size, x[1]-x[0])
     n = freqs.size/2+1
     fr_cm = -dv.fs2cm(1000/freqs[n:])
-    
+
     ax.plot(fr_cm, f[n:])
     ax.set_xlabel('Wavenumber / cm$^{-1}$')
     ax.set_ylabel('FFT amplitude')
@@ -586,6 +586,25 @@ def fit_semiconductor(t, data, sav_n=11, sav_deg=4, mode='sav'):
     plt.tight_layout()
     plt.text(0.5, 0.9, 'x$_0$ = %.2f\nFWHM = %.2f\nA = %.1f\n'%(x0[0][2],2.35*x0[0][0], x0[0][1]),
              transform=plt.gca().transAxes, va='top')
+
+def stack_ax(num_rows=2, num_cols=1, height_rations=[2,1]):
+    gs = plt.GridSpec(num_rows, num_cols, wspace=0, hspace=0, height_ratios=height_rations)
+    #disable ticklabels
+    axes = []
+    for r in range(num_rows):
+        row = []
+        for c in range(num_cols):
+            ax = plt.subplot(gs[r,c])
+            row.append(ax)
+            if r != num_rows:
+                ax.xaxis.tick_params(label_bottom=False)
+            if c != 0:
+                ax.yaxis.tick_params(label_left=False)
+
+        axes.append(row)
+
+        fo
+
 
 def nsf(num, n=1):
     """n-Significant Figures"""
