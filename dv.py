@@ -38,7 +38,7 @@ def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     if not use_sem:
         n = 1
     arr[idx] = np.nan
-        
+
     mean = np.nanmean(arr, axis)
     std = np.nanstd(arr, axis, ddof=1)/n
     return mean, std
@@ -68,6 +68,8 @@ def apply_spline(t, d, s=None):
         out[:, i] =smooth_spline(t, d[:, i], s)
     return out
 
+def normalize(x):
+    return x/abs(x).max()
 
 def weighted_binner(n, wl, dat, std):
     """
@@ -162,7 +164,7 @@ def apply_sg(y, window_size, order, deriv=0):
 
 import scipy.ndimage as nd
 def apply_sg_scan(y, window_size, order, deriv=0):
-    out = np.zeros_like(y)    
+    out = np.zeros_like(y)
     c = sig.savgol_coeffs(window_size, order, deriv=0)
 #    for s in range(y.shape[-1]):
 #        for i in range(y.shape[1]):
@@ -301,7 +303,7 @@ def efa(dat, n, reverse=False):
 
     out=np.zeros((data.shape[0], n))
     for i in range(6, data.shape[0]):
-        sv = svds(data[:i, :], min(i,n))[1]        
+        sv = svds(data[:i, :], min(i,n))[1]
         out[i, :] = sv
     return out
 
@@ -415,7 +417,7 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
     i_max = fi(t, tmax)
     t = t[i:i_max]
     d = d[i:i_max, :]
-    
+
     pos = np.where(d > 0, d, 0)
     neg = np.where(d < 0, d, 0)
     pos = np.trapz(pos, w)
