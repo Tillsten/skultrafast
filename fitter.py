@@ -193,16 +193,16 @@ class Fitter(object):
         if any(idx[:2]) or self.model_disp or True:
             if self.model_coh:
                 x_vec = np.zeros((self.t.size, self.num_exponentials + 3))
-                print(taus)
-                a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus[tau_idx])
-
+                #print(taus)
+                a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus)
+                #print(a.shape, b.shape)
                 x_vec[:, -3:] = b[..., 0]
-                x_vec[:, :-3] = a[..., 0]
+                x_vec[:, :-3] = a[..., 0, :]
 
             else:
                 x_vec = _fold_exp(self.t[:, None], w, x0, taus).squeeze()
             self.x_vec = np.nan_to_num(x_vec)
-            self.x_vec /= np.max(self.x_vec, 0)
+            #self.x_vec /= np.max(self.x_vec, 0)
             self._last = para.copy()
         else:
             self.x_vec[:, tau_idx] = _fold_exp(self.t, w,
@@ -256,7 +256,9 @@ class Fitter(object):
 
         self.last_para = para
 
-        if self.model_disp and is_disp_changed:
+        #print(is_disp_changed, self.model_disp, end=' ')
+        if self.model_disp != 0 and is_disp_changed or True:
+            #print('change_tn', para[:m_disp])
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
             self.t_mat = self.t[:, None] - self.tn[None, :]
 
@@ -287,9 +289,10 @@ class Fitter(object):
         x0 = 0.
 
         #Only calculate what is necessary.
-        if idx[0] or is_disp_changed:
+        if idx[0] or is_disp_changed or True:
             exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
             if self.model_coh:
+                #print('test')
                 self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
             self.xmat[:, :, :num_exp] =  exps

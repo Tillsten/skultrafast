@@ -128,7 +128,7 @@ def cut_tup(tup, from_t=None, to_t=None, from_wl=None, to_wl=None):
         to_wl = wl.max()+1
     t0, t1 = dv.fi(t, from_t), dv.fi(t, to_t)
     w0, w1 = dv.fi(wl, from_wl), dv.fi(wl, to_wl)
-    w0, w1 = sorted(w0, w1)
+    w0, w1 = min(w0, w1), max(w0, w1)
     return dv.tup(wl[w0:w1], t[t0:t1], d[t0:t1, w0:w1])
 
 

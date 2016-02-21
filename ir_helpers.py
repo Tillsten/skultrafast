@@ -61,7 +61,6 @@ def robust_mean_back(d, n=10):
 
 
 def back_correction(d, n=10, use_robust=True):
-    print d.shape
     d = d.copy()
     mean_back = d[:n, ...].mean(0).mean(-1).mean(-1)
     scan_means = d[:n, ...].mean(0)
@@ -160,7 +159,7 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
     iso = (2*senk + para)/3
     if plot:
         import matplotlib.pyplot as plt
-        from plot_helpers import lbl_spec, mean_spec
+        from skultrafast.plot_helpers import lbl_spec, mean_spec
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
         plt.plot(wl, iso[:10, :].mean(0))
