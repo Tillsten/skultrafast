@@ -15,13 +15,14 @@ def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=True):
     if add_const:
         taus = np.hstack((taus, 10000))
     out = _fold_exp(tup.t.T[:, None], w, 0, taus[None, :]).squeeze()
-    if add_coh:
-        out = np.hstack((out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze()))
-    if norm:
-        out = out / np.abs(out).max(0)
     if add_const:
         print(out.shape)
         out[:, -1] *= 1000
+    if add_coh:
+        out = np.hstack((out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) *10
+    if norm:
+        out = out / np.abs(out).max(0)
+
     return out.squeeze()
 
 

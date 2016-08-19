@@ -189,7 +189,6 @@ def min_pulse_length(width_in_cm, shape='gauss'):
         return (0.44 / width_hz) / 1e-15
 
 
-
 def wavelength2rgb(w):
     """
     Converts a wavelength to a RGB color.
@@ -356,6 +355,20 @@ def als(dat, n=5):
                 res = res_n
     return u0.T, v0.T
 
+def spec_int(tup, r, is_wavelength=True):
+    wl, t, d = tup.wl, tup.t, tup.data
+    if is_wavelength:
+        wl = 1e7/wl
+        wl1, wl2 = 1e7 / r[0], 1e7 / r[1]
+    else:
+        wl1, wl2 = r
+    ix = np.argsort(wl)
+    wl = wl[ix]
+    d = d[:, ix]
+
+    idx1, idx2 = sorted([fi(wl, wl1), fi(wl, wl2)])
+    dat = np.trapz(d[:, idx1:idx2], wl[idx1:idx2]) / np.ptp(wl[idx1:idx2])
+    return dat
 
 #import mls
 def do_nnls(A,b):
@@ -367,7 +380,7 @@ def do_nnls(A,b):
     return out
 
 import lmfit
-def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=None,
+def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=None, weights=None,
             verbose=True):
     num_exp = len(start_taus)
     para = lmfit.Parameters()
@@ -381,9 +394,8 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
         para.add('amp' + str(i), a)
         if amp_max is not None:
             para['amp' + str(i)].max = amp_max
-            para['amp' + str(i)].min = -amp_max
         if amp_min is not None:
-            para['amp' + str(i)].min = -amp_min
+            para['amp' + str(i)].min = amp_min
 
     def fit(p):
         y_fit = np.zeros_like(y)
@@ -397,15 +409,16 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
             y_fit += amp * np.exp(-x/tau)
 
         return y_fit
-    fit(para)
 
     def res(p):
-        return y - fit(p)
-
+        if weights is None:
+            return y - fit(p)
+        else:
+            return (y - fit(p)) / weights
 
     mini = lmfit.minimize(res, para)
     if verbose:
-        lmfit.report_errors(mini.params)
+        lmfit.report_fit(mini)
     y_fit = fit(mini.params)
     return mini, y_fit
 
