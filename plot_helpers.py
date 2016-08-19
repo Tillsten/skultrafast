@@ -190,20 +190,26 @@ def lbl_spec(ax=None):
     ax.set_xlabel(freq_label)
     ax.set_ylabel(sig_label)
     if inv_freq:
-        ax.invert_xaxis()
+        x, y = ax.get_xlim()
+        ax.set_xlim(sorted((x,y))[::-1])
     ax.axhline(0, c='k', zorder=1.5)
 
     plt.minorticks_on()
 
 
-def lbl_trans(ax=None):
+def lbl_trans(ax=None, use_symlog=True):
     if ax is None:
         ax = plt.gca()
 
     ax.set_xlabel(time_label)
     ax.set_ylabel(sig_label)
     ax.axhline(0, c='k', zorder=1.5)
-    plt.minorticks_on()
+    if use_symlog:
+        symticks(plt.gca())
+        plt.axvline(1, c='k', lw=0.5, zorder=1.5)
+
+    else:
+        plt.minorticks_on()
 
 def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
     wl, t, d = tup.wl, tup.t, tup.data
@@ -245,17 +251,10 @@ def mean_tup(tup, time):
 
 def plot_ints(tup, wls, factors=None, symlog=True, norm=False, is_wavelength=True):
     wl, t, d = tup.wl, tup.t, tup.data
-    if is_wavelength:
-        wl = 1e7/wl
 
     plotted_vals = []
     for i in wls:
-        if is_wavelength:
-            wl1, wl2 = 1e7/i[0], 1e7/i[1]
-        else:
-            wl1, wl2 = i
-        idx1, idx2 = sorted([dv.fi(wl, wl1), dv.fi(wl, wl2)])
-        dat = np.trapz(d[:, idx1:idx2], wl[idx1:idx2]) / np.ptp(wl[idx1:idx2])
+        dat = dv.spec_int(tup, i, is_wavelength)
         if norm is True:
             dat = np.sign(dat[np.argmax(abs(dat))]) * dat / abs(dat).max()
         elif norm is False:
@@ -264,6 +263,7 @@ def plot_ints(tup, wls, factors=None, symlog=True, norm=False, is_wavelength=Tru
             dat = dat / dat[dv.fi(t, norm)]
 
         plotted_vals.append(dat)
+        idx1, idx2 = dv.fi(wl, i)
         label = 'From {0: .1f} - {1: .1f} {2}'.format(wl[idx1], wl[idx2], freq_unit)
         plt.plot(t, dat, label=label, lw=line_width)
 
@@ -281,9 +281,9 @@ def plot_ints(tup, wls, factors=None, symlog=True, norm=False, is_wavelength=Tru
     plt.legend(loc='best', ncol=1)
 
 
-def plot_diff(tup, t0, t_list):
+def plot_diff(tup, t0, t_list, **kwargs):
     diff = tup.data - tup.data[dv.fi(tup.t, t0), :]
-    plot_spec(dv.tup(tup.wl, tup.t, diff), t_list)
+    plot_spec(dv.tup(tup.wl, tup.t, diff), t_list, **kwargs)
 
 def time_formatter(time, unit):
     mag = np.floor(np.log10(time))
@@ -292,7 +292,7 @@ def time_formatter(time, unit):
     else:
         return '%1.2f %s'%(time, unit)
 
-def plot_spec(tup, t_list, ax=None, **kwargs):
+def plot_spec(tup, t_list, ax=None, norm=False, **kwargs):
     if ax is None:
         ax = plt.gca()
     wl, t, d = tup.wl, tup.t, tup.data
@@ -300,8 +300,10 @@ def plot_spec(tup, t_list, ax=None, **kwargs):
     for i in t_list:
         idx = dv.fi(t, i)
         dat = d[idx, :]
+        if norm:
+            dat = dat/abs(dat).max()
         li+= ax.plot(wl, dat, label=time_formatter(t[idx], time_unit),
-                      lw=linewidth, **kwargs)
+                     **kwargs)
 
 
     #ulim = np.percentile(plotted_vals, 98.) + 0.1
@@ -313,7 +315,8 @@ def plot_spec(tup, t_list, ax=None, **kwargs):
     ax.legend(loc='best', ncol=2,  title='Delay time')
     return li
 
-def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle'],
+def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
+              color=plt.rcParams['axes.color_cycle'],
               markers = ['o', '^']):
     if ax is None:
        ax = plt.gca()
@@ -324,18 +327,20 @@ def mean_spec(wl, t, p, t_range, ax=None, color=plt.rcParams['axes.color_cycle']
     for j, (x, y) in enumerate(t_range):
         for i, d in enumerate(p):
             t0, t1 = dv.fi(t, x), dv.fi(t, y)
-            pd = d[t0:t1, :].mean(0)
+            print(t0, t1)
+            pd = np.mean(d[t0:t1, :], 0)
             lw = 2 if i == 0 else 1
             ax.plot(wl, pd, color=color[j], marker=markers[i], lw=lw,
-                    mec='none', ms=5)
+                    mec='none', ms=3)
 
-        ax.text(0.8, 0.1+j*0.04,'%.1f ps'%t[t0:t1].mean(),
+        ax.text(pos[0], pos[1]+j*0.07,'%.1f - %.1f ps'%(t[t0], t[t1]),
                 color=color[j],
                 transform=ax.transAxes)
 
     lbl_spec(ax)
 
-    if len(p) == 1:
+    if len(t_range) == 1:
+        print(len(p))
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
 
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
@@ -372,7 +377,7 @@ def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
 
 
 def nice_lft_map(tup, taus, coefs, show_sums=False, **kwargs):
-    cmap = kwargs.pop('cmap', 'bwr')
+    cmap = kwargs.pop('cmap', 'seismic')
     plt.figure(1, figsize=(6, 4))
     ax = plt.subplot(111)
     #norm = SymLogNorm(linthresh=0.3)
@@ -385,7 +390,7 @@ def nice_lft_map(tup, taus, coefs, show_sums=False, **kwargs):
     cb.set_label('Amplitude')
     ax.set_yscale('log')
     plt.autoscale(1, 'both', 'tight')
-    ax.set_ylim(None, 60)
+    #ax.set_ylim(None, 60)
 
     plt.minorticks_on()
     ax.set_xlabel(freq_label)
@@ -396,7 +401,6 @@ def nice_lft_map(tup, taus, coefs, show_sums=False, **kwargs):
     if show_sums:
         axt = divider.append_axes("left", size=.5, sharey=ax,
                                   pad=0.05)
-
         pos = np.where(coefs>0, coefs, 0).sum(1)
         neg = np.where(coefs<0, coefs, 0).sum(1)
         axt.plot(pos[:len(taus)], taus, 'r', label='pos.')
@@ -404,8 +408,6 @@ def nice_lft_map(tup, taus, coefs, show_sums=False, **kwargs):
         axt.plot(abs(coefs).sum(1)[:len(taus)], taus, 'k', label='abs.')
         axt.legend(frameon=False, loc='best')
         axt.invert_xaxis()
-
-
         #axt.plot(out[0].T[:, wi(1513):].sum(1), taus)
         #axt.plot(3*out[0].T[:, :wi(1513)].sum(1), taus)
         #plt.autoscale(1, 'y', 'tight')
@@ -425,7 +427,7 @@ def nice_lft_map(tup, taus, coefs, show_sums=False, **kwargs):
 
         axt.xaxis.tick_top()
         axt.axhline(0, c='k', zorder=1.9)
-    plt.autoscale(1, 'x', 'tight')
+    plt.autoscale(1, 'both', 'tight')
 
 
 def plot_freqs(tup, wl, from_t, to_t, taus=[1]):

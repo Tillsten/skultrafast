@@ -103,10 +103,10 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
 
     if wiener == 'svd':
         for i in range(d.shape[-1]):
-            d[:, :, 0, i] = dv.svd_filter(d[:, :, 0, i], 5)
-            d[:, :, 1, i] = dv.svd_filter(d[:, :, 1, i], 5)
+            d[:, :, 0, i] = dv.svd_filter(d[:, :, 0, i], 3)
+            d[:, :, 1, i] = dv.svd_filter(d[:, :, 1, i], 3)
     elif wiener > 1:
-        d = sig.wiener(d, (wiener, 1, 1, 1))
+        d = sig.wiener(d, (wiener, 3, 1, 1))
     elif wiener < 0:
         d = nd.uniform_filter1d(d, -wiener, 0, mode='nearest')
 
@@ -115,8 +115,10 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
     #d, back0 = back_correction(d, use_robust=1)
     #back1 = back0
     if do_scan_correction:
-        d = scan_correction(d, dv.fi(t, 0.3))
-    fi = lambda x, ax=0: trim_mean(x, trunc_back, ax)
+        d = scan_correction(d, dv.fi(t, 0.5))
+    import astropy.stats as stats
+
+    fi = lambda x, ax=0: stats.sigma_clip(x, sigma=trunc_back, iters=3, axis=ax).mean(ax)
     back0 = fi(d[:n, ..., 0, :], ax=0)
     back1 = fi(d[:n, ..., 1, :], ax=0)
     back = 0.5*(back0+back1).mean(-1)
@@ -132,6 +134,7 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
     fi = lambda x, ax=-1: trim_mean(x, trunc_scans,  ax)
     fi = lambda x: dv.trimmed_mean(x, ratio=trunc_scans)[0]
     #fi = lambda x, ax=-1: np.median(x, ax)
+    fi = lambda x, ax=-1: stats.sigma_clip(x, sigma=trunc_scans, iters=2, axis=ax).mean(ax)
     if start_det0_is_para:
         para_0 = fi(d[..., 0, ::2])
         senk_0 = fi(d[..., 0, 1::2])
