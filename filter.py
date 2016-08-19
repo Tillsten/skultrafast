@@ -117,15 +117,8 @@ def weighted_binner(n, wl, dat, std):
     return binned, binned_wl
 
 def cut_tup(tup, from_t=None, to_t=None, from_wl=None, to_wl=None):
-    wl, t, d = tup.wl, tup.t, tup.data
-    if not from_t:
-        from_t = t.min()-1
-    if not to_t:
-        to_t = t.max()+1
-    if not from_wl:
-        from_wl = wl.min()-1
-    if not to_wl:
-        to_wl = wl.max()+1
+    wl, t, d = tup.wl.copy(), tup.t.copy(), tup.data.copy()
+
     t0, t1 = dv.fi(t, from_t), dv.fi(t, to_t)
     w0, w1 = dv.fi(wl, from_wl), dv.fi(wl, to_wl)
     w0, w1 = min(w0, w1), max(w0, w1)
