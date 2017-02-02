@@ -6,8 +6,8 @@ Created on Tue May 27 15:35:22 2014
 """
 
 import matplotlib.pyplot as plt
-import skultrafast.dv as dv
 import numpy as np
+import skultrafast.dv as dv
 
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
              (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),
@@ -44,7 +44,7 @@ def ir_mode():
     global freq_label
     global inv_freq
     global freq_unit
-    freq_label = u'Wavenumbers [cm$^{-1}$]'
+    freq_label = u'Wavenumber [cm$^{-1}$]'
     inv_freq = True
     freq_unit = u'cm$^{-1}$'
 
@@ -61,7 +61,7 @@ vis_mode()
 time_label = 'Delay time [ps]'
 time_unit = 'ps'
 sig_label = 'Absorbance change [mOD]'
-vib_label = 'Wavenumbers  [cm$^{-1}$]'
+vib_label = 'Wavenumber  [cm$^{-1}$]'
 inv_freq = False
 line_width = 1
 
@@ -72,7 +72,7 @@ def plot_singular_values(dat):
     plt.plot(np.arange(len(s)), s, 'o')
 
     plt.xlim(-1, 30)
-    plt.ylim(1, )
+    #plt.ylim(-1, )
     plt.yscale('log')
     plt.minorticks_on()
     plt.title('Singular values')
@@ -211,7 +211,10 @@ def lbl_trans(ax=None, use_symlog=True):
     else:
         plt.minorticks_on()
 
-def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
+def plot_trans(tup, wls, symlog=True, norm=False, marker=None, ax=None,
+               **kwargs):
+    if ax is None:
+        ax = plt.gca()
     wl, t, d = tup.wl, tup.t, tup.data
     ulim = -np.inf
     llim = np.inf
@@ -229,29 +232,32 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, **kwargs):
 
 
         plotted_vals.append(dat)
-        l.extend(plt.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), marker=marker, **kwargs))
+        l.extend(ax.plot(t, dat, label='%.1f %s'%(wl[idx], freq_unit), marker=marker, **kwargs))
 
     ulim = np.percentile(plotted_vals, 99.) + 0.5
     llim = np.percentile(plotted_vals, 1.) - 0.5
-    plt.xlabel(time_label)
-    plt.ylabel(sig_label)
+    ax.set_xlabel(time_label)
+    ax.set_ylabel(sig_label)
     #plt.ylim(llim, ulim)
     if symlog:
-        plt.xscale('symlog', linthreshx=1)
-        plt.axvline(1, c='k', lw=0.5, zorder=1.9)
-        symticks(plt.gca())
-    plt.axhline(0, color='k', lw=0.5, zorder=1.9)
-    plt.xlim(-.5,)
-    plt.legend(loc='best', ncol=2, title='Wavelength')
+        ax.set_xscale('symlog', linthreshx=1)
+        ax.axvline(1, c='k', lw=0.5, zorder=1.9)
+        symticks(ax)
+    ax.axhline(0, color='k', lw=0.5, zorder=1.9)
+    ax.set_xlim(-.5,)
+    ax.legend(loc='best', ncol=2, title='Wavelength')
     return l
 def mean_tup(tup, time):
     wl, t, d = tup.wl, tup.t, tup.data
     new_dat = tup.data /  tup.data[dv.fi(t, time), :]
     return dv.tup(wl, t, new_dat)
 
-def plot_ints(tup, wls, factors=None, symlog=True, norm=False, is_wavelength=True):
+def plot_ints(tup, wls, factors=None, symlog=True,
+              norm=False, is_wavelength=True, ax=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
     wl, t, d = tup.wl, tup.t, tup.data
-
+    lines = []
     plotted_vals = []
     for i in wls:
         dat = dv.spec_int(tup, i, is_wavelength)
@@ -265,28 +271,26 @@ def plot_ints(tup, wls, factors=None, symlog=True, norm=False, is_wavelength=Tru
         plotted_vals.append(dat)
         idx1, idx2 = dv.fi(wl, i)
         label = 'From {0: .1f} - {1: .1f} {2}'.format(wl[idx1], wl[idx2], freq_unit)
-        plt.plot(t, dat, label=label, lw=line_width)
+        lines += ax.plot(t, dat, label=label, **kwargs)
 
 
-    plt.xlabel(time_label)
-    plt.ylabel(sig_label)
-
-    plt.xlim(-.5, )
+    lbl_trans(ax)
+    ax.set_xlim(-.5, )
     if symlog:
-        plt.xscale('symlog')
-        plt.axvline(1, c='k', lw=0.5, zorder=1.9)
-        symticks(plt.gca())
-    plt.axhline(0, color='k', lw=0.5, zorder=1.9)
+        ax.set_xscale('symlog')
+        ax.axvline(1, c='k', lw=0.5, zorder=1.9)
+        symticks(ax)
+    ax.axhline(0, color='k', lw=0.5, zorder=1.9)
 
-    plt.legend(loc='best', ncol=1)
-
+    ax.legend(loc='best', ncol=1)
+    return lines
 
 def plot_diff(tup, t0, t_list, **kwargs):
     diff = tup.data - tup.data[dv.fi(tup.t, t0), :]
     plot_spec(dv.tup(tup.wl, tup.t, diff), t_list, **kwargs)
 
-def time_formatter(time, unit):
-    mag = np.floor(np.log10(time))
+def time_formatter(time, unit='ps'):
+    mag = np.floor(np.log10(abs(time)))
     if mag > -1:
         return '%d %s'%(time, unit)
     else:
@@ -324,13 +328,13 @@ def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
         p = [p]
     if not isinstance(t_range, list):
         t_range = [t_range]
+    l = []
     for j, (x, y) in enumerate(t_range):
         for i, d in enumerate(p):
             t0, t1 = dv.fi(t, x), dv.fi(t, y)
-            print(t0, t1)
             pd = np.mean(d[t0:t1, :], 0)
             lw = 2 if i == 0 else 1
-            ax.plot(wl, pd, color=color[j], marker=markers[i], lw=lw,
+            l+= ax.plot(wl, pd, color=color[j], marker=markers[i], lw=lw,
                     mec='none', ms=3)
 
         ax.text(pos[0], pos[1]+j*0.07,'%.1f - %.1f ps'%(t[t0], t[t1]),
@@ -342,6 +346,7 @@ def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
     if len(t_range) == 1:
         print(len(p))
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
+    return l
 
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
              linscaley=1, cmap='coolwarm',
@@ -444,9 +449,9 @@ def plot_freqs(tup, wl, from_t, to_t, taus=[1]):
     #ax2 = plt.subplot(312)
     ax3 = plt.subplot(111)
 
-    f = abs(np.fft.fft(np.kaiser(dt.size, 4)*dt, dt.size*2))
+    f = abs(np.fft.fft(np.kaiser(2*dt.size, 2)*dt, dt.size*2))**2
     freqs = np.fft.fftfreq(dt.size*2, tup.t[ti(from_t)+1]-tup.t[ti(from_t)])
-    n = freqs.size/2
+    n = freqs.size//2
     ax3.plot(dv.fs2cm(1000/freqs[1:n]), f[1:n])
     ax3.set_xlabel('freq / cm$^{-1}$')
     return dv.fs2cm(1000/freqs[1:n]), f[1:n]
@@ -457,7 +462,7 @@ def plot_fft(x, y, min_amp=0.2, order=1, padding=2, power=1, ax=None):
         ax = plt.gca()
     f = abs(np.fft.fft(y, padding*y.size))**power
     freqs = np.fft.fftfreq(padding*x.size, x[1]-x[0])
-    n = freqs.size/2+1
+    n = freqs.size//2+1
     fr_cm = -dv.fs2cm(1000/freqs[n:])
 
     ax.plot(fr_cm, f[n:])
@@ -551,7 +556,7 @@ class MidPointNorm(Normalize):
                 return  val*abs(vmax-midpoint) + midpoint
 
 
-def fit_semiconductor(t, data, sav_n=11, sav_deg=4, mode='sav'):
+def fit_semiconductor(t, data, sav_n=11, sav_deg=4, mode='sav', tr=0.4):
     from scipy.signal import savgol_filter
     from scipy.ndimage import gaussian_filter1d
     from scipy.optimize import leastsq
@@ -578,7 +583,7 @@ def fit_semiconductor(t, data, sav_n=11, sav_deg=4, mode='sav'):
     plt.ylim(0, 700)
     plt.minorticks_on()
     plt.grid(1)
-    tr = .4
+
     def gaussian(p, ch, res=True):
 
         i, j = dv.fi(t, -tr), dv.fi(t, tr)
@@ -635,6 +640,10 @@ def nsf(num, n=1):
     if num < 1:
         return '%.2f'%num
 
+def plot_das(fitter):
+    pass
+
+
 def symticks(ax, linthresh=1, linstep=0.2, axis='x'):
     l, r = ax.get_xlim() if axis == 'x' else ax.get_ylim()
     axis = ax.xaxis if axis == 'x' else ax.yaxis
@@ -686,9 +695,10 @@ def enable_style():
     plt.rcParams['legend.handletextpad'] = 0.2
     plt.rcParams['legend.fontsize'] = 'small'
     plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['axes.formatter.useoffset'] = False
 
 
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap
 
 cmaps = {}
 

@@ -116,12 +116,11 @@ def weighted_binner(n, wl, dat, std):
         binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
-def cut_tup(tup, from_t=None, to_t=None, from_wl=None, to_wl=None):
+def cut_tup(tup, from_t=-1e6, to_t=1e6, from_wl=-1e6, to_wl=1e6):
     wl, t, d = tup.wl.copy(), tup.t.copy(), tup.data.copy()
-
     t0, t1 = dv.fi(t, from_t), dv.fi(t, to_t)
     w0, w1 = dv.fi(wl, from_wl), dv.fi(wl, to_wl)
-    w0, w1 = min(w0, w1), max(w0, w1)
+    w0, w1 = min(w0, w1), max(w0, w1)    
     return dv.tup(wl[w0:w1], t[t0:t1], d[t0:t1, w0:w1])
 
 
