@@ -5,7 +5,9 @@ Created on Tue Jul 01 19:51:56 2014
 @author: Tillsten
 """
 import numpy as np
-import skultrafast.dv as dv
+
+from skultrafast import dv, fitter, plot_helpers, filter
+import matplotlib.pyplot as plt
 from scipy.stats import trim_mean, linregress
 
 
@@ -27,9 +29,11 @@ def scan_correction(dn, tidx):
     return dn
 
 def load(fname, recalc_wl=None):
+    """Give file name return t, wavenumbers, data"""
     f = np.load(fname)
     t = f['t']/1000.
     wl = f['wl']
+
     if recalc_wl is not None:
         for i in range(wl.shape[1]):
             wl[:, i] =-(np.arange(32)-16)*recalc_wl + wl[16, i]
@@ -176,3 +180,45 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
         plt.legend(['iso_0', 'iso_1 * %.2f'%iso_factor])
 
     return iso, para, senk
+
+from collections import namedtuple
+def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True):
+    out = namedtuple('das_result', field_names=['fitter', 'result', 'minimizer'])
+
+    ti = dv.make_fi(tup.t)
+    if uniform_fil is not None:
+        tupf = filter.uniform_filter(tup, uniform_fil)
+    else:
+        tupf = tup
+    import numpy as np
+    #ct = dv.tup(np.hstack((wl, wl)), tup.t[ti(t0):],  np.hstack((pa[ti(t0):, :], se[ti(t0):, :])))
+    ct = dv.tup(tup.wl, tup.t[ti(from_t):], tupf.data[ti(from_t):, :])
+    f = fitter.Fitter(ct, model_coh=0, model_disp=0)
+    f.lsq_method = 'ridge'
+    lm = f.start_lmfit(x0, ['w'], full_model=0, lower_bound=0.2)
+    res = lm.leastsq()
+    import lmfit
+    lmfit.report_fit(res)
+    if plot_result:
+        plt.figure(figsize=(4, 7))
+        plt.subplot(211)
+        plt.plot(f.wl, f.c[:, :], lw=3)
+        plot_helpers.lbl_spec()
+        lbls = ['%.1f'%i for i in f.last_para[1:-1]] + ['const']
+        plt.legend(lbls)
+
+        plt.subplot(212)
+
+        wi = dv.make_fi(tup.wl)
+        for i in range(tup.wl.size)[::6]:
+            l, = plt.plot(tup.t, tupf.data[:, i], '-o', lw=0.7,
+                          alpha=0.5, label='%.1f cm-1'%f.wl[i], mec='None', ms=3)
+            plt.plot(f.t, f.model[:, i], lw=3, c=l.get_color())
+
+        plt.xlim(-1)
+        plt.xscale('symlog', linthreshx=1, linscalex=0.5)
+        plot_helpers.lbl_trans()
+        plt.legend(loc='best')
+
+    return out(f, res, lm)
+

@@ -57,12 +57,13 @@ class MyView(QtGui.QGraphicsView):
         self.transitions = []
 
     def add_compartment(self):
-        item = AbstractItem(0., 0., 20., 20.)
+        item = AbstractItem(20., 20., 20., 20.)
         self.compartments.append(item)
         self.scene.addItem(item)
 
     def mousePressEvent(self, ev, **kwargs):
         super(MyView, self).mousePressEvent(ev, **kwargs)
+        print(ev.button())
         if ev.button() == 2:
             try:
                 sel_item = self.scene.selectedItems()[0]

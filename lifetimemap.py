@@ -11,7 +11,7 @@ from sklearn import linear_model as lm
 from skultrafast import dv, zero_finding
 from skultrafast.base_functions_np import _fold_exp, _coh_gaussian
 
-def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=True):
+def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=False):
     if add_const:
         taus = np.hstack((taus, 10000))
     out = _fold_exp(tup.t.T[:, None], w, 0, taus[None, :]).squeeze()
@@ -19,7 +19,7 @@ def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=True):
         print(out.shape)
         out[:, -1] *= 1000
     if add_coh:
-        out = np.hstack((out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) *10
+        out = np.hstack((out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) * 10
     if norm:
         out = out / np.abs(out).max(0)
 
@@ -29,7 +29,12 @@ def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=True):
 def start_ltm(tup, taus, w=0.1,  add_coh=False,
               add_const=False, verbose=False, **kwargs):
     """
-    Returns mod, coefs, fit, alphas
+    Parameter
+    ---------
+
+    tup:
+        namedtuple/class with t, wl and data as attributes.
+        t array shape N, wl array shape M, data array (N, M)
 
     """
     X = _make_base(tup, taus, w=w,
