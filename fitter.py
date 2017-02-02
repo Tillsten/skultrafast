@@ -196,7 +196,7 @@ class Fitter(object):
                 #print(taus)
                 a, b  = _fold_exp_and_coh(self.t[:, None], w, x0, taus)
                 #print(a.shape, b.shape)
-                x_vec[:, -3:] = b[..., 0]
+                x_vec[:, -3:] = b[..., 0, :]
                 x_vec[:, :-3] = a[..., 0, :]
 
             else:
