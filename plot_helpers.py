@@ -631,6 +631,8 @@ def stack_ax(num_rows=2, num_cols=1, height_rations=[2,1]):
         fo
 
 
+
+
 def nsf(num, n=1):
     """n-Significant Figures"""
     if num > 10:
@@ -660,21 +662,6 @@ def symticks(ax, linthresh=1, linstep=0.2, axis='x'):
     axis.set_ticks(np.hstack((-lin_pos, lin_pos[lin_pos>k], minor_pos, rest)), minor=True)
     axis.set_ticks(np.hstack((0, major_pos)))
     axis.set_major_formatter(plt.ScalarFormatter())
-
-# New matplotlib colormaps by Nathaniel J. Smith, Stefan van der Walt,
-# and (in the case of viridis) Eric Firing.
-#
-# This file and the colormaps in it are released under the CC0 license /
-# public domain dedication. We would appreciate credit if you use or
-# redistribute these colormaps, but do not impose any legal restrictions.
-#
-# To the extent possible under law, the persons who associated CC0 with
-# mpl-colormaps have waived all copyright and related or neighboring rights
-# to mpl-colormaps.
-#
-# You should have received a copy of the CC0 legalcode along with this
-# work.  If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-
 
 
 def enable_style():
