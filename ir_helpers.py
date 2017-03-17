@@ -182,7 +182,9 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
     return iso, para, senk
 
 from collections import namedtuple
-def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True):
+
+
+def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True, fit_kws=None):
     out = namedtuple('das_result', field_names=['fitter', 'result', 'minimizer'])
 
     ti = dv.make_fi(tup.t)
@@ -190,12 +192,14 @@ def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True):
         tupf = filter.uniform_filter(tup, uniform_fil)
     else:
         tupf = tup
+    if fit_kws is None:
+        fit_kws = {}
     import numpy as np
     #ct = dv.tup(np.hstack((wl, wl)), tup.t[ti(t0):],  np.hstack((pa[ti(t0):, :], se[ti(t0):, :])))
     ct = dv.tup(tup.wl, tup.t[ti(from_t):], tupf.data[ti(from_t):, :])
     f = fitter.Fitter(ct, model_coh=0, model_disp=0)
     f.lsq_method = 'ridge'
-    lm = f.start_lmfit(x0, ['w'], full_model=0, lower_bound=0.2)
+    lm = f.start_lmfit(x0, ['w'], full_model=0, lower_bound=0.2, **fit_kws)
     res = lm.leastsq()
     import lmfit
     lmfit.report_fit(res)
