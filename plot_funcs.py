@@ -366,6 +366,31 @@ def make_legend_noerr(p, err, n):
         l.append('$\\tau_' + str(int(i - 1)) + '$=' + val + ' ps')
     return l
 
+def surface(tup, ax=None, lvl_step=0.5):
+    """
+    Plots a surface 
+    
+    Parameters
+    ----------
+    
+    tup: data tuple
+    ax: defaults to plt.gca()
+    lvl_step: distance between contour lines
+    """
+    if ax is None:
+        ax = plt.gca()
+    wl, t, d = tup
+    tupf = filter.uniform_filter(tup, (2, 3))
+    m = np.max(abs(d))
+    ax.pcolormesh(wl, t, d, vmin=-m, vmax=m, cmap='bwr')
+    ax.contour(wl, t, tupf.data, colors='k', linestyles='-',
+                linewidths=0.5, levels=np.arange(-m, m, lvl_step))
+    ax.set_ylim(-1)
+    ax.set_yscale('symlog', linthreshy=1, linscaley=1)
+    ph.symticks(ax, axis='y')
+    ax.set_xlabel(ph.freq_label)
+    ax.set_ylabel(ph.time_label)
+    ax.invert_xaxis()
 
 def _plot_kin_res(x):
     import networkx as nx
