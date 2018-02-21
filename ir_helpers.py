@@ -28,7 +28,7 @@ def scan_correction(dn, tidx):
             dn[:, :, j, i] *= c[0][0]
     return dn
 
-def load(fname, recalc_wl=None):
+def load(fname, recalc_wl=None, center_ch=16):
     """Give file name return t, wavenumbers, data"""
     f = np.load(fname)
     t = f['t']/1000.
@@ -36,7 +36,7 @@ def load(fname, recalc_wl=None):
 
     if recalc_wl is not None:
         for i in range(wl.shape[1]):
-            wl[:, i] =-(np.arange(32)-16)*recalc_wl + wl[16, i]
+            wl[:, i] =-(np.arange(32)-center_ch)*recalc_wl + wl[16, i]
     data = -f['data']
     return t, 1e7/wl, data
 

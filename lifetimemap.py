@@ -40,9 +40,9 @@ def start_ltm(tup, taus, w=0.1,  add_coh=False,
     X = _make_base(tup, taus, w=w,
                    add_const=add_const,
                    add_coh=add_coh)
-
-    mod = lm.ElasticNet(**kwargs)
-    mod.fit_intercept = 0
+    if not use_cv:
+        mod = lm.ElasticNet(**kwargs)
+    mod.fit_intercept = 1
     mod.warm_start = 1
 
     coefs = np.empty((X.shape[1], tup.data.shape[1]))
