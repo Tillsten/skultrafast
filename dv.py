@@ -147,9 +147,9 @@ def arr_polydetrend(x, t=None, deg=3):
         out[:, i] = polydetrend(x[:, i], t, deg)
     return out
 
-
-def meaner(dat, t, llim, ulim):
-    return np.mean(dat[fi(t, llim):fi(t, ulim)], 0)
+from scipy.stats import trim_mean
+def meaner(dat, t, llim, ulim, proportiontocut=0.0):
+    return trim_mean(dat[fi(t, llim):fi(t, ulim)], 0, proportiontocut=proportiontocut)
 
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
@@ -380,7 +380,7 @@ def do_nnls(A,b):
     return out
 
 import lmfit
-def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=None, weights=None,
+def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=None, weights=None, amp_penalty=0,
             verbose=True):
     num_exp = len(start_taus)
     para = lmfit.Parameters()
@@ -406,7 +406,7 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
             amp = p['amp'+str(i)].value
             tau = p['tau'+str(i)].value
 
-            y_fit += amp * np.exp(-x/tau)
+            y_fit += amp * np.exp(-x/tau) + amp_penalty/y.size
 
         return y_fit
 
