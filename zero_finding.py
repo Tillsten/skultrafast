@@ -6,7 +6,7 @@ Contains functions to find the time-zero and to interpolate the data.
 import numpy as np
 import skultrafast.dv as dv
 import scipy.ndimage as nd
-from statsmodels.api import RLM
+from statsmodels.api import RLM, robust
 
 from matplotlib.pyplot import plot
 #from skultrafast.fitter import _coh_gaussian
@@ -117,13 +117,14 @@ def _fit_func(t, y, x0, w, tau):
 
 
 
-def robust_fit_tz(wl, tn, degree=3):
+def robust_fit_tz(wl, tn, degree=3, t=1.345):
     """
     Apply a robust 3-degree fit to given tn-indexs.
     """
     powers = np.arange(degree+1)
     X = wl[:,None] ** powers[None, :]
-    r = RLM(tn, X).fit()
+    norm = robust.norms.HuberT(t=t)
+    r = RLM(tn, X, M=norm).fit()
     return r.predict(), r.params[::-1]
 
 
