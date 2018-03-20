@@ -199,14 +199,28 @@ def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True, fit_kws=None
     ct = dv.tup(tup.wl, tup.t[ti(from_t):], tupf.data[ti(from_t):, :])
     f = fitter.Fitter(ct, model_coh=0, model_disp=0)
     f.lsq_method = 'ridge'
-    lm = f.start_lmfit(x0, ['w'], full_model=0, lower_bound=0.2, **fit_kws)
+    kws = dict(full_model=0, lower_bound=0.2, fixed_names=['w'])
+    kws.update(fit_kws)
+    lm = f.start_lmfit(x0, **kws)
     res = lm.leastsq()
     import lmfit
     lmfit.report_fit(res)
     if plot_result:
         plt.figure(figsize=(4, 7))
         plt.subplot(211)
-        plt.plot(f.wl, f.c[:, :], lw=3)
+        if is_montone(f.wl):
+            monotone = False
+            # Assume wl is repeated
+            N = len(f.wl)
+        else:
+            monotone = True
+            N = len(f.wl) // 2
+        print(N)
+        l = plt.plot(f.wl[:N], f.c[:N, :], lw=3)
+        if monotone:
+            l2 = plt.plot(f.wl[:N], f.c[N:, :], lw=1)
+            for i,j in zip(l, l2):
+                j.set_color(i.get_color())
         plot_helpers.lbl_spec()
         lbls = ['%.1f'%i for i in f.last_para[1:-1]] + ['const']
         plt.legend(lbls)
@@ -214,11 +228,15 @@ def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True, fit_kws=None
         plt.subplot(212)
 
         wi = dv.make_fi(tup.wl)
-        for i in range(tup.wl.size)[::6]:
+        for i in range(N)[::6]:
             l, = plt.plot(tup.t, tupf.data[:, i], '-o', lw=0.7,
                           alpha=0.5, label='%.1f cm-1'%f.wl[i], mec='None', ms=3)
             plt.plot(f.t, f.model[:, i], lw=3, c=l.get_color())
 
+            if monotone:
+                l, = plt.plot(tup.t, tupf.data[:, i+N], '-o', lw=0.7,
+                              alpha=0.5, label='%.1f cm-1' % f.wl[i], mec='None', ms=3)
+                plt.plot(f.t, f.model[:, i+N], lw=3, c=l.get_color())
         plt.xlim(-1)
         plt.xscale('symlog', linthreshx=1, linscalex=0.5)
         plot_helpers.lbl_trans()
@@ -226,3 +244,6 @@ def das(tup,  x0, from_t = 0.4, uniform_fil=None, plot_result=True, fit_kws=None
 
     return out(f, res, lm)
 
+
+def is_montone(x):
+    return np.all(np.diff(x)>0) or np.all(np.diff(x)< 0)

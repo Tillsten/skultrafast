@@ -26,7 +26,7 @@ def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=False):
     return out.squeeze()
 
 
-def start_ltm(tup, taus, w=0.1,  add_coh=False,
+def start_ltm(tup, taus, w=0.1,  add_coh=False, use_cv=False,
               add_const=False, verbose=False, **kwargs):
     """
     Parameter
@@ -42,6 +42,9 @@ def start_ltm(tup, taus, w=0.1,  add_coh=False,
                    add_coh=add_coh)
     if not use_cv:
         mod = lm.ElasticNet(**kwargs)
+
+    else:
+        mod = lm.ElasticNetCV(**kwargs)
     mod.fit_intercept = 1
     mod.warm_start = 1
 
