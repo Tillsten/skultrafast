@@ -5,7 +5,7 @@ Skultrafast stands for scikit.ultrafast and is an
 python package. It aims to include everthing
 needed to analyze ultrafast data. At the moment,
 it is mostly used used to analyse transient absorption
-data, so this at the moment the only fully functional
+data, hence it isthe only fully functional
 part. In also includes a not well tested FROG-algorithm.
 
 The big advantage of python is, that is quite easy
