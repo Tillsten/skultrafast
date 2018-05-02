@@ -7,12 +7,12 @@ Created on Wed Apr 17 17:03:26 2013
 import numpy as np
 
 
-from numba import autojit, vectorize, f8, jit, prange
-from math import exp, erfc, sqrt
+from numba import autojit, vectorize, njit, jit
+import math 
 #from lmmv
-sq2 = sqrt(2)
+sq2 = math.sqrt(2)
 
-@autojit
+@jit
 def _coh_gaussian(ta, w, tz):
     """
     Models coherent artifacts proportional to a gaussian and it's first three derivatives.
@@ -34,24 +34,35 @@ def _coh_gaussian(ta, w, tz):
     """
 
     w = w / 1.4142135623730951
+    n, m = ta.shape
+    y = np.zeros(( n, m, 3))    
+    
+    
     if tz != 0:    
         ta = ta - tz
-    n, m = ta.shape
-    y = np.zeros(( n, m, 4))
+    
+    _coh_loop(y, ta, w, n, m)    
+    y = y / np.max(np.abs(y), 0)
+    return y
+
+@njit
+def _coh_loop(y, ta, w, n, m):
     for i in range(n):
         for j in range(m):
             tt = ta[i, j]
             if tt/w < 3.:
                 y[i, j, 0] = np.exp(-0.5 * (tt / w)* (tt / w))# / (w * np.sqrt(2 * 3.14159265))
-                y[i, j, 1] = y[i, j, 0] * (-tt / w / w)
-                y[i, j, 2] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
-                y[i, j, 3] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
+                #y[i, j, 1] = y[i, j, 0] * (-tt / w / w)
+                y[i, j, 1] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
+                y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
-    y /= np.max(np.abs(y), 0)
-    return y
-
-
-@jit('f8(f8)', nopython=True)
+@jit
+def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
+    a = _fold_exp(t_arr, w, tz, tau_arr)
+    b = _coh_gaussian(t_arr, w, tz)
+    return a, b
+    
+@njit
 def fast_erfc(x):
     """
     Calculates the erfc near zero faster than
@@ -83,16 +94,13 @@ def fast_erfc(x):
     
     return ret
 
-
-@jit('f8(f8, f8, f8, f8)', nopython=True)
+@njit
 def folded_fit_func(t, tz, w, k):
     """
     Returns the value of a folded exponentials.
     Employs some domain checking for making the calculation.
 
-    Parat_array = np.subtract.outer(np.linspace(-2, 50, 300),
-                                np.linspace(3, 3, 400))
-    w = 0.1meters
+    Parameters
     ----------
     t: float
         The time.
@@ -108,12 +116,12 @@ def folded_fit_func(t, tz, w, k):
         return 0.
     elif t < 5. * w:
         #print -t/w + w*k/2., w, k, t
-        return exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
+        return np.exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
     elif t > 5.* w:
-        return exp(k* (w*w*k/ (4.0) - t))
+        return np.exp(k* (w*w*k/ (4.0) - t))
 
 
-@jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])
+@jit
 def _fold_exp(t_arr, w, tz, tau_arr):
     """
     Returns the values of the folded exponentials for given parameters.
@@ -137,14 +145,25 @@ def _fold_exp(t_arr, w, tz, tau_arr):
     n, m = t_arr.shape
     l = tau_arr.size
     out = np.empty((l, m, n))
-    for tau_idx in prange(l):
-        k = 1 / tau_arr[tau_idx]
-        for j in range(m):
-            for i in range(n):
-                out[tau_idx, j, i] = folded_fit_func(t_arr[i, j], -tz, w, k)
+    _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n)    
     return out.T
 
-
+@njit
+def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
+    for tau_idx in range(l):
+        k = 1 / tau_arr[tau_idx]
+        for j in range(m):
+            for i in range(n):                 
+                t = t_arr[i, j] - tz
+                if t < -5. * w:
+                    ret = 0
+                elif t < 5. * w:
+                    #print -t/w + w*k/2., w, k, t
+                    ret =  np.exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t/w + w*k/2.)
+                elif t > 5.* w:
+                    ret = np.exp(k* (w*w*k/ (4.0) - t))
+                out[tau_idx, j, i] = ret
+                
 #jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])
 def _exp(t_arr, w, tz, tau_arr):
     """
