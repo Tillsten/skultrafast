@@ -4,10 +4,11 @@ Created on Wed Nov 28 18:34:30 2012
 
 @author: tillsten
 """
-
+from __future__ import print_function
 import numpy as np
 
-def vbload(fname = 'C:\Users\Tillsten\Documents\weisslicht.dat'):
+
+def vbload(fname = r'C:\Users\Tillsten\Documents\weisslicht.dat'):
     """
     loads a old vb file
     """
@@ -20,7 +21,7 @@ def load_datfile(datfile):
     f = lambda  s: float(s.replace(',', '.'))
     d = np.loadtxt(datfile, converters = {0:f, 1:f, 2:f, 3:f})
     return d    
-    
+  
 def read_data(d):    
     """
     Put raw data into arrays.
@@ -50,17 +51,24 @@ def loader_func(name):
     files = glob.glob(name + '_dat?.npy') + glob.glob(name + '_dat??.npy')
     if len(files) == 0:
         raise IOError('No file found.')
-    print files
+    
     import re    
     num_list = [re.findall('dat\d+', i)[0][3:] for i in files]    
+    
     endname = max(zip(map(int, num_list), files))[1]
-    print 'Loading: ' + endname
+    
     a = np.load(endname)
-    num = str(max(map(int, num_list)) - 1)
-    files = glob.glob(name + '-???_'+ num + '_' + '*dat.npy')
+    num_list = [str(int(i) - 1) for i in num_list]
+    
+    num = str(max(map(int, num_list)))
+    
+    search_string = name + '-???_'+ '*' + '_' + 'dat.npy'
+    
+    files = glob.glob(search_string)
     wls = []
+    
     for i in files:
-        print 'Loading: ' + i
+    
         cwl = re.findall('-\d\d\d_', i)
         tmp = np.load(i)
         t, w = tmp[1:,0], tmp[0,1:]
@@ -102,45 +110,75 @@ def save_txt_das(name, fitter):
     arr = np.vstack((taus, arr))
     np.savetxt(name, arr)
 
-def make_report(fitter, info, raw=None):
-    import plot_funcs
+def make_report(fitter, info, raw=None, plot_fastest=1, make_ltm=False):
+    
+    from skultrafast import zero_finding, dv, plot_funcs
+    
     g = fitter
     name = info.get('name','')
     solvent = info.get('solvent','')    
     excitation = info.get('excitation','')
-    title = u"{} in {} excited at {}".format(name, solvent, excitation)
-    plot_funcs.a4_overview(g, 'pics\\' + name + '.png', title=title)
+    add_info = info.get('add_info', '')
+    title = u"{} in {} excited at {}. {}".format(name, solvent, excitation, add_info)
+    plot_funcs.a4_overview(g, 'pics\\' + title + '.png', title=title, 
+                           plot_fastest=plot_fastest)
+                           
+    
     save_txt_das(name + '_-DAS.txt', g)
-    save_txt(name + '_data.txt', g.wl, g.t, g.data)
-    save_txt(name + '_fit.txt', g.wl, g.t, g.model)
+    save_txt(name + '_ex' + excitation + '_iso.txt', g.wl, g.t, g.data)
+    save_txt(name + '_ex' + excitation + '_iso_fit.txt', g.wl, g.t, g.model)
+    
+    dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data),
+                                 fitter.tn, 0.0)            
+    save_txt(name + '_ex' + excitation + '_iso_timecor.txt', *dat)
+    if make_ltm:
+        plot_funcs.plot_ltm_page(dat, 'pics\\'+ title + 'lft_map.png')
+    
+    fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model),
+                                 fitter.tn, 0.0)            
+    save_txt(name + '_ex' + excitation + '_iso_fit_timecor.txt', *fit)    
+    
+    
     if raw:
-        save_txt(name + '_raw.txt', *raw)
+        save_txt(name +  '_ex' + excitation + '_raw.txt', *raw)
+    
+    if hasattr(fitter, 'data_perp'):
+        perp = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_perp),
+                                 fitter.tn, 0.0)    
+        
+        para = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_para),
+                                 fitter.tn, 0.0)                                   
 
+        #plot_funcs.a4_overview_second_page(fitter, para, perp, 'bla.png')
+        save_txt(name + '_ex' + excitation + '_para.txt', *para)
+        save_txt(name + '_ex' + excitation + '_perp.txt', *perp)
+    import matplotlib.pyplot as plt
+    plt.close('all')
+        
 def save_txt(name, wls, t, dat):
     try:
         tmp = np.vstack((wls[None, :], dat))
         arr = np.hstack((np.vstack((0,t[:,None])), tmp))
     except ValueError:
-        print wls.shape, t.shape, dat.shape
+        print('Shapes wl:', wls.shape, 't', t.shape, 'd', dat.shape)
         raise IndexError
     np.savetxt(name, arr)
+    
+
 
 def svd_filter(d, n=10):
-    u, s, v = np.linalg.svd(d, full_matrices=False)
+    u, s, v = np.linalg.svd(d, full_matrices=i.set_drawstyleFalse)
     s[n:] = 0.
     return np.dot(u, np.dot(np.diag(s), v))
 
-import numba 
-@numba.autojit
+
+
 def sort_scans(data):
-    for i in range(data.shape[0]):
-        for j in range(data.shape[1]):
-            for k in range(data.shape[2]):
-                for l in range(data.shape[3]):
-                    col = data[i, j, k , l , :]
-                    k = np.argsort(np.abs(col-np.mean(col)))            
-                    data[i, j, k , l , :] = col[k]
-    
+    axis = -1
+    index = list(np.ix_(*[np.arange(i) for i in data.shape]))
+    index[axis] = np.abs(data-data.mean(-1)[..., None]).argsort(axis)
+    dsorted = data[index]
+    return dsorted
 
 import re
 def extract_freqs_from_gaussianlog(fname):

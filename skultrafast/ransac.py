@@ -1,7 +1,7 @@
+from __future__ import print_function
 import numpy
 import scipy # use numpy if scipy unavailable
 import scipy.linalg # use numpy if scipy unavailable
-
 ## Copyright (c) 2004-2007, Andrew D. Straw. All rights reserved.
 
 ## Redistribution and use in source and binary forms, with or without
@@ -87,11 +87,11 @@ return bestfit
         also_idxs = test_idxs[test_err < t] # select indices of rows with accepted points
         alsoinliers = data[also_idxs,:]
         if debug:
-            print 'test_err.min()',test_err.min()
-            print 'test_err.max()',test_err.max()
-            print 'numpy.mean(test_err)',numpy.mean(test_err)
-            print 'iteration %d:len(alsoinliers) = %d'%(
-                iterations,len(alsoinliers))
+            print('test_err.min()',test_err.min())
+            print('test_err.max()',test_err.max())
+            print('numpy.mean(test_err)',numpy.mean(test_err))
+            print('iteration %d:len(alsoinliers) = %d'%(
+                iterations,len(alsoinliers)))
         if len(alsoinliers) > d:
             betterdata = numpy.concatenate( (maybeinliers, alsoinliers) )
             bettermodel = model.fit(betterdata)
