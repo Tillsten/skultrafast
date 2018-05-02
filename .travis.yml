@@ -1,0 +1,39 @@
+# Config file for automatic testing at travis-ci.org
+
+language: python
+sudo: false
+
+python:
+    - 2.7
+    - 3.4
+    - 3.5
+    - 3.6
+
+# test minium required and latest versions of SciPy and NumPy
+env:
+    - version=minimum  # SciPy>=0.17 NumPy>=1.10
+    - version=latest
+
+before_install:
+    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - hash -r
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+
+install:
+    - if [[ $version == minimum && $TRAVIS_PYTHON_VERSION != 3.6 ]]; then conda create -q -n test_env python=$TRAVIS_PYTHON_VERSION numpy=1.10 scipy=0.17 six=1.10 nose; fi
+    - if [[ $version == minimum && $TRAVIS_PYTHON_VERSION == 3.6 ]]; then conda create -q -n test_env python=$TRAVIS_PYTHON_VERSION numpy=1.12 scipy=0.18 six=1.10 nose; fi
+    - if [[ $version == latest ]]; then conda create -q -n test_env python=$TRAVIS_PYTHON_VERSION numpy scipy six pandas matplotlib dill nose sklearn; fi
+    - source activate test_env
+    - pip install asteval
+    - pip install emcee
+    - pip install uncertainties
+    - python setup.py install
+    - conda list
+
+script:
+    - cd tests
+    - nosetests
