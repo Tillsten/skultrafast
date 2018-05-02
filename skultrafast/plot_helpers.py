@@ -16,7 +16,7 @@ tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
              (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
 
 tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
-plt.rcParams['axes.color_cycle'] = tableau20[::2]
+#plt.rcParams['axes.color_cycle'] = tableau20[::2]
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
@@ -320,7 +320,6 @@ def plot_spec(tup, t_list, ax=None, norm=False, **kwargs):
     return li
 
 def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
-              color=plt.rcParams['axes.color_cycle'],
               markers = ['o', '^']):
     if ax is None:
        ax = plt.gca()
@@ -334,7 +333,7 @@ def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
             t0, t1 = dv.fi(t, x), dv.fi(t, y)
             pd = np.mean(d[t0:t1, :], 0)
             lw = 2 if i == 0 else 1
-            l+= ax.plot(wl, pd, color=color[j], marker=markers[i], lw=lw,
+            l+= ax.plot(wl, pd, color='C%d'%i, marker=markers[i], lw=lw,
                     mec='none', ms=3)
 
         ax.text(pos[0], pos[1]+j*0.07,'%.1f - %.1f ps'%(t[t0], t[t1]),
