@@ -41,7 +41,7 @@ class Model(object):
         comp = get_comparments(self.transitions)
         idx_dict = dict(enumerate(comp))
         inv_idx = dict(zip(idx_dict.values(), idx_dict.keys()))
-        mat = sympy.zeros((len(comp), len(comp)))
+        mat = sympy.zeros(len(comp))
         #for i, comp in idx_dict.iteritems():
         for t in self.transitions:
             i = inv_idx[t.from_comp]
@@ -54,30 +54,47 @@ class Model(object):
 
     def get_compartments(self):
         return get_comparments(self.transitions)
+    
+    def make_diff_equation(self):
+        A = self.build_matrix()
+        funcs = []
+        t = sympy.Symbol('t', real=True)
+        for c in self.get_compartments():
+            funcs.append(sympy.Function(c)(t))
+        eqs = []
+        for i, row in enumerate(A):
+        
+            eqs.append(sympy.Eq(sympy.diff(funcs[i]), row.sum()))
+        print(eqs)
+            
+        
+        
 
-    def get_func(self, y0):
+    def get_func(self, y0=None):
         """
         Gives back a function (compiled with cython)
         """
+        
         A = self.build_matrix()
-        ts = sympy.Symbol('ts', real=True)
-        expA = sympy.exp(A*ts)
-        print expA
-        fun = expA * y0
-        print fun
-        r, e = sympy.cse(fun)
-        #print r, e
-        e_sim = [i.simplify() for i in e]
-        print e_sim
-        prog_str = _make_progstr(self.transitions, fun, e, r)
-        self.prog_str = prog_str
-        self.fun = fun
-        self.expA = expA
-        #print prog_str
-        def sol_fun(p, t):
-            ret = cython.inline(prog_str)
-            return ret
-        return sol_fun #autowrap(fun,'C', backend='CYTHON', tempdir='..')
+        if y0 is None:
+            y0 = sympy.zeros(A.shape[0])
+            y0[0] = 1
+
+        
+        ts = sympy.Symbol('ts', real=True, positive=True)
+        (P, J ) = (A*ts).jordan_form()
+        out = sympy.zeros(P.cols)
+        for i in range(P.cols):
+            out[i,i] = sympy.exp(P[i,i])
+        print(out, '\n', sympy.simplify(out))
+        sim_Pinv = sympy.simplify(P.inv('ADJ'))
+        sim_P = sympy.simplify(P)
+        sol = (sim_P*out*sim_Pinv)*y0
+        #print(sol)
+        print(sympy.cse(sol))
+        return sol
+        
+   
 
 
     def get_trans(self, y0, taus, t):
@@ -88,7 +105,7 @@ class Model(object):
         k = np.array(self.mat.subs(zip(symbols, taus))).astype('float')
         o = np.zeros((len(t), k.shape[0]))
 
-        for i in xrange(t.shape[0]):
+        for i in range(t.shape[0]):
             o[i, :] = la.expm(k * t[i]).dot(y0)[:, 0]
 
         return o
@@ -122,19 +139,20 @@ def get_symbols(list_trans):
     return [t.rate for t in list_trans]
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
     model = Model()
     model.add_trans('a', 'b')
     model.add_trans('b', 'c')
     model.add_trans('c', 'd')
     model.add_trans('d', 'e')
-    model.add_trans('e', 'e')
+    #model.add_trans('e', 'e')
     #model.add_trans('S1', 'S0', tau=6600)
     t = np.linspace(1, 100, 1000)
-    y0 = np.array([1, 0, 0, 0, 0])[:, None]
-    #plot(t, model.exp_solution(y0, t))
-    print get_comparments(model.transitions)
-    print model.build_matrix()
+    #model.make_diff_equation()
+    #plt.plot(t, model.exp_solution(y0, t))
+    print(get_comparments(model.transitions))
+    print(model.build_matrix())
 
-    fu = model.get_func(y0)
-    tau = np.array([1., 10., 100, 300, 10000, 10000])
-    model.get_trans(y0, tau, t)
+    fu = model.get_func()
+#    tau = np.array([1., 10., 100, 300, 10000, 10000])
+#    model.get_trans(y0, tau, t)
