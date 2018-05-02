@@ -6,7 +6,8 @@ Created on Wed Jul 31 15:38:47 2013
 """
 import numpy as np
 from scipy.special import erfc
-
+import math
+sq2 = math.sqrt(2)
 def _fold_exp(tt, w, tz, tau):
     """
     Returns the values of the folded exponentials for given parameters.
@@ -34,6 +35,12 @@ def _fold_exp(tt, w, tz, tau):
     y = np.exp(k * (ws * ws * k / (4.0) - t))
     y *= 0.5 * erfc(-t / ws + ws * k / (2.0))
     return y.T
+    
+def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
+    a = _fold_exp(t_arr, w, tz, tau_arr)
+    b = _coh_gaussian(t_arr, w, tz)
+    return a, b
+    
 
 def _coh_gaussian(t, w, tz):
     """Models artifacts proportional to a gaussian and it's derivatives
@@ -55,10 +62,12 @@ def _coh_gaussian(t, w, tz):
     """
     w = w / sq2
     tt = t + tz
-    y = np.where(tt/w < 4, exp(-0.5 * (tt / w) ** 2) / (w * sqrt(2 * 3.14159265)), 0)
+    idx = (tt/w < 4)    
+    y = np.where(idx, np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * 3.14159265)), 0)
     y = np.tile(y[..., None], (1, 1, 4))
-    y[..., 1] *= (-tt / w ** 2)
-    y[..., 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
-    y[..., 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
+    tt = tt[idx]
+    y[idx,..., 1] *= (-tt / w ** 2)
+    y[idx,..., 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
+    y[idx,..., 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
     y /= np.max(np.abs(y), 0)
     return y

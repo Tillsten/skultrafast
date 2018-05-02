@@ -4,9 +4,9 @@ Contains functions to find the time-zero and to interpolate the data.
 """
 
 import numpy as np
-import dv
+import skultrafast.dv as dv
 import scipy.ndimage as nd
-from statsmodels.api import RLM
+from statsmodels.api import RLM, robust
 
 from matplotlib.pyplot import plot
 #from skultrafast.fitter import _coh_gaussian
@@ -29,8 +29,7 @@ def use_diff(dat, smooth=0):
     """
     Use numerical diff.
     """
-    if smooth != 0:
-        print smooth
+    if smooth != 0:        
         dat = nd.gaussian_filter(dat, smooth)
     derivate = np.diff(dat, 1, 0)
     return np.argmax(np.abs(derivate), 0)
@@ -79,7 +78,7 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
         y = dat[:n, i]
         f = lambda p: _fit_func(t, y, -p[0], p[1], tau)
         f_sum = lambda p: (f(p)**2).sum()
-        print f_sum([w0, tn[i]])
+        
         try:
             if not np.isnan(o) and False:
                 k = o + np.diff(tn)[i]
@@ -87,7 +86,7 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
             else:
                 k = tn[i]
                 w = w0
-            print k
+            
             #o, w = leastsq(f, list([k, w0]))[0][:2]
             # = opt.minimize(f_sum, [k,w], method='BFGS')
             #x = cma.fmin(f_sum, [o, w0], 0.03, bounds=[(0,0.04),(5, 0.2)], restarts=1, verb_log=0)
@@ -118,18 +117,19 @@ def _fit_func(t, y, x0, w, tau):
 
 
 
-def robust_fit_tz(wl, tn, degree=3):
+def robust_fit_tz(wl, tn, degree=3, t=1.345):
     """
     Apply a robust 3-degree fit to given tn-indexs.
     """
     powers = np.arange(degree+1)
     X = wl[:,None] ** powers[None, :]
-    r = RLM(tn, X).fit()
+    norm = robust.norms.HuberT(t=t)
+    r = RLM(tn, X, M=norm).fit()
     return r.predict(), r.params[::-1]
 
 
 
-import ransac
+from skultrafast import ransac
 
 def find_time_zero(d, value, method='abs', polydeg=3, *args):
     """
@@ -193,13 +193,15 @@ def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
     """
     Fully automatic timezero correction.
     """
-    idx = method(tup.data, **kwargs)
+    idx = method(tup.data, **kwargs)    
     raw_tn = tup.t[idx]
-    fit, p = robust_fit_tz(tup.wl, raw_tn, deg)
+    no_nan = ~np.any(np.isnan(tup.data), 0)
+    fit, p = robust_fit_tz(tup.wl[no_nan], raw_tn[no_nan], deg)
     #dv.subtract_background(tup.data, tup.t, fit, 400)
+    fit = np.polyval(p, tup.wl)
     cor = interpol(tup, fit)
     if plot:
-        import plot_funcs as pl
+        from . import plot_funcs as pl
         pl._plot_zero_finding(tup, raw_tn, fit, cor)
     return cor, fit
 

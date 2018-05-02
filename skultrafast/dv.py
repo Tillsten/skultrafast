@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import numpy as np
-from scipy.interpolate import splrep, splev
+import scipy.stats as st
+import scipy.signal as sig
 from collections import namedtuple
 
 tup = namedtuple('tup','wl t data')
@@ -20,20 +22,31 @@ def add_tup(str_lst):
 
 def fs2cm(t):
     return 1/(t * 3e-5)
-    
+
 def cm2fs(cm):
     return  1/(cm * 3e-5)
 
-def trimmed_mean(arr, axis=-1, ratio=3.):
+def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
+    arr = np.sort(arr, axis=axis)
     std = np.std(arr, axis, keepdims=1)
-    mean = np.mean(arr, axis, keepdims=1)  
-    idx = np.abs(arr - mean) > 3. * std
+    std = np.std(st.trimboth(arr, 0.1, axis), keepdims=1)
+    mean = np.mean(st.trimboth(arr, 0.1, axis), keepdims=1)
+    #std = np.std(st.trimboth(arr, 0.1, axis), keepdims=1)
+    #mean = np.mean(st.trimboth(arr, 0.1, axis), keepdims=1)
+    idx = np.abs(arr - mean) > ratio * std
+    n = np.sqrt(np.sum(~idx, axis))
+    if not use_sem:
+        n = 1
     arr[idx] = np.nan
-    return np.nansum(arr, axis=axis) / np.sum(np.isfinite(arr), axis=axis)
+
+    mean = np.nanmean(arr, axis)
+    std = np.nanstd(arr, axis, ddof=1)/n
+    return mean, std
 
 
 def dichro_to_angle(d):
     return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
+
 def angle_to_dichro(x):
     return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
 
@@ -42,24 +55,49 @@ from scipy.interpolate import UnivariateSpline
 def smooth_spline(x, y, s):
     s = UnivariateSpline(x, y, s=s)
     return s(x)
-    
+
 def svd_filter(d, n=6):
     u, s, v = np.linalg.svd(d, full_matrices=0)
     s[n:] = 0
     f = np.dot(u, np.diag(s).dot(v))
     return f
-    
+
 def apply_spline(t, d, s=None):
     out = np.zeros_like(d)
     for i in range(d.shape[1]):
         out[:, i] =smooth_spline(t, d[:, i], s)
-    return out 
-    
-def binner(n, wl, dat):
-    """ 
+    return out
+
+def normalize(x):
+    return x/abs(x).max()
+
+def weighted_binner(n, wl, dat, std):
+    """
     Given wavelengths and data it bins the data into n-wavelenths.
-    Returns bdata and bwl    
-    
+    Returns bdata and bwl
+
+    """
+    i = np.argsort(wl)
+    wl = wl[i]
+    dat = dat[:, i]
+    idx = np.searchsorted(wl,np.linspace(wl.min(),wl.max(),n+1))
+    binned = np.empty((dat.shape[0], n))
+    binned_std = np.empty_like(binned)
+    binned_wl = np.empty(n)
+    for i in range(n):
+        data = dat[:,idx[i]:idx[i+1]]
+        weights = 1/std[:,idx[i]:idx[i+1]]**2
+        binned[:,i] = np.average(data, 1, weights)
+        binned_std[:, i] = np.average(std[:,idx[i]:idx[i+1]], 1, weights)
+        binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
+    return binned, binned_wl, binned_std
+
+
+def binner(n, wl, dat, func=np.mean):
+    """
+    Given wavelengths and data it bins the data into n-wavelenths.
+    Returns bdata and bwl
+
     """
     i = np.argsort(wl)
     wl = wl[i]
@@ -68,7 +106,7 @@ def binner(n, wl, dat):
     binned=np.empty((dat.shape[0], n))
     binned_wl=np.empty(n)
     for i in range(n):
-        binned[:,i]=np.mean(dat[:,idx[i]:idx[i+1]],1)
+        binned[:,i]=func(dat[:,idx[i]:idx[i+1]],1)
         binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
@@ -77,7 +115,7 @@ def fi(w,x):
     try:
         len(x)
     except TypeError:
-        x = [x]        
+        x = [x]
     ret =  [np.argmin(np.abs(w-i)) for i in x]
     if len(ret)==1:
         return ret[0]
@@ -93,104 +131,46 @@ def subtract_background(dat, t, tn, offset=0.3):
     return out
 
 def polydetrend(x, t=None, deg=3):
-    t = t or np.arange(x.shape[0])
+    if t is None:
+        t = np.arange(x.shape[0])
     p = np.polyfit(t, x, deg)
     yf = np.poly1d(p)(t)
     return x - yf
-    
+
+def exp_detrend(y, t, start_taus=[1], use_constant=True):
+    m, yf = exp_fit(t, y, start_taus, use_constant=use_constant, verbose=0)
+    return y - yf
+
 def arr_polydetrend(x, t=None, deg=3):
     out = np.zeros_like(x)
     for i in range(x.shape[1]):
         out[:, i] = polydetrend(x[:, i], t, deg)
     return out
 
+from scipy.stats import trim_mean
+def meaner(dat, t, llim, ulim, proportiontocut=0.0):
+    return trim_mean(dat[fi(t, llim):fi(t, ulim)], 0, proportiontocut=proportiontocut)
 
-def meaner(dat, t, llim, ulim):
-    return np.mean(dat[fi(t, llim):fi(t, ulim)], 0)
-    
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
 
-def savitzky_golay(y, window_size, order, deriv=0):
-    """Smooth (and optionally differentiate) data with a Savitzky-Golay filter.
-    The Savitzky-Golay filter removes high frequency noise from data.
-    It has the advantage of preserving the original shape and
-    features of the signal better than other types of filtering
-    approaches, such as moving averages techhniques.
-    Parameters
-    ----------
-    y : array_like, shape (N,)
-        the values of the time history of the signal.
-    window_size : int
-        the length of the window. Must be an odd integer number.
-    order : int
-        the order of the polynomial used in the filtering.
-        Must be less then `window_size` - 1.
-    deriv: int
-        the order of the derivative to compute (default = 0 means only smoothing)
-    Returns
-    -------
-    ys : ndarray, shape (N)
-        the smoothed signal (or it's n-th derivative).
-    Notes
-    -----
-    The Savitzky-Golay is a type of low-pass filter, particularly
-    suited for smoothing noisy data. The main idea behind this
-    approach is to make for each point a least-square fit with a
-    polynomial of high order over a odd-sized window centered at
-    the point.
-    Examples
-    --------
-    t = np.linspace(-4, 4, 500)
-    y = np.exp( -t**2 ) + np.random.normal(0, 0.05, t.shape)
-    ysg = savitzky_golay(y, window_size=31, order=4)
-    import matplotlib.pyplot as plt
-    plt.plot(t, y, label='Noisy signal')
-    plt.plot(t,files=glob.glob(name+'*dat?.npy') np.exp(-t**2), 'k', lw=1.5, label='Original signal')
-    plt.plot(t, ysg, 'r', label='Filtered signal')
-    plt.legend()
-    plt.show()
-    References
-    ----------
-    .. [1] A. Savitzky, M. J. E. Golay, Smoothing and Differentiation of
-       Data by Simplified Least Squares Procedures. Analytical
-       Chemistry, 1964, 36 (8), pp 1627-1639.
-    .. [2] Numerical Recipes 3rd Edition: The Art of Scientific Computing
-       W.H. Press, S.A. Teukolsky, W.T. Vetterling, B.P. Flannerypsd1D = radialProfile.azimuthalAverage(psd2D)
-       Cambridge University Press ISBN-13: 9780521880688
-    """
-    try:
-        window_size = np.abs(np.int(window_size))
-        order = np.abs(np.int(order))
-    except ValueError, msg:
-        raise ValueError("window_size and order have to be of type int")
-    if window_size % 2 != 1 or window_size < 1:
-        raise TypeError("window_size size must be a positive odd number")
-    if window_size < order + 2:
-        raise TypeError("window_size is too small for the polynomials order")
-    order_range = range(order+1)
-    half_window = (window_size -1) // 2
-    # precompute coefficients
-    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
-    m = np.linalg.pinv(b).A[deriv]
-    # pad the signal at the extremes with
-    # values taken from the signal itself
-    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
-    y = np.concatenate((firstvals, y, lastvals))
-    return np.convolve( m, y, mode='valid')
 
 def apply_sg(y, window_size, order, deriv=0):
     out = np.zeros_like(y)
+    coeffs = sig.savgol_coeffs(window_size, order, deriv=0, use='dot')
     for i in range(y.shape[1]):
-        out[:, i] = savitzky_golay(y[:, i], window_size, order, deriv)
+        out[:, i] = coeffs.dot(y[:, i])
     return out
-    
+
+import scipy.ndimage as nd
 def apply_sg_scan(y, window_size, order, deriv=0):
     out = np.zeros_like(y)
-    for s in range(y.shape[-1]):
-        for i in range(y.shape[1]):
-            out[:, i, s] = savitzky_golay(y[:, i, s], window_size, order, deriv)
+    c = sig.savgol_coeffs(window_size, order, deriv=0)
+#    for s in range(y.shape[-1]):
+#        for i in range(y.shape[1]):
+#            print c.shape
+    out = nd.convolve1d(y, c, 0, mode='nearest')
+     #out, s] = c.dot(y[:, i, 1, s])
     return out
 
 def calc_error(args):
@@ -203,7 +183,12 @@ def calc_error(args):
     sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof) for i in range(len(p))])
     return p, sigma
 
-#
+def min_pulse_length(width_in_cm, shape='gauss'):
+    width_hz = width_in_cm * 3e10
+    if shape == 'gauss':
+        return (0.44 / width_hz) / 1e-15
+
+
 def wavelength2rgb(w):
     """
     Converts a wavelength to a RGB color.
@@ -318,8 +303,7 @@ def efa(dat, n, reverse=False):
     out=np.zeros((data.shape[0], n))
     for i in range(6, data.shape[0]):
         sv = svds(data[:i, :], min(i,n))[1]
-        print sv
-        out[i, :]=sv
+        out[i, :] = sv
     return out
 
 def moving_efa(dat, n, ncols, method='svd'):
@@ -338,14 +322,12 @@ from scipy.optimize import nnls
 
 def pfid_tau_to_w(tau):
     """
-    Given the rise time of the pertuabed 
-    free induction decay, calculate the    
+    Given the rise time of the pertuabed
+    free induction decay, calculate the
     corresponding spectral width in cm-^1.
     """
     return 1/(np.pi*3e7*tau*1e-9)
-    
-print pfid_tau_to_w(1)
-    
+
 def als(dat, n=5):
     u, s, v = np.linalg.svd(dat)
     u0=u[:n]
@@ -369,59 +351,75 @@ def als(dat, n=5):
             if abs(res-res_n) < 0.001:
                 break
             else:
-                print i, res_n
+                print(i, res_n)
                 res = res_n
     return u0.T, v0.T
 
+def spec_int(tup, r, is_wavelength=True):
+    wl, t, d = tup.wl, tup.t, tup.data
+    if is_wavelength:
+        wl = 1e7/wl
+        wl1, wl2 = 1e7 / r[0], 1e7 / r[1]
+    else:
+        wl1, wl2 = r
+    ix = np.argsort(wl)
+    wl = wl[ix]
+    d = d[:, ix]
+
+    idx1, idx2 = sorted([fi(wl, wl1), fi(wl, wl2)])
+    dat = np.trapz(d[:, idx1:idx2], wl[idx1:idx2]) / np.ptp(wl[idx1:idx2])
+    return dat
 
 #import mls
 def do_nnls(A,b):
     n = b.shape[1]
     out = np.zeros((A.shape[1], n))
-    for i in xrange(n):
         #mls.bounded_lsq(A.T, b[:,i], np.zeros((A.shape[1],1)), np.ones((A.shape[1],1))).shape
         out[:,i] =  nnls(A, b[:,i])[0]
     return out
 
 import lmfit
-def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None):
-    print y.dtype
+def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=None, weights=None, amp_penalty=0,
+            verbose=True):
     num_exp = len(start_taus)
     para = lmfit.Parameters()
     if use_constant:
         para.add('const', y[-1] )
-    
+
     for i in range(num_exp):
-        para.add('tau' + str(i), start_taus[i])
+        para.add('tau' + str(i), start_taus[i], min=0)
         y_c = y - y[-1]
-        a = y_c[fi(x, start_taus[i])]        
+        a = y_c[fi(x, start_taus[i])]
         para.add('amp' + str(i), a)
         if amp_max is not None:
             para['amp' + str(i)].max = amp_max
-            para['amp' + str(i)].min = -amp_max
-        
+        if amp_min is not None:
+            para['amp' + str(i)].min = amp_min
+
     def fit(p):
-        y_fit = np.zeros_like(y) 
+        y_fit = np.zeros_like(y)
         if use_constant:
             y_fit += p['const'].value
-        
+
         for i in range(num_exp):
             amp = p['amp'+str(i)].value
             tau = p['tau'+str(i)].value
-            
-            y_fit += amp * np.exp(-x/tau)
-        
+
+            y_fit += amp * np.exp(-x/tau) + amp_penalty/y.size
+
         return y_fit
-    fit(para)
 
     def res(p):
-        return y - fit(p)        
-
+        if weights is None:
+            return y - fit(p)
+        else:
+            return (y - fit(p)) / weights
 
     mini = lmfit.minimize(res, para)
-    lmfit.report_errors(para)
-    y_fit = fit(para)
-    return mini, y_fit 
+    if verbose:
+        lmfit.report_fit(mini)
+    y_fit = fit(mini.params)
+    return mini, y_fit
 
 def calc_ratios(fitter, tmin=0.35, tmax=200):
     from skultrafast import zero_finding
@@ -431,15 +429,19 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
     i_max = fi(t, tmax)
     t = t[i:i_max]
     d = d[i:i_max, :]
-    pos = np.where(d > 0, d, 0).sum(1)
-    neg = np.where(d < 0, d, 0).sum(1)
-    return t, pos, neg, pos/neg, d.sum(1)
-        
-        
 
+    pos = np.where(d > 0, d, 0)
+    neg = np.where(d < 0, d, 0)
+    pos = np.trapz(pos, w)
+    neg = np.trapz(neg, w)
+    return t, pos, neg, pos/neg, d.sum(1)
+
+
+def make_fi(data_to_search):
+    return lambda x: fi(data_to_search, x)
 #if __name__=='__main__':
 #    import numpy as np
-#    ss = apply_spline(t, d[..., 0], s=9)        
+#    ss = apply_spline(t, d[..., 0], s=9)
 #    plot(ss[:, 18])
 #    t, p, n, pn, total = calc_ratios(g)
 #    m,yf = exp_fit(t, pn, [1, 11])
@@ -458,3 +460,15 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
     ##hlines(log(s[:8])/log(s[0]), wl.min(), wl.max())
     #plot(wl, lo)
     #show()
+
+
+import attr
+
+@attr.s
+class DataSet:
+
+    wl = attr.ib()
+    t = attr.ib()
+    iso = attr.ib()
+
+    
