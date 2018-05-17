@@ -1,6 +1,3 @@
- .. image:: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
-   :target: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
-
 skultrafast
 ===========
 WARNING! THE PROJECT IS A RESTRUCTERING PHASE AND NOT VERY USEABLE FOR NEW USERS!

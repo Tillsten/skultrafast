@@ -374,6 +374,7 @@ def spec_int(tup, r, is_wavelength=True):
 def do_nnls(A,b):
     n = b.shape[1]
     out = np.zeros((A.shape[1], n))
+    for i in range(n):
         #mls.bounded_lsq(A.T, b[:,i], np.zeros((A.shape[1],1)), np.ones((A.shape[1],1))).shape
         out[:,i] =  nnls(A, b[:,i])[0]
     return out
