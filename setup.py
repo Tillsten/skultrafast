@@ -13,6 +13,7 @@ setup(
     description='Python package for analyzing time-resolved spectra',
     #long_description=open('README.rst').read(),
     install_requires=[
+        "attrs",
         "numpy",
         "scipy",
         "lmfit",
