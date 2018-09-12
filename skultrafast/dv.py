@@ -149,7 +149,7 @@ def arr_polydetrend(x, t=None, deg=3):
 
 from scipy.stats import trim_mean
 def meaner(dat, t, llim, ulim, proportiontocut=0.0):
-    return trim_mean(dat[fi(t, llim):fi(t, ulim)], 0, proportiontocut=proportiontocut)
+    return trim_mean(dat[fi(t, llim):fi(t, ulim)],  axis=0, proportiontocut=proportiontocut)
 
 def legend_format(l):
     return [str(i/1000.)+ ' ps' for i in l]
@@ -308,7 +308,7 @@ def efa(dat, n, reverse=False):
 
 def moving_efa(dat, n, ncols, method='svd'):
     out=np.zeros((dat.shape[0], n))
-    #p=PCA()
+    p = PCA()
     for i in range(0, dat.shape[0]-n):
         if method=='svd':
             sv = np.linalg.svd(dat[i:i+ncols,:])[1][:n]
@@ -462,14 +462,5 @@ def make_fi(data_to_search):
     #plot(wl, lo)
     #show()
 
-
-import attr
-
-@attr.s
-class DataSet:
-
-    wl = attr.ib()
-    t = attr.ib()
-    iso = attr.ib()
 
     
