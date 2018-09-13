@@ -41,9 +41,9 @@ def get_config():
     cfg = VersioneerConfig()
     cfg.VCS = "git"
     cfg.style = "pep440"
-    cfg.tag_prefix = "skultrafast-"
+    cfg.tag_prefix = ""
     cfg.parentdir_prefix = "None"
-    cfg.versionfile_source = "skultrafast/_version.py"
+    cfg.versionfile_source = "skultrafast\_version.py"
     cfg.verbose = False
     return cfg
 
