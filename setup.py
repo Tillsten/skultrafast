@@ -8,6 +8,7 @@ setup(
     version=versioneer.get_version(),
     author='Till Stensitzki',
     author_email='tillsten@zedat.fu-berlin.de',
+    data_files=[('example_data', ['examples/test.npz'])],
     url='http://github.com/tillsten/skultrafast',
     packages=['skultrafast',],
     license='LICENSE.txt',
