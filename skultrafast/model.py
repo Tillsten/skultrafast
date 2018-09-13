@@ -29,8 +29,7 @@ def make_state_spectra(para, x, state, shape='lorentz'):
     return lorentz(x, *vals)
 
 def fit(p, x, mode='lm', has_spectral=True):
-    taus = [p[name].value for name in p if name.startswith('tau')]
-    print taus    
+    taus = [p[name].value for name in p if name.startswith('tau')]   
     A = func(taus, f.t)    
     states = m.get_compartments()    
     if has_spectral:
