@@ -10,10 +10,13 @@ from skultrafast.base_functions_numba import fast_erfc, calc_gaussian_fold, \
       _fold_exp, _coh_gaussian, _exp
       
 import skultrafast.base_functions_np as bnp
-import skultrafast.base_functions_cl as bcl
+try:
+    import skultrafast.base_functions_cl as bcl
+except ImportError:
+    print('Warning, pyopencl was not found. OpenCL backend ist not tested')
+    bcl = bnp
 import skultrafast.base_functions_numba as bnb 
 
-#import skultrafast.fitter_cython
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 
