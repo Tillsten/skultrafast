@@ -8,7 +8,7 @@ setup(
     version=versioneer.get_version(),
     author='Till Stensitzki',
     author_email='tillsten@zedat.fu-berlin.de',
-    url='http://github.com/tillsten/skultrafast-git',
+    url='http://github.com/tillsten/skultrafast',
     packages=['skultrafast',],
     license='LICENSE.txt',
     description='Python package for analyzing time-resolved spectra.',
