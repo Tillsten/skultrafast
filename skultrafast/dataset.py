@@ -2,7 +2,10 @@ import numpy as np
 import astropy.stats as stats
 from skultrafast.data_io import save_txt
 from skultrafast.filter import bin_channels
+from skultrafast import zero_finding
 from enum import Enum
+from types import SimpleNamespace
+from collections import namedtuple
 
 class Polarization(Enum):
     """Enum which describes the relative polarisation of pump and probe"""
@@ -109,6 +112,8 @@ class MesspyDataSet:
             raise NotImplementedError("Iso correction not suppeorted yet.")
 
 
+EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
+
 class DataSet:
     def __init__(self, wl, t, data, err=None, freq_unit='nm'):
         """Class for containing a 2D spectra.
@@ -124,7 +129,7 @@ class DataSet:
         err : array of shape(n, m) (optional)
             Contains the std err  of the data.
         name : str
-            Identifier for data set. (optionl)
+            Identifier for data set. (optional)
         freq_unit : {'nm', 'cm'} 
             Unit of the wavelength array, default is 'nm'.
         """
@@ -236,12 +241,94 @@ class DataSet:
         # Slightly offset edges to include themselves.
         edges = np.linspace(arr.min()-0.002, arr.max()+0.002, n+1)
         np.seachsorted()
-    pass
+        #TODO: Finnish function
+
+    def estimate_dispersion(self, heuristic='abs', heuristic_args=(), deg=2):
+        """Estimates the dispersion from a dataset. by first
+        applying a heuristic to each channel. The results are than 
+        robustly fitted with a polynomial of given order.
+
+        Parameters
+        ----------
+        heuristic : {'abs', 'diff', 'gauss_diff'} or func
+            Determines which heuristic to use on each channel. Can
+            also be a function which follows `func(t, y, *args) and returns
+            a `t0`-value. The heuristics are described in `zero_finding`.
+        heuristic_args : tuple
+            Arguments which are given to the heuristic.
+        deg : int (optional)
+            Degree of the polynomial used to fit the dispersion (defaults to 2).
+
+        Returns
+        -------
+        : EstDispResult
+            Tuple containing a dispersion correction version of the dataset,
+            and array with the estimated time-zeros, and the polynomial function.                     
+        """
+
+        zero_finding.ro
+
+
+    def fit_das(self, x0, fit_t0=False, fix_last_decay=True):
+        """Fit expontials to the dataset.
+        
+        Parameters
+        ----------
+        x0 : list of floats or array
+            Starting values of the fit. The first value is the estimate
+            of the system response time omega. If `fit_t0` is true, the second
+            float is the guess of the time-zero. All other floats are intepreted
+            as the guessing values for expontial decays.        
+        fit_t0 : bool (optional)
+            If the time-zero should be determined by the fit too. (`True` by default)
+        fix_last_decay : bool (optional)
+            Fixes the value of the last tau of the inital guess. Is used to add a constant
+            contribution by setting the last tau to a large value and fix it. 
+        """
+        pass
+
+
+  
+    def lft_density_map(self, taus, alpha=1e-4, ): 
+        """Calculates the LDM from a dataset by regularized regression.
+
+        Parameters
+        """ 
+        pass
 
 
 class DataSetPlotter:
     def __init__(self, dataset):
-        self.dataset = Da
+        """Class for plotting a dataset via matplotlib"""
+        self.dataset = dataset
+
+
+class DataSetInteractiveViewer:
+    def __init__(self, dataset, fig_kws={}):
+        """Class showing a interactive matplotlib window for exploring
+        a dataset.
+        """
+        import matplotlib.pyplot as plt
+        self.dataset = dataset
+        self.figure, axs = plt.subplots(3, 1, **fig_kws)
+        self.ax_img, self.ax_trans, self.ax_spec = axs
+        self.ax_img.pcolormesh(dataset.wl, dataset.t, dataset.data)
+        self.trans_line = self.ax_trans.plot()
+        self.spec_line = self.ax_spec.plot()
+
+    def init_event(self):
+        'Connect mpl events'
+        connect = self.figure.canvas.mpl_connect
+        connect('motion_notify_event', self.update_lines) 
+
+    def update_lines(self, event):
+        """If the mouse cursor is over the 2D image, update
+        the dynamic transient and spectrum"""
+        
+        
+
+
+    
         
         
 
