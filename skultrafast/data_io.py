@@ -196,3 +196,6 @@ def extract_freqs_from_gaussianlog(fname):
     return np.vstack([i.flatten() for i in arrs])
     
 
+def load_example():
+    pass
+    
