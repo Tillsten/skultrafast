@@ -57,7 +57,7 @@ def use_max(dat, use_abs=True):
 @dv.add_to_cls(est)
 def use_first_abs(dat, val=5):
     """
-    Returns the first index where dat>val.
+    Returns the first index where abs(dat)>val.
     """
     idx = np.abs(dat) > val
     return np.argmax(idx, 0)

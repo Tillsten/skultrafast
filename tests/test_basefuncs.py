@@ -5,7 +5,7 @@ Created on Sun Apr 21 20:34:15 2013
 @author: Tillsten
 """
 
-import nose
+
 from skultrafast.base_functions_numba import fast_erfc, calc_gaussian_fold, \
       _fold_exp, _coh_gaussian, _exp
       
