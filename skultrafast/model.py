@@ -9,6 +9,7 @@ import networkx as nx
 from sklearn.linear_model import ridge_regression
 from skultrafast.kinetic_model import Model
 import lmfit
+from pylab import *
 
 
 def sol_matexp(A, tlist, y0):
@@ -81,7 +82,7 @@ m.add_trans('S1warm', 'S1')
 m.add_trans('S1', 'T1')
 m.add_trans('T1', 'S0')
 #m.add_trans('S0', 'S0')
-print m.get_compartments()
+print(m.get_compartments())
 y0 = np.array([1., 0, 0, 0, 0])[:, None]
 func = m.get_func(y0)
 a = func(np.array([7., 8, 15, 6600]), f.t)
@@ -90,6 +91,7 @@ def add_state(p, state, A, w, xc, min=20, vary=True):
     p.add(state + '_A', A, min=min, vary=vary)
     p.add(state + '_w', w, min=2, vary=vary)
     p.add(state + '_xc', xc, min=0, vary=vary)
+
 
 import scipy.optimize as opt
 x0 = [5, 7, 15., 6600.]
@@ -114,7 +116,7 @@ mi.scalar_minimize('CG')
 #
 lmfit.report_errors(p, show_correl=False)
 res, A, shapes = fit(p, f.wl, 'p')
-print sum(res**2)
+print(sum(res**2))
 subplot(121)
 plot(f.wl, shapes.T)
 subplot(122)
