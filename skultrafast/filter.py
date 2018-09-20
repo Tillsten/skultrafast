@@ -116,12 +116,32 @@ def weighted_binner(n, wl, dat, std):
         binned_wl[i] = np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
-def cut_tup(tup, from_t=-1e6, to_t=1e6, from_wl=-1e6, to_wl=1e6):
-    wl, t, d = tup.wl.copy(), tup.t.copy(), tup.data.copy()
-    t0, t1 = dv.fi(t, from_t), dv.fi(t, to_t)
-    w0, w1 = dv.fi(wl, from_wl), dv.fi(wl, to_wl)
-    w0, w1 = min(w0, w1), max(w0, w1)    
-    return dv.tup(wl[w0:w1], t[t0:t1], d[t0:t1, w0:w1])
+def _idx_range(arr, a, b):
+    """Returns a boolean array which is True where arr is between
+    a and b.
+    
+    Parameters
+    ----------
+    arr : array 
+        Array to find the range in.
+    a : float
+        First edge of the region.
+    b : float
+        Second edge of the region.
+
+    Returns
+    -------
+    : arr of bool
+        The resulting boolean array
+    """
+    lower, upper = sorted([a,b])
+    idx = (lower<arr) & (arr<upper)
+    return idx
+
+def cut_tup(tup, from_t=-1e20, to_t=1e20, from_wl=-1e20, to_wl=1e20):
+    t_idx = _idx_range(tup.t, from_t, to_t)
+    wl_idx = _idx_range(tup.wl, from_wl, to_wl)    
+    return dv.tup(wl[wl_idx], t[t_idx], (d[t_idx, :])[:, wl_idx])
 
 
 def norm_tup(tup, min_div=3):

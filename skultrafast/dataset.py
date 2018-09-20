@@ -17,6 +17,7 @@ class Polarization(Enum):
 
 
 class MesspyDataSet:
+
     def __init__(self, fname, is_pol_resolved=False, 
                  pol_first_scan='unknown', valid_channel='both'):
         """Class for working with data files from MessPy.
@@ -115,7 +116,7 @@ class MesspyDataSet:
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
 
 class DataSet:
-    def __init__(self, wl, t, data, err=None, freq_unit='nm'):
+    def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm'):
         """Class for containing a 2D spectra.
         
         Parameters
@@ -149,15 +150,48 @@ class DataSet:
         self.data = data
         if err is not None:
             self.err = err
+        if name is not None:
+            self.name = name
+
+        #Sort wavelenths and data.
         idx = np.argsort(self.wavelengths)
         self.wavelengths = self.wavelengths[idx]
         self.wavenumbers = self.wavenumbers[idx]
-        
+        self.data = self.data[:, idx]
+
 
     def __iter__(self):
         """For compatbility with dv.tup"""
         return iter(self.wavelengths, self.t, self.data)
 
+    @staticmethod
+    def from_txt(cls, fname, freq_unit='cm', time_div=1000., loadtxt_kws=None):
+        """Directly create a dataset from a text file.
+
+        Parameters
+        ----------
+        fname : str 
+            Name of the file. This function assumes the data is given
+            by (n+1, m+1) tabular. The first row (exculding the value at [0, 0])
+            are frequiencies, the first colum (excluding [0, 0]) are the delay times.
+        freq_unit : {'nm', 'cm'}
+            Unit of the frequencies.
+        time_div : float
+            Since `skultrafast` prefers to work with picoseconds and most programms
+            use femtoseconds, it divides the time-values. By default it divides
+            by `1000`. Use `1` not change the time values.  
+        loadtxt_kws : dict
+            Dict containing keyword arguments to `np.loadtxt`. 
+        """
+        if loadtxt_kws is None:
+            loadtxt_kws = {}
+        tmp = np.loadtxt(fname, loadtxt_kws)
+        t = tmp[1:, 0] / time_div
+        freq = tmp[0, 1:]
+        data = tmp[1:, 1:]
+        return cls(freq, t, data, freq_unit=freq_unit)
+
+        
     def save_txt(self, fname, freq_unit='wl'):
         """Save the dataset as a text file
         
@@ -198,6 +232,32 @@ class DataSet:
             err = None
         return DataSet(arr[idx], self.t, self.data[:, idx], err, freq_unit)
 
+    def mask_freqs(self, freq_ranges=None, freq_unit='nm'):
+        """Mask channels outside of given frequency ranges.
+
+        Parameters
+        ----------
+        freq_ranges : list of (float, float)
+            List containing the edges (lower, upper) of the
+            frequencies to keep.
+        freq_unit : {'nm', 'cm'}
+            Unit of the given edges.
+
+        Returns
+        -------
+        : DataSet
+            DataSet containing only the listed regions.
+        """
+        idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        arr = self.wavelengths if freq_unit is 'nm' else self.wavenumbers
+        for (lower, upper) in freq_ranges:
+            idx ^= np.logical_and(arr > lower, arr < upper)
+        if self.err is not None:
+            self.err.mask[:, idx] = True
+        self.data.mask[:, idx] = True
+        self.wavelengths = np.ma.MaskedArray(self.wavelengths, idx)
+        self.wavenumbers = np.ma.MaskedArray(self.wavenumbers, idx)
+
     def cut_times(self, time_ranges):
         """Remove spectra outside of given time-ranges.
 
@@ -221,6 +281,28 @@ class DataSet:
             err = None
         return DataSet(self.wavelengths, self.t[idx], self.data[idx, :], err)
 
+    def mask_times(self, time_ranges):
+        """Mask spectra outside of given time-ranges.
+
+        Parameters
+        ----------
+        time_ranges : list of (float, float)
+            List containing the edges of the time-regions to keep.
+        
+        Returns
+        -------
+        : None
+        """
+        idx = np.zeros_like(self.t, dtype=np.bool)
+        arr = self.t
+        for (lower, upper) in time_ranges:           
+                idx ^= np.logical_and(arr > lower, arr < upper)
+        if self.err is not None:
+            self.err[idx, :].mask = True
+        self.t = np.ma.MaskedArray(self.t, idx)
+        self.data.mask[:, idx] = True
+
+
     def subtract_background(self, n : int=10):
         """Subtracts the first n-spectra from the dataset"""
         self.data -= np.mean(self.data[:n, :], 0, keepdims=1)
@@ -235,16 +317,25 @@ class DataSet:
             np.linspace(freq.min(), freq.max(), n+1).
         freq_unit : {'nm', 'cm'}
             Whether to calculate the bin-borders in
-            frequency- of wavelengt-space.
+            frequency- of wavelength-space.
         """
-        arr =  self.wavelengths if freq_unit is 'nm' else self.wavenumbers
+        # We use the negative of the wavenumbers to make the array sorted
+        arr =  self.wavelengths if freq_unit is 'nm' else -self.wavenumbers
         # Slightly offset edges to include themselves.
         edges = np.linspace(arr.min()-0.002, arr.max()+0.002, n+1)
-        np.seachsorted()
-        #TODO: Finnish function
+        idx = np.searchsorted(arr, edges)
+        binned = np.empty((self.data.shape[0], n))
+        binned_wl = np.empty(n)
+        binned_wl = np.empty(n)
+        for i in range(n):
+            binned[:,i] = np.average(self.data[:,idx[i]:idx[i+1]],1)
+            binned_wl[i] = np.mean(arr[idx[i]:idx[i+1]])
+        if freq_unit is 'cm':
+            binned_wl = - binned_wl
+        return DataSet(arr, self.t, binned,freq_unit)
 
-    def estimate_dispersion(self, heuristic='abs', heuristic_args=(), deg=2):
-        """Estimates the dispersion from a dataset. by first
+    def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2):
+        """Estimates the dispersion from a dataset by first
         applying a heuristic to each channel. The results are than 
         robustly fitted with a polynomial of given order.
 
@@ -266,8 +357,13 @@ class DataSet:
             and array with the estimated time-zeros, and the polynomial function.                     
         """
 
-        zero_finding.ro
+        if heuristic == 'abs':
+            idx = zero_finding.use_first_abs(self.data, heuristic_args[0])
 
+        vals, coefs = zero_finding.robust_fit_tz(self.wl, self.t[idx], deg)
+        func = np.polynomial.poly1d(coefs)
+        new_data = zero_finding.interpol(self, tn)
+        EstDispResult(
 
     def fit_das(self, x0, fit_t0=False, fix_last_decay=True):
         """Fit expontials to the dataset.

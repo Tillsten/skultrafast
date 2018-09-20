@@ -22,7 +22,7 @@ setup(
         "lmfit",
         "statsmodels",
         "numba",
-        "sklearn",
+        "scikit-learn",
         "matplotlib"
     ],
     keywords='science physics chemistry pump-probe spectroscopy time-resolved',
