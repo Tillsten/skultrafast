@@ -18,21 +18,21 @@ class Polarization(Enum):
 
 class MesspyDataSet:
 
-    def __init__(self, fname, is_pol_resolved=False, 
+    def __init__(self, fname, is_pol_resolved=False,
                  pol_first_scan='unknown', valid_channel='both'):
         """Class for working with data files from MessPy.
-        
+
         Parameters
-        ---------- 
+        ----------
         fname : str
             Filename to open.
         is_pol_resolved : bool (false)
             If the dataset was recorded polarization resolved.
         pol_first_scan : {'magic', 'para', 'perp', 'unknown'}
-            Polarization between the pump and the probe in the first scan. 
-            If `valid_channel` is 'both', this corresponds to the zeroth channel. 
+            Polarization between the pump and the probe in the first scan.
+            If `valid_channel` is 'both', this corresponds to the zeroth channel.
         valid_channel : {0, 1, 'both'}
-            Indicates which channels contains a real signal. 
+            Indicates which channels contains a real signal.
 
         """
 
@@ -46,8 +46,8 @@ class MesspyDataSet:
         self.valid_channel = valid_channel
 
     def average_scans(self, sigma=3):
-        """Calculate the average of the scans. Uses sigma clipping, which 
-        also filters nans. For polarization resovled measurements, the 
+        """Calculate the average of the scans. Uses sigma clipping, which
+        also filters nans. For polarization resovled measurements, the
         function assumes that the polarisation switches every scan.
 
         Parameters
@@ -58,48 +58,48 @@ class MesspyDataSet:
         Returns
         -------
         : dict or DataSet
-            DataSet or Dict of DataSets containing the averaged datasets. 
+            DataSet or Dict of DataSets containing the averaged datasets.
 
-        """        
+        """
 
         num_wls = self.data.shape[0]
 
         if not self.is_pol_resolved:
-            data = stats.sigma_clip(self.data, 
+            data = stats.sigma_clip(self.data,
                                     sigma=sigma, axis=-1)
             data = data.mean(-1)
             std = data.std(-1)
             err = std/np.sqrt(std.mask.sum(-1))
-            
+
             if self.valid_channel in [0, 1]:
                 data = data[..., self.valid_channel]
                 std = std[..., self.valid_channel]
                 err = err[..., self.valid_channel]
 
                 out = {}
-                
+
                 if num_wls > 1:
-                    for i in range(num_wls):                     
+                    for i in range(num_wls):
                         ds = DataSet(self.wl[:, i], self.t, data[i, ...], err[i, ...])
                         out[self.pol_first_scan + str(i)] = ds
                 else:
                     out = DataSet(self.wl[:, 0], self.t, data[0, ...], err[0, ...])
                 return out
-            
+
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
             assert(self.pol_first_scan in ['para', 'perp'])
-            data1 = stats.sigma_clip(self.data[..., self.valid_channel,::2], 
+            data1 = stats.sigma_clip(self.data[..., self.valid_channel,::2],
                                     sigma=sigma, axis=-1)
             data1 = data1.mean(-1)
             std1 = data1.std(-1)
             err1 = std1/np.sqrt(data1.mask.sum(-1))
-            
-            data2 = stats.sigma_clip(self.data[..., self.valid_channel, 1::2], 
+
+            data2 = stats.sigma_clip(self.data[..., self.valid_channel, 1::2],
                                     sigma=sigma, axis=-1)
             data2 = data2.mean(-1)
             std2 = data2.std(-1)
             err2 = std2/np.sqrt(data2.mask.sum(-1))
-        
+
             out = {}
             for i in range(self.data.shape[0]):
                 out[self.pol_first_scan + str(i)] = DataSet(self.wl[:, i], self.t, data1[i, ...], err1[i, ...])
@@ -118,7 +118,7 @@ EstDispResult = namedtuple('EstDispResult', 'corrected_ds tn polyfunc')
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm'):
         """Class for containing a 2D spectra.
-        
+
         Parameters
         ----------
         wl : array of shape(n)
@@ -131,7 +131,7 @@ class DataSet:
             Contains the std err  of the data.
         name : str
             Identifier for data set. (optional)
-        freq_unit : {'nm', 'cm'} 
+        freq_unit : {'nm', 'cm'}
             Unit of the wavelength array, default is 'nm'.
         """
 
@@ -170,7 +170,7 @@ class DataSet:
 
         Parameters
         ----------
-        fname : str 
+        fname : str
             Name of the file. This function assumes the data is given
             by (n+1, m+1) tabular. The first row (exculding the value at [0, 0])
             are frequiencies, the first colum (excluding [0, 0]) are the delay times.
@@ -179,9 +179,9 @@ class DataSet:
         time_div : float
             Since `skultrafast` prefers to work with picoseconds and most programms
             use femtoseconds, it divides the time-values. By default it divides
-            by `1000`. Use `1` not change the time values.  
+            by `1000`. Use `1` not change the time values.
         loadtxt_kws : dict
-            Dict containing keyword arguments to `np.loadtxt`. 
+            Dict containing keyword arguments to `np.loadtxt`.
         """
         if loadtxt_kws is None:
             loadtxt_kws = {}
@@ -191,10 +191,10 @@ class DataSet:
         data = tmp[1:, 1:]
         return cls(freq, t, data, freq_unit=freq_unit)
 
-        
+
     def save_txt(self, fname, freq_unit='wl'):
         """Save the dataset as a text file
-        
+
         Parameters
         ----------
         fname : str
@@ -216,7 +216,7 @@ class DataSet:
             frequencies to keep.
         freq_unit : {'nm', 'cm'}
             Unit of the given edges.
-        
+
         Returns
         -------
         : DataSet
@@ -224,7 +224,7 @@ class DataSet:
         """
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
         arr =  self.wavelengths if freq_unit is 'nm' else self.wavenumbers
-        for (lower, upper) in freq_ranges:           
+        for (lower, upper) in freq_ranges:
                 idx ^= np.logical_and(arr > lower, arr < upper)
         if self.err is not None:
             err = self.err[:, idx]
@@ -265,15 +265,15 @@ class DataSet:
         ----------
         time_ranges : list of (float, float)
             List containing the edges of the time-regions to keep.
-        
+
         Returns
         -------
-        : DataSet 
+        : DataSet
             DataSet containing only the requested regions.
         """
         idx = np.zeros_like(self.t, dtype=np.bool)
         arr = self.t
-        for (lower, upper) in time_ranges:           
+        for (lower, upper) in time_ranges:
                 idx ^= np.logical_and(arr > lower, arr < upper)
         if self.err is not None:
             err = self.err[idx, :]
@@ -288,14 +288,14 @@ class DataSet:
         ----------
         time_ranges : list of (float, float)
             List containing the edges of the time-regions to keep.
-        
+
         Returns
         -------
         : None
         """
         idx = np.zeros_like(self.t, dtype=np.bool)
         arr = self.t
-        for (lower, upper) in time_ranges:           
+        for (lower, upper) in time_ranges:
                 idx ^= np.logical_and(arr > lower, arr < upper)
         if self.err is not None:
             self.err[idx, :].mask = True
@@ -336,7 +336,7 @@ class DataSet:
 
     def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2):
         """Estimates the dispersion from a dataset by first
-        applying a heuristic to each channel. The results are than 
+        applying a heuristic to each channel. The results are than
         robustly fitted with a polynomial of given order.
 
         Parameters
@@ -354,7 +354,7 @@ class DataSet:
         -------
         : EstDispResult
             Tuple containing a dispersion correction version of the dataset,
-            and array with the estimated time-zeros, and the polynomial function.                     
+            and array with the estimated time-zeros, and the polynomial function.
         """
 
         if heuristic == 'abs':
@@ -368,7 +368,7 @@ class DataSet:
 
     def fit_das(self, x0, fit_t0=False, fix_last_decay=True):
         """Fit expontials to the dataset.
-        
+
         Parameters
         ----------
         x0 : list of floats or array
@@ -380,17 +380,17 @@ class DataSet:
             If the time-zero should be determined by the fit too. (`True` by default)
         fix_last_decay : bool (optional)
             Fixes the value of the last tau of the inital guess. Is used to add a constant
-            contribution by setting the last tau to a large value and fix it. 
+            contribution by setting the last tau to a large value and fix it.
         """
         pass
 
 
-  
-    def lft_density_map(self, taus, alpha=1e-4, ): 
+
+    def lft_density_map(self, taus, alpha=1e-4, ):
         """Calculates the LDM from a dataset by regularized regression.
 
         Parameters
-        """ 
+        """
         pass
 
 
@@ -416,23 +416,25 @@ class DataSetInteractiveViewer:
     def init_event(self):
         'Connect mpl events'
         connect = self.figure.canvas.mpl_connect
-        connect('motion_notify_event', self.update_lines) 
+        connect('motion_notify_event', self.update_lines)
 
     def update_lines(self, event):
         """If the mouse cursor is over the 2D image, update
         the dynamic transient and spectrum"""
-        
-        
-
-
-    
-        
-        
+        pass
 
 
 
 
-           
+
+
+
+
+
+
+
+
+
 
 
 
