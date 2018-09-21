@@ -32,8 +32,8 @@ The current releases centers around working with time-resolved spectra:
     * Publication ready plots with few lines.
     * Automatic dispersion correction.
     * Very fast exponential fitting, which can make use of your GPU.
-    * Modern error estimates of the fitting results via `lmfit <http://lmfit
-    .github.io/lmfit-py/>`_.
+    * Modern error estimates of the fitting results via
+      `lmfit <http://lmfit.github.io/lmfit-py/>`_.
     * Lifetime-density analyses using regularization regression.
 
 This package also tries its best to follow modern software practices. This
