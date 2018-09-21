@@ -5,7 +5,6 @@ from os.path import normpath, abspath, dirname, join
 here = normpath(abspath(dirname(__file__)))
 import versioneer
 
-here = normpath(abspath(dirname(__file__)))
 class CleanCommand(Command):
     """Custom clean command to tidy up the project root."""
     CLEAN_FILES = './build ./dist ./*.pyc ./*.tgz ./*.egg-info ./__pycache__'.split(' ')
