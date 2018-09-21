@@ -200,16 +200,27 @@ def lbl_spec(ax=None):
 def lbl_trans(ax=None, use_symlog=True):
     if ax is None:
         ax = plt.gca()
-
     ax.set_xlabel(time_label)
     ax.set_ylabel(sig_label)
     ax.axhline(0, c='k', zorder=1.5)
     if use_symlog:
-        symticks(plt.gca())
-        plt.axvline(1, c='k', lw=0.5, zorder=1.5)
-
+        symticks(ax, axis='y')
+        ax.axhline(1, c='k', lw=0.5, zorder=1.5)
+        ax.set_xlim(-.5)
     else:
         plt.minorticks_on()
+
+def lbl_map(ax=None, use_symlog=True):
+    if ax is None:
+        ax = plt.gca()
+    ax.set_xlabel(freq_label)
+    ax.set_ylabel(time_label)
+
+    if use_symlog:
+        symticks(ax, axis='y')
+        ax.axhline(1, c='k', lw=0.5, zorder=1.5)
+        ax.set_ylim(-.5)
+
 
 def plot_trans(tup, wls, symlog=True, norm=False, marker=None, ax=None,
                **kwargs):
