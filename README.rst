@@ -11,10 +11,13 @@ Skultrafast stands for scikit.ultrafast and is an python package which aims
 to include everything needed to analyze data from time-resolved spectroscopy
 experiments in the femtosecond domain.
 
-The package was created and is maintained by *Till Stensitzki*. All work was
+The latest version of the software can be found on `github <https://github
+.com/Tillsten/skultrafast>`_.
+
+The package was created and is maintained by *Till Stensitzki*. All coding was
 done while employed in the `Heyne group <http://www.physik.fu-berlin
-.de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via SFB
-1078 and SFB 1114.
+.de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via *SFB
+1078* and *SFB 1114*.
 
 Aims of the project
 -------------------
@@ -24,11 +27,18 @@ gui for these parts).
 
 Features
 --------
-The current releases centers around working with time-resolved spectra.
+The current releases centers around working with time-resolved spectra:
+
     * Publication ready plots with few lines.
     * Automatic dispersion correction.
     * Very fast exponential fitting, which can make use of your GPU.
+    * Modern error estimates of the fitting results via `lmfit <http://lmfit
+    .github.io/lmfit-py/>`_.
     * Lifetime-density analyses using regularization regression.
+
+This package also tries its best to follow modern software practices. This
+includes version control using *git*, continues integration testing via
+travisCI and documented code.
 
 Users
 -----
@@ -54,7 +64,7 @@ installed.
 
 
 License
--------
+=======
 
-Standard BSD-Licence.
+Standard BSD-Licence. See the LICENCE file.
 
