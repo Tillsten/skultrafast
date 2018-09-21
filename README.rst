@@ -1,6 +1,8 @@
 skultrafast
-===========
-WARNING! THE PROJECT IS A RESTRUCTURING PHASE AND NOT VERY USABLE FOR NEW USERS!
+***********
+
+**WARNING! THE PROJECT IS A RESTRUCTURING PHASE AND NOT VERY USABLE FOR NEW
+USERS!**
 
 What is skultrafast?
 ====================
@@ -11,7 +13,7 @@ experiments in the femtosecond domain.
 
 The package was created and is maintained by *Till Stensitzki*. All work was
 done while employed in the `Heyne group <http://www.physik.fu-berlin
-.de/einrichtungen/ag/ag-heyne/>` and was therefore founded by the DFG via SFB
+.de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via SFB
 1078 and SFB 1114.
 
 Aims of the project
@@ -22,7 +24,7 @@ gui for these parts).
 
 Features
 --------
-The current releases center around time-resolved spectra.
+The current releases centers around working with time-resolved spectra.
     * Publication ready plots with few lines.
     * Automatic dispersion correction.
     * Very fast exponential fitting, which can make use of your GPU.
