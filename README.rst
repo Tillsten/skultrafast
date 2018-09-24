@@ -1,13 +1,14 @@
-.. image:: https://readthedocs.org/projects/skultrafast/badge/?version=latest
-:target: https://skultrafast.readthedocs.io/en/latest/?badge=latest
-:alt: Documentation Status
-
-.. image:: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
-:target: https://travis-ci.org/Tillsten/skultrafast
-:alt: TravisCI Status
-
 skultrafast
 ***********
+
+.. image:: https://readthedocs.org/projects/skultrafast/badge/?version=latest
+    :target: https://skultrafast.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
+    :target: https://travis-ci.org/Tillsten/skultrafast
+
+
 
 **WARNING! THE PROJECT IS A RESTRUCTURING PHASE AND NOT VERY USABLE FOR NEW
 USERS!**
@@ -20,13 +21,14 @@ to include everything needed to analyze data from time-resolved spectroscopy
 experiments in the femtosecond domain. Its current features are listed further
 below.
 
-The latest version of the software can be found on `github <https://github
-.com/Tillsten/skultrafast>`_.
+The latest version of the software is avaiable on `github <https://github
+.com/Tillsten/skultrafast>`_. A build of the documentation can be found at
+`Read the docs <https://skultrafast.readthedocs.io/en/latest/example.html>`_.
 
 The package was created and is maintained by *Till Stensitzki*. All coding was
 done while employed in the `Heyne group <http://www.physik.fu-berlin
 .de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via
-`SFB 1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_*.
+`SFB 1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_.
 
 Aims of the project
 -------------------
