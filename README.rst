@@ -1,3 +1,11 @@
+.. image:: https://readthedocs.org/projects/skultrafast/badge/?version=latest
+:target: https://skultrafast.readthedocs.io/en/latest/?badge=latest
+:alt: Documentation Status
+
+.. image:: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
+:target: https://travis-ci.org/Tillsten/skultrafast
+:alt: TravisCI Status
+
 skultrafast
 ***********
 
