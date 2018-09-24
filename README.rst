@@ -9,21 +9,23 @@ What is skultrafast?
 
 Skultrafast stands for scikit.ultrafast and is an python package which aims
 to include everything needed to analyze data from time-resolved spectroscopy
-experiments in the femtosecond domain.
+experiments in the femtosecond domain. Its current features are listed further
+below.
 
 The latest version of the software can be found on `github <https://github
 .com/Tillsten/skultrafast>`_.
 
 The package was created and is maintained by *Till Stensitzki*. All coding was
 done while employed in the `Heyne group <http://www.physik.fu-berlin
-.de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via *SFB
-1078* and *SFB 1114*.
+.de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via
+`SFB 1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_*.
 
 Aims of the project
 -------------------
-I would include any kind of algorithm or data structure which comes up in
-ultrafast physics. Also, data exploration should be made easy (a.k.a. has a
-gui for these parts).
+I like to include any kind of algorithm or data structure which comes up in
+ultrafast physics. I am also open to add a graphical interface to the 
+package, but as experience shows, a GUI brings in alot of maintainence 
+burden. 
 
 Features
 --------
@@ -54,7 +56,10 @@ Dataset
 New users should use the `DataSet` class, which provides methods to explore,
 fit, preprocess and visualize time-resolved spectra. The class makes uses of
 older parts of the package. With time, I plan to deprecate older parts of the
-package and move all functionality to classes like `DataSet`.
+package and move all functionality to classes like `DataSet`. 
+
+An example of using skultrafast to anaylize a real dataset can be found in 
+the example directory or in the docmentatation.
 
 Software prerequisites
 =======================
@@ -66,7 +71,7 @@ automatically installed when using pip:
 * lmfit
 * matplotlib
 * sklearn
-* statsmodels.
+* statsmodels
 
 License
 =======
