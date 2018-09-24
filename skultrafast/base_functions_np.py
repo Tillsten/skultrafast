@@ -56,7 +56,7 @@ def _coh_gaussian(t, w, tz):
 
     Returns
     -------
-    y:  ndarray (len(t), 4)
+    y:  ndarray (len(t), 3)
         Array containing a gaussian and it the scaled derivatives,
         each in its own column.
     """
@@ -66,8 +66,8 @@ def _coh_gaussian(t, w, tz):
     y = np.where(idx, np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * 3.14159265)), 0)
     y = np.tile(y[..., None], (1, 1, 4))
     tt = tt[idx]
-    y[idx,..., 1] *= (-tt / w ** 2)
-    y[idx,..., 2] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
-    y[idx,..., 3] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
+    #y[idx,..., 1] *= (-tt / w ** 2)
+    y[idx,..., 1] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
+    y[idx,..., 2] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
     y /= np.max(np.abs(y), 0)
     return y

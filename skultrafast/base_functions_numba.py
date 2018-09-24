@@ -28,7 +28,7 @@ def _coh_gaussian(ta, w, tz):
 
     Returns
     -------
-    y:  ndarray (shape(t), 4)
+    y:  ndarray (shape(t), 3)
         Array containing a gaussian and it the scaled derivatives,
         each in its own column.
     """
