@@ -64,7 +64,7 @@ def _coh_gaussian(t, w, tz):
     tt = t + tz
     idx = (tt/w < 4)    
     y = np.where(idx, np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * 3.14159265)), 0)
-    y = np.tile(y[..., None], (1, 1, 4))
+    y = np.tile(y[..., None], (1, 1, 3))
     tt = tt[idx]
     #y[idx,..., 1] *= (-tt / w ** 2)
     y[idx,..., 1] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
