@@ -139,6 +139,7 @@ def _idx_range(arr, a, b):
     return idx
 
 def cut_tup(tup, from_t=-1e20, to_t=1e20, from_wl=-1e20, to_wl=1e20):
+    wl, t, d = tup
     t_idx = _idx_range(tup.t, from_t, to_t)
     wl_idx = _idx_range(tup.wl, from_wl, to_wl)    
     return dv.tup(wl[wl_idx], t[t_idx], (d[t_idx, :])[:, wl_idx])
