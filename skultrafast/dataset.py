@@ -13,19 +13,19 @@ import matplotlib.pyplot as plt
 
 
 class MesspyDataSet:
-    def __init__(self, fname, is_pol_resolved=False, 
+    def __init__(self, fname, is_pol_resolved=False,
                  pol_first_scan='unknown', valid_channel='both'):
         """Class for working with data files from MessPy.
-        
+
         Parameters
-        ---------- 
+        ----------
         fname : str
             Filename to open.
         is_pol_resolved : bool (false)
             If the dataset was recorded polarization resolved.
         pol_first_scan : {'magic', 'para', 'perp', 'unknown'}
-            Polarization between the pump and the probe in the first scan. 
-            If `valid_channel` is 'both', this corresponds to the zeroth channel. 
+            Polarization between the pump and the probe in the first scan.
+            If `valid_channel` is 'both', this corresponds to the zeroth channel.
         valid_channel : {0, 1, 'both'}
             Indicates which channels contains a real signal. For recent data, it
             is 0 for the visible setup and 1 for the IR setup. Older IR data uses both.
@@ -42,8 +42,8 @@ class MesspyDataSet:
         self.valid_channel = valid_channel
 
     def average_scans(self, sigma=3):
-        """Calculate the average of the scans. Uses sigma clipping, which 
-        also filters nans. For polarization resovled measurements, the 
+        """Calculate the average of the scans. Uses sigma clipping, which
+        also filters nans. For polarization resovled measurements, the
         function assumes that the polarisation switches every scan.
 
         Parameters
@@ -54,48 +54,48 @@ class MesspyDataSet:
         Returns
         -------
         : dict or DataSet
-            DataSet or Dict of DataSets containing the averaged datasets. 
+            DataSet or Dict of DataSets containing the averaged datasets.
 
-        """        
+        """
 
         num_wls = self.data.shape[0]
 
         if not self.is_pol_resolved:
-            data = stats.sigma_clip(self.data, 
+            data = stats.sigma_clip(self.data,
                                     sigma=sigma, axis=-1)
             data = data.mean(-1)
             std = data.std(-1)
             err = std/np.sqrt(std.mask.sum(-1))
-            
+
             if self.valid_channel in [0, 1]:
                 data = data[..., self.valid_channel]
                 std = std[..., self.valid_channel]
                 err = err[..., self.valid_channel]
 
                 out = {}
-                
+
                 if num_wls > 1:
-                    for i in range(num_wls):                     
+                    for i in range(num_wls):
                         ds = DataSet(self.wl[:, i], self.t, data[i, ...], err[i, ...])
                         out[self.pol_first_scan + str(i)] = ds
                 else:
                     out = DataSet(self.wl[:, 0], self.t, data[0, ...], err[0, ...])
                 return out
-            
+
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
             assert(self.pol_first_scan in ['para', 'perp'])
-            data1 = stats.sigma_clip(self.data[..., self.valid_channel,::2], 
+            data1 = stats.sigma_clip(self.data[..., self.valid_channel,::2],
                                     sigma=sigma, axis=-1)
             data1 = data1.mean(-1)
             std1 = data1.std(-1)
             err1 = std1/np.sqrt(data1.mask.sum(-1))
-            
-            data2 = stats.sigma_clip(self.data[..., self.valid_channel, 1::2], 
+
+            data2 = stats.sigma_clip(self.data[..., self.valid_channel, 1::2],
                                     sigma=sigma, axis=-1)
             data2 = data2.mean(-1)
             std2 = data2.std(-1)
             err2 = std2/np.sqrt(data2.mask.sum(-1))
-        
+
             out = {}
             for i in range(self.data.shape[0]):
                 out[self.pol_first_scan + str(i)] = DataSet(self.wl[:, i], self.t, data1[i, ...], err1[i, ...])
@@ -114,11 +114,12 @@ EstDispResult.__doc__ = 'Tuple containing the results from an dispersion estimat
 
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm'):
-        """Class for time-resolved spectra. If offers
-        methods for analyzing and preprocossing the data.
-        To visualize the data, the each `DataSet` object
-        has an instance of an  
-        
+        """
+        Class for working with time-resolved spectra. If offers methods for
+        analyzing and pre-processing the data. To visualize the data,
+        each `DataSet` object has an instance of an `DataSetPlotter` object
+        accessible under `plot`.
+
         Parameters
         ----------
         wl : array of shape(n)
@@ -131,8 +132,14 @@ class DataSet:
             Contains the std err  of the data.
         name : str
             Identifier for data set. (optional)
-        freq_unit : {'nm', 'cm'} 
+        freq_unit : {'nm', 'cm'}
             Unit of the wavelength array, default is 'nm'.
+
+        Attributes
+        ----------
+        plot : DataSetPlotter
+            Helper class which can plot the dataset using `matplotlib`.
+
         """
 
         assert((t.shape[0], wl.shape[0]) == data.shape)
@@ -148,7 +155,7 @@ class DataSet:
 
         self.t = t
         self.data = data
-            self.err = err
+        self.err = err
 
         if name is not None:
             self.name = name
@@ -159,18 +166,19 @@ class DataSet:
         self.wavenumbers = self.wavenumbers[idx]
         self.data = self.data[:, idx]
         self.plot = DataSetPlotter(self)
-      
+
     def __iter__(self):
         """For compatbility with dv.tup"""
         return iter(self.wavelengths, self.t, self.data)
 
     @classmethod
     def from_txt(cls, fname, freq_unit='nm', time_div=1., loadtxt_kws=None):
-        """Directly create a dataset from a text file.
+        """
+        Directly create a dataset from a text file.
 
         Parameters
         ----------
-        fname : str 
+        fname : str
             Name of the file. This function assumes the data is given
             by (n+1, m+1) tabular. The first row (exculding the value at [0, 0])
             are frequiencies, the first colum (excluding [0, 0]) are the delay times.
@@ -181,7 +189,7 @@ class DataSet:
             may use different units, it divides the time-values by `time_div`.
             Use `1`, the default, to not change the time values.
         loadtxt_kws : dict
-            Dict containing keyword arguments to `np.loadtxt`. 
+            Dict containing keyword arguments to `np.loadtxt`.
         """
         if loadtxt_kws is None:
             loadtxt_kws = {}
@@ -191,10 +199,11 @@ class DataSet:
         data = tmp[1:, 1:]
         return cls(freq, t, data, freq_unit=freq_unit)
 
-        
+
     def save_txt(self, fname, freq_unit='wl'):
-        """Save the dataset as a text file
-        
+        """
+        Save the dataset as a text file
+
         Parameters
         ----------
         fname : str
@@ -207,7 +216,8 @@ class DataSet:
         save_txt(fname, wl, self.t, self.data)
 
     def cut_freqs(self, freq_ranges=None, invert_sel=False, freq_unit='nm'):
-        """Remove channels inside (or outside if inverted) of given frequency ranges.
+        """
+        Remove channels inside (or outside if inverted) of given frequency ranges.
 
         Parameters
         ----------
@@ -218,7 +228,7 @@ class DataSet:
             Invert the final selection.
         freq_unit : {'nm', 'cm'}
             Unit of the given edges.
-        
+
         Returns
         -------
         : DataSet
@@ -226,7 +236,7 @@ class DataSet:
         """
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
         arr =  self.wavelengths if freq_unit is 'nm' else self.wavenumbers
-        for (lower, upper) in freq_ranges:           
+        for (lower, upper) in freq_ranges:
                 idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
@@ -237,7 +247,8 @@ class DataSet:
         return DataSet(arr[idx], self.t, self.data[:, idx], err, freq_unit)
 
     def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit='nm'):
-        """Mask channels inside of given frequency ranges.
+        """
+        Mask channels inside of given frequency ranges.
 
         Parameters
         ----------
@@ -270,7 +281,8 @@ class DataSet:
         #self.wavenumbers = np.ma.MaskedArray(self.wavenumbers, idx)
 
     def cut_times(self, time_ranges, invert_sel):
-        """Remove spectra inside (or outside) of given time-ranges.
+        """
+        Remove spectra inside (or outside) of given time-ranges.
 
         Parameters
         ----------
@@ -280,12 +292,12 @@ class DataSet:
             Inverts the final selection.
         Returns
         -------
-        : DataSet 
+        : DataSet
             DataSet containing only the requested regions.
         """
         idx = np.zeros_like(self.t, dtype=np.bool)
         arr = self.t
-        for (lower, upper) in time_ranges:           
+        for (lower, upper) in time_ranges:
                 idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
@@ -297,7 +309,8 @@ class DataSet:
 
 
     def mask_times(self, time_ranges, invert_sel=False):
-        """Mask spectra inside (or outside) of given time-ranges.
+        """
+        Mask spectra inside (or outside) of given time-ranges.
 
         Parameters
         ----------
@@ -305,14 +318,14 @@ class DataSet:
             List containing the edges of the time-regions to keep.
         invert_sel : bool
             Invert the selection.
-        
+
         Returns
         -------
         : None
         """
         idx = np.zeros_like(self.t, dtype=np.bool)
         arr = self.t
-        for (lower, upper) in time_ranges:           
+        for (lower, upper) in time_ranges:
                 idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
@@ -326,7 +339,8 @@ class DataSet:
         self.data -= np.mean(self.data[:n, :], 0, keepdims=1)
 
     def bin_freqs(self, n : int, freq_unit='nm'):
-        """Bins down the dataset by averaging over spectral channel.
+        """
+        Bins down the dataset by averaging over spectral channel.
 
         Parameters
         ----------
@@ -352,8 +366,9 @@ class DataSet:
         return DataSet(binned_wl, self.t, binned, freq_unit)
 
     def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2):
-        """Estimates the dispersion from a dataset by first
-        applying a heuristic to each channel. The results are than 
+        """
+        Estimates the dispersion from a dataset by first
+        applying a heuristic to each channel. The results are than
         robustly fitted with a polynomial of given order.
 
         Parameters
@@ -371,22 +386,23 @@ class DataSet:
         -------
         : EstDispResult
             Tuple containing a dispersion correction version of the dataset,
-            and array with the estimated time-zeros, and the polynomial function.                     
+            and array with the estimated time-zeros, and the polynomial function.
         """
 
         if heuristic == 'abs':
             idx = zero_finding.use_first_abs(self.data, heuristic_args[0])
 
         vals, coefs = zero_finding.robust_fit_tz(self.wl, self.t[idx], deg)
-        func = np.polynomial.poly1d(coefs)
+        func = np.poly1d(coefs)
         new_data = zero_finding.interpol(self, vals)
-        return EstDispResult(corrected_ds=DataSet(self.wavelengths, self.t, new_data),
-                             tn=vals, polyfunc=func)
+        return EstDispResult(correct_ds=DataSet(self.wavelengths, self.t, new_data.data),
+                             tn=self.t[idx], polynomial=func)
 
     def fit_das(self, x0, fit_t0=False, fix_last_decay=True):
-        """Fit a sum of expontials to the dataset. This function assumes
+        """
+        Fit a sum of expontials to the dataset. This function assumes
         the dataset is already corrected for dispersion.
-        
+
         Parameters
         ----------
         x0 : list of floats or array
@@ -398,17 +414,17 @@ class DataSet:
             If the time-zero should be determined by the fit too. (`True` by default)
         fix_last_decay : bool (optional)
             Fixes the value of the last tau of the inital guess. Is used to add a constant
-            contribution by setting the last tau to a large value and fix it. 
+            contribution by setting the last tau to a large value and fix it.
         """
         pass
 
 
-  
-    def lft_density_map(self, taus, alpha=1e-4, ): 
+
+    def lft_density_map(self, taus, alpha=1e-4, ):
         """Calculates the LDM from a dataset by regularized regression.
 
         Parameters
-        """ 
+        """
         pass
 
 
@@ -420,7 +436,8 @@ class DataSetPlotter:
     def map(self, symlog=True,  equal_limits=True,
             plot_con=True, con_step=None, con_filter=None, ax=None,
             **kwargs):
-        """Plot a colormap of the dataset with optional contour lines.
+        """
+        Plot a colormap of the dataset with optional contour lines.
 
         Paremeters
         ----------
@@ -495,7 +512,8 @@ class DataSetPlotter:
 
 
     def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
-        """Plot spectra at given times.
+        """
+        Plot spectra at given times.
 
         Parameters
         ----------
@@ -550,7 +568,8 @@ class DataSetPlotter:
 
     def trans(self, wls, symlog=True, norm=False, ax=None,
                **kwargs):
-        """Plot the nearest transients for given frequencies.
+        """
+        Plot the nearest transients for given frequencies.
 
         Parameters
         ----------
@@ -599,12 +618,37 @@ class DataSetPlotter:
             ax.set_xscale('symlog', linthreshx=1.)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
         ax.legend(loc='best', ncol=2, title='Wavelength')
+        ax.set_xlim(right=t.max())
         return l
+
+    def overview(self):
+        """
+        Plot an overview figure.
+        """
+        is_nm = self.freq_unit is 'nm'
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        ds = self.dataset
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        fig, axs = plt.subplots(3, 1., figsize=(5, 6),
+                                gridspec_kw=dict(height_ratios=(2,1,1)))
+        self.map(ax=axs[0])
+        times = np.geomspace(0, ds.t.max(), 10)
+        self.spec(times, ax=axs[1])
+        freqs = np.unique(np.linspace(x.min(), x.max(), 10))
+        self.trans(ax=axs[2])
+
+
+
+
 
 
 class DataSetInteractiveViewer:
     def __init__(self, dataset, fig_kws={}):
-        """Class showing a interactive matplotlib window for exploring
+        """
+        Class showing a interactive matplotlib window for exploring
         a dataset.
         """
         import matplotlib.pyplot as plt
@@ -620,23 +664,23 @@ class DataSetInteractiveViewer:
     def init_event(self):
         'Connect mpl events'
         connect = self.figure.canvas.mpl_connect
-        connect('motion_notify_event', self.update_lines) 
+        connect('motion_notify_event', self.update_lines)
 
     def update_lines(self, event):
         """If the mouse cursor is over the 2D image, update
         the dynamic transient and spectrum"""
-        
-        
-
-
-    
-        
-        
 
 
 
 
-           
+
+
+
+
+
+
+
+
 
 
 

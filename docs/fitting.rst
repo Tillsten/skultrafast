@@ -19,6 +19,7 @@ with a gaussian IRF
 (-\frac{t^2}{2\sigma^2}\right)`.
 
 The result of the convolution :math:`y_{\textrm{conv}} = IRF \circledast y`
-can be expressed in terms of the complementary errorfunction `erfc`.
+can be expressed in terms of the complementary error-function `erfc`. The
+calculation is shown in 
 
 
