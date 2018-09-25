@@ -11,5 +11,7 @@ DataSet
 .. autoclass:: dataset.DataSet
    :members:
 
+DataSetPlotter
+--------------
 .. autoclass:: dataset.DataSetPlotter
    :members:
