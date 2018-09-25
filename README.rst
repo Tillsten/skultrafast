@@ -1,6 +1,5 @@
 skultrafast
 ***********
-
 .. image:: https://readthedocs.org/projects/skultrafast/badge/?version=latest
     :target: https://skultrafast.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
@@ -8,14 +7,11 @@ skultrafast
 .. image:: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
     :target: https://travis-ci.org/Tillsten/skultrafast
 
-
-
 **WARNING! THE PROJECT IS A RESTRUCTURING PHASE AND NOT VERY USABLE FOR NEW
 USERS!**
 
 What is skultrafast?
 ====================
-
 Skultrafast stands for scikit.ultrafast and is an python package which aims
 to include everything needed to analyze data from time-resolved spectroscopy
 experiments in the femtosecond domain. Its current features are listed further
@@ -26,16 +22,18 @@ The latest version of the software is avaiable on `github <https://github
 `Read the docs <https://skultrafast.readthedocs.io/en/latest/example.html>`_.
 
 The package was created and is maintained by *Till Stensitzki*. All coding was
-done while employed in the `Heyne group <http://www.physik.fu-berlin
+done while being employed in the `Heyne group <http://www.physik.fu-berlin
 .de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via
 `SFB 1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_.
 
 Aims of the project
 -------------------
 I like to include any kind of algorithm or data structure which comes up in
-ultrafast physics. I am also open to add a graphical interface to the 
-package, but as experience shows, a GUI brings in alot of maintainence 
-burden. 
+ultrafast physics. I am also open to add a graphical interface to the
+package, but as experience shows, a GUI brings in alot of maintenance
+burden. Hence, the first target is a interactive data-explorer for the
+jupyter notebook.
+
 
 Features
 --------
@@ -51,12 +49,19 @@ The current releases centers around working with time-resolved spectra:
 
 This package also tries its best to follow modern software practices. This
 includes version control using *git*, continues integration testing via
-travisCI and decent documentation. 
+travisCI and decent documentation.
 
 Users
 -----
 At the moment it is mostly me and other people in my group. I would be happy
 if anyone would like to join the project!
+
+Installation methods
+====================
+Released version pypi:
+    - Last released version: `pip install skultrafast`
+Latest development version:
+    - `pip install git+https://github.com/tillsten/skultrafast`
 
 Basic Usage
 ===========
@@ -66,15 +71,15 @@ Dataset
 New users should use the `DataSet` class, which provides methods to explore,
 fit, preprocess and visualize time-resolved spectra. The class makes uses of
 older parts of the package. With time, I plan to deprecate older parts of the
-package and move all functionality to classes like `DataSet`. 
+package and move all functionality to classes like `DataSet`.
 
-An example of using skultrafast to anaylize a real dataset can be found in 
+An example of using skultrafast to anaylize a real dataset can be found in
 the example directory or in the docmentatation.
 
 Software prerequisites
 =======================
-Works with Python versions after 3.5 only. Requires the following packages, which are
-automatically installed when using pip:
+Works with Python versions after 3.5 only. Requires the following packages,
+which are automatically installed when using pip:
 
 * numpy
 * scipy
@@ -85,6 +90,5 @@ automatically installed when using pip:
 
 License
 =======
-
-Standard BSD-Licence. See the LICENCE file.
+Standard BSD-Licence. See the LICENSE file for details.
 
