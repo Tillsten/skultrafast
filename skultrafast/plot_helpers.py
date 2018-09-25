@@ -206,7 +206,7 @@ def lbl_trans(ax=None, use_symlog=True):
     if use_symlog:
         symticks(ax, axis='x')
         ax.axvline(1, c='k', lw=0.5, zorder=1.5)
-    ax.set_xlim(-.2)
+        ax.set_xlim(-.2)
     else:
         plt.minorticks_on()
 
