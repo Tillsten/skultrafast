@@ -17,12 +17,12 @@ class MesspyDataSet:
         ---------- 
         fname : str
             Filename to open.
-        is_pol_resolved : bool (false)
+        is_pol_resolved : bool (optional)
             If the dataset was recorded polarization resolved.
-        pol_first_scan : {'magic', 'para', 'perp', 'unknown'}
+        pol_first_scan : {'magic', 'para', 'perp', 'unknown'} (optional)
             Polarization between the pump and the probe in the first scan. 
             If `valid_channel` is 'both', this corresponds to the zeroth channel. 
-        valid_channel : {0, 1, 'both'}
+        valid_channel : {`0`, `1`, 'both'} (optional)
             Indicates which channels contains a real signal. 
 
         """
@@ -48,7 +48,7 @@ class MesspyDataSet:
 
         Returns
         -------
-        : dict or DataSet
+        dict or DataSet
             DataSet or Dict of DataSets containing the averaged datasets. 
 
         """        
@@ -104,7 +104,7 @@ class MesspyDataSet:
             raise NotImplementedError("Iso correction not suppeorted yet.")
 
 
-EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
+EstDispResult = namedtuple('EstDispResult', 'correct_ds time_zeros poly_func')
 EstDispResult.__doc__ = 'Tuple containing the results from an dispersion estimation.'
 
 class DataSet:
@@ -124,10 +124,10 @@ class DataSet:
             Array with the data for each point.
         err : array of shape(n, m) (optional)
             Contains the std err  of the data.
-        name : str
-            Identifier for data set. (optional)
+        name : str (optional)
+            Identifier for data set.
         freq_unit : {'nm', 'cm'} 
-            Unit of the wavelength array, default is 'nm'.
+            Unit of the wavelength array, default is `'nm'`.
         """
 
         assert((wl.shape[0], t.shape[0]) == data.shape)
@@ -264,7 +264,7 @@ class DataSet:
             err = self.err[idx, :]
         else:
             err = None
-        np.ma.mask
+        #TODO CHECK
         return DataSet(self.wavelengths, self.t[idx], self.data[idx, :], err)
 
     def subtract_background(self, n : int=10):
@@ -297,6 +297,7 @@ class DataSet:
         if freq_unit is 'cm':
             binned_wl = - binned_wl
         return DataSet(arr, self.t, binned,freq_unit)
+    
 
     def estimate_dispersion(self, heuristic='abs', heuristic_args=(), deg=2):
         """Estimates the dispersion from a dataset. by first
