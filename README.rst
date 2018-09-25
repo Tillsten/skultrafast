@@ -90,5 +90,5 @@ which are automatically installed when using pip:
 
 License
 =======
-Standard BSD-Licence. See the LICENSE file for details.
+Standard BSD-License. See the LICENSE file for details.
 

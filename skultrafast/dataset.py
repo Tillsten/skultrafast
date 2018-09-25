@@ -446,7 +446,7 @@ class DataSet:
 class DataSetPlotter:
     def __init__(self, dataset: DataSet, freq_unit='nm'):
         """
-        Class which can Plot `DataSet`s using matplotlib.
+        Class which can Plot a `DataSet` using matplotlib.
 
         Parameters
         ----------
@@ -465,7 +465,7 @@ class DataSetPlotter:
         """
         Plot a colormap of the dataset with optional contour lines.
 
-        Paremeters
+        Parameters
         ----------
         symlog : bool
             Determines if the yscale is symmetric logarithmic.
