@@ -2,3 +2,8 @@
 build/*
 *.pyc
 .vscode/*
+.idea/*
+.pytest_cache/*
+docs/_build/*
+dist/*
+*egg-info/*
