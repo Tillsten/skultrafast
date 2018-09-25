@@ -24,12 +24,12 @@ class MesspyDataSet:
         is_pol_resolved : bool (false)
             If the dataset was recorded polarization resolved.
         pol_first_scan : {'magic', 'para', 'perp', 'unknown'}
-            Polarization between the pump and the probe in the first scan.
-            If `valid_channel` is 'both', this corresponds to the zeroth channel.
+            Polarization between the pump and the probe in the first scan. If
+            `valid_channel` is 'both', this corresponds to the zeroth channel.
         valid_channel : {0, 1, 'both'}
             Indicates which channels contains a real signal. For recent data, it
-            is 0 for the visible setup and 1 for the IR setup. Older IR data uses both.
-
+            is 0 for the visible setup and 1 for the IR setup. Older IR data
+            uses both.
         """
 
         with np.load(fname) as f:
@@ -42,7 +42,8 @@ class MesspyDataSet:
         self.valid_channel = valid_channel
 
     def average_scans(self, sigma=3):
-        """Calculate the average of the scans. Uses sigma clipping, which
+        """
+        Calculate the average of the scans. Uses sigma clipping, which
         also filters nans. For polarization resovled measurements, the
         function assumes that the polarisation switches every scan.
 
@@ -53,7 +54,7 @@ class MesspyDataSet:
 
         Returns
         -------
-        : dict or DataSet
+        dict or DataSet
             DataSet or Dict of DataSets containing the averaged datasets.
 
         """
@@ -65,7 +66,7 @@ class MesspyDataSet:
                                     sigma=sigma, axis=-1)
             data = data.mean(-1)
             std = data.std(-1)
-            err = std/np.sqrt(std.mask.sum(-1))
+            err = std / np.sqrt(std.mask.sum(-1))
 
             if self.valid_channel in [0, 1]:
                 data = data[..., self.valid_channel]
@@ -76,34 +77,44 @@ class MesspyDataSet:
 
                 if num_wls > 1:
                     for i in range(num_wls):
-                        ds = DataSet(self.wl[:, i], self.t, data[i, ...], err[i, ...])
+                        ds = DataSet(self.wl[:, i], self.t, data[i, ...],
+                                     err[i, ...])
                         out[self.pol_first_scan + str(i)] = ds
                 else:
-                    out = DataSet(self.wl[:, 0], self.t, data[0, ...], err[0, ...])
+                    out = DataSet(self.wl[:, 0], self.t, data[0, ...],
+                                  err[0, ...])
                 return out
 
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
-            assert(self.pol_first_scan in ['para', 'perp'])
-            data1 = stats.sigma_clip(self.data[..., self.valid_channel,::2],
-                                    sigma=sigma, axis=-1)
+            assert (self.pol_first_scan in ['para', 'perp'])
+            data1 = stats.sigma_clip(self.data[..., self.valid_channel, ::2],
+                                     sigma=sigma, axis=-1)
             data1 = data1.mean(-1)
             std1 = data1.std(-1)
-            err1 = std1/np.sqrt(data1.mask.sum(-1))
+            err1 = std1 / np.sqrt(data1.mask.sum(-1))
 
             data2 = stats.sigma_clip(self.data[..., self.valid_channel, 1::2],
-                                    sigma=sigma, axis=-1)
+                                     sigma=sigma, axis=-1)
             data2 = data2.mean(-1)
             std2 = data2.std(-1)
-            err2 = std2/np.sqrt(data2.mask.sum(-1))
+            err2 = std2 / np.sqrt(data2.mask.sum(-1))
 
             out = {}
             for i in range(self.data.shape[0]):
-                out[self.pol_first_scan + str(i)] = DataSet(self.wl[:, i], self.t, data1[i, ...], err1[i, ...])
+                out[self.pol_first_scan + str(i)] = DataSet(self.wl[:, i],
+                                                            self.t,
+                                                            data1[i, ...],
+                                                            err1[i, ...])
                 other_pol = 'para' if self.pol_first_scan == 'perp' else 'perp'
-                out[other_pol + str(i)] = DataSet(self.wl[:, i], self.t, data2[i, ...], err2[i, ...])
-                iso = 1/3*out['para' + str(i)].data + 2/3*out['perp' + str(i)].data
-                iso_err = np.sqrt(1/3*out['para' + str(i)].err**2 + 2/3*out['perp' + str(i)].data**2)
-                out['iso' + str(i)] = DataSet(self.wl[:, i], self.t, iso, iso_err)
+                out[other_pol + str(i)] = DataSet(self.wl[:, i], self.t,
+                                                  data2[i, ...], err2[i, ...])
+                iso = 1 / 3 * out['para' + str(i)].data + 2 / 3 * out[
+                    'perp' + str(i)].data
+                iso_err = np.sqrt(
+                    1 / 3 * out['para' + str(i)].err ** 2 + 2 / 3 * out[
+                        'perp' + str(i)].data ** 2)
+                out['iso' + str(i)] = DataSet(self.wl[:, i], self.t, iso,
+                                              iso_err)
             return out
         else:
             raise NotImplementedError("Iso correction not suppeorted yet.")
@@ -111,6 +122,7 @@ class MesspyDataSet:
 
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
 EstDispResult.__doc__ = 'Tuple containing the results from an dispersion estimation.'
+
 
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm'):
@@ -142,14 +154,14 @@ class DataSet:
 
         """
 
-        assert((t.shape[0], wl.shape[0]) == data.shape)
+        assert ((t.shape[0], wl.shape[0]) == data.shape)
 
         if freq_unit == 'nm':
             self.wavelengths = wl
-            self.wavenumbers = 1e7/wl
+            self.wavenumbers = 1e7 / wl
             self.wl = self.wavelengths
         else:
-            self.wavelengths = 1e7/wl
+            self.wavelengths = 1e7 / wl
             self.wavenumbers = wl
             self.wl = self.wavenumbers
 
@@ -160,7 +172,7 @@ class DataSet:
         if name is not None:
             self.name = name
 
-        #Sort wavelenths and data.
+        # Sort wavelenths and data.
         idx = np.argsort(self.wavelengths)
         self.wavelengths = self.wavelengths[idx]
         self.wavenumbers = self.wavenumbers[idx]
@@ -179,9 +191,9 @@ class DataSet:
         Parameters
         ----------
         fname : str
-            Name of the file. This function assumes the data is given
-            by (n+1, m+1) tabular. The first row (exculding the value at [0, 0])
-            are frequiencies, the first colum (excluding [0, 0]) are the delay times.
+            Name of the file. This function assumes the data is given by a
+            (n+1, m+1) table. Excludig the [0, 0] value, the first row gives the
+            frequencies and the first column gives the delay-times.
         freq_unit : {'nm', 'cm'}
             Unit of the frequencies.
         time_div : float
@@ -198,7 +210,6 @@ class DataSet:
         freq = tmp[0, 1:]
         data = tmp[1:, 1:]
         return cls(freq, t, data, freq_unit=freq_unit)
-
 
     def save_txt(self, fname, freq_unit='wl'):
         """
@@ -217,7 +228,7 @@ class DataSet:
 
     def cut_freqs(self, freq_ranges=None, invert_sel=False, freq_unit='nm'):
         """
-        Remove channels inside (or outside if inverted) of given frequency ranges.
+        Remove channels inside (or outside ) of given frequency ranges.
 
         Parameters
         ----------
@@ -235,9 +246,9 @@ class DataSet:
             DataSet containing only the listed regions.
         """
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
-        arr =  self.wavelengths if freq_unit is 'nm' else self.wavenumbers
+        arr = self.wavelengths if freq_unit is 'nm' else self.wavenumbers
         for (lower, upper) in freq_ranges:
-                idx ^= np.logical_and(arr > lower, arr < upper)
+            idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
@@ -277,8 +288,8 @@ class DataSet:
             self.err.mask[:, idx] = True
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
-        #self.wavelengths = np.ma.MaskedArray(self.wavelengths, idx)
-        #self.wavenumbers = np.ma.MaskedArray(self.wavenumbers, idx)
+        # self.wavelengths = np.ma.MaskedArray(self.wavelengths, idx)
+        # self.wavenumbers = np.ma.MaskedArray(self.wavenumbers, idx)
 
     def cut_times(self, time_ranges, invert_sel):
         """
@@ -298,7 +309,7 @@ class DataSet:
         idx = np.zeros_like(self.t, dtype=np.bool)
         arr = self.t
         for (lower, upper) in time_ranges:
-                idx ^= np.logical_and(arr > lower, arr < upper)
+            idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
@@ -306,7 +317,6 @@ class DataSet:
         else:
             err = None
         return DataSet(self.wavelengths, self.t[idx], self.data[idx, :], err)
-
 
     def mask_times(self, time_ranges, invert_sel=False):
         """
@@ -326,21 +336,21 @@ class DataSet:
         idx = np.zeros_like(self.t, dtype=np.bool)
         arr = self.t
         for (lower, upper) in time_ranges:
-                idx ^= np.logical_and(arr > lower, arr < upper)
+            idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
             self.err[idx, :].mask = True
-        #self.t = np.ma.MaskedArray(self.t, idx)
+        # self.t = np.ma.MaskedArray(self.t, idx)
         self.data.mask[:, idx] = True
 
-    def subtract_background(self, n : int=10):
+    def subtract_background(self, n: int = 10):
         """Subtracts the first n-spectra from the dataset"""
         self.data -= np.mean(self.data[:n, :], 0, keepdims=1)
 
-    def bin_freqs(self, n : int, freq_unit='nm'):
+    def bin_freqs(self, n: int, freq_unit='nm'):
         """
-        Bins down the dataset by averaging over spectral channel.
+        Bins down the dataset by averaging over several transients.
 
         Parameters
         ----------
@@ -350,17 +360,21 @@ class DataSet:
         freq_unit : {'nm', 'cm'}
             Whether to calculate the bin-borders in
             frequency- of wavelength-space.
+        Returns
+        -------
+        DataSet
+            Binned down `DataSet`
         """
         # We use the negative of the wavenumbers to make the array sorted
-        arr =  self.wavelengths if freq_unit is 'nm' else -self.wavenumbers
+        arr = self.wavelengths if freq_unit is 'nm' else -self.wavenumbers
         # Slightly offset edges to include themselves.
-        edges = np.linspace(arr.min()-0.002, arr.max()+0.002, n+1)
+        edges = np.linspace(arr.min() - 0.002, arr.max() + 0.002, n + 1)
         idx = np.searchsorted(arr, edges)
         binned = np.empty((self.data.shape[0], n))
         binned_wl = np.empty(n)
         for i in range(n):
-            binned[:,i] = np.average(self.data[:,idx[i]:idx[i+1]],1)
-            binned_wl[i] = np.mean(arr[idx[i]:idx[i+1]])
+            binned[:, i] = np.average(self.data[:, idx[i]:idx[i + 1]], 1)
+            binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
         if freq_unit is 'cm':
             binned_wl = - binned_wl
         return DataSet(binned_wl, self.t, binned, freq_unit)
@@ -384,9 +398,10 @@ class DataSet:
 
         Returns
         -------
-        : EstDispResult
-            Tuple containing a dispersion correction version of the dataset,
-            and array with the estimated time-zeros, and the polynomial function.
+        EstDispResult
+            Tuple containing the dispersion corrected version of the dataset, an
+            array with time-zeros from the heuristic, and the polynomial
+            function resulting from the robust fit.
         """
 
         if heuristic == 'abs':
@@ -395,8 +410,9 @@ class DataSet:
         vals, coefs = zero_finding.robust_fit_tz(self.wl, self.t[idx], deg)
         func = np.poly1d(coefs)
         new_data = zero_finding.interpol(self, vals)
-        return EstDispResult(correct_ds=DataSet(self.wavelengths, self.t, new_data.data),
-                             tn=self.t[idx], polynomial=func)
+        return EstDispResult(
+            correct_ds=DataSet(self.wavelengths, self.t, new_data.data),
+            tn=self.t[idx], polynomial=func)
 
     def fit_das(self, x0, fit_t0=False, fix_last_decay=True):
         """
@@ -406,19 +422,18 @@ class DataSet:
         Parameters
         ----------
         x0 : list of floats or array
-            Starting values of the fit. The first value is the estimate
-            of the system response time omega. If `fit_t0` is true, the second
-            float is the guess of the time-zero. All other floats are intepreted
-            as the guessing values for exponential decays.
+            Starting values of the fit. The first value is the estimate of the
+            system response time omega. If `fit_t0` is true, the second float is
+            the guess of the time-zero. All other floats are interpreted as the
+            guessing values for exponential decays.
         fit_t0 : bool (optional)
-            If the time-zero should be determined by the fit too. (`True` by default)
+            If the time-zero should be determined by the fit too.
         fix_last_decay : bool (optional)
-            Fixes the value of the last tau of the inital guess. Is used to add a constant
-            contribution by setting the last tau to a large value and fix it.
+            Fixes the value of the last tau of the initial guess. It can be
+            used to add a constant by setting the last tau to a large value
+            and fix it.
         """
         pass
-
-
 
     def lft_density_map(self, taus, alpha=1e-4, ):
         """Calculates the LDM from a dataset by regularized regression.
@@ -429,11 +444,22 @@ class DataSet:
 
 
 class DataSetPlotter:
-    def __init__(self, dataset : DataSet, freq_unit='nm'):
+    def __init__(self, dataset: DataSet, freq_unit='nm'):
+        """
+        Class which can Plot `DataSet`s using matplotlib.
+
+        Parameters
+        ----------
+        dataset : DataSet
+            The DataSet to work with.
+        freq_unit : {'nm', 'cm'} (optional)
+            The default unit of the plots. To change
+            the unit afterwards, set the attribute directly.
+        """
         self.dataset = dataset
         self.freq_unit = freq_unit
 
-    def map(self, symlog=True,  equal_limits=True,
+    def map(self, symlog=True, equal_limits=True,
             plot_con=True, con_step=None, con_filter=None, ax=None,
             **kwargs):
         """
@@ -444,25 +470,25 @@ class DataSetPlotter:
         symlog : bool
             Determines if the yscale is symmetric logarithmic.
         equal_limits : bool
-            If true, it makes to colors symmetric around zeros.
-            Note this also sets the middle of the colormap to zero.
+            If true, it makes to colors symmetric around zeros. Note this
+            also sets the middle of the colormap to zero.
             Default is `True`.
         plot_con : bool
             Plot additional contour lines if `True` (default).
         con_step : float, array or None
-            Controls the contour-levels. If `con_step` is a float, it is
-            used as the step size between two levels. If it is an array,
-            its elements are the levels. If `None`, it defaults to 20 levels.
+            Controls the contour-levels. If `con_step` is a float, it is used as
+            the step size between two levels. If it is an array, its elements
+            are the levels. If `None`, it defaults to 20 levels.
         con_filter : None, int or `DataSet`.
             Since contours are strongly affected by noise, it can be prefered to
-            filter the dataset before calculating the contours. If `con_filter` is
-            a dataset, the data of that set will be used for the contours. If it is
-            a int or tuple or int, the data will be filtered with an uniform filter
-            before calculation the contours. If `None`, no data prepossessing will be
-            applied.
+            filter the dataset before calculating the contours. If `con_filter`
+            is a dataset, the data of that set will be used for the contours. If
+            it is a int or tuple or int, the data will be filtered with an
+            uniform filter before calculation the contours. If `None`, no data
+            prepossessing will be applied.
         ax : plt.Axis or None
-            Takes a matplotlib axis. If none, it uses `plt.gca()` to
-            get the current axes. The lines are plotted in this axis.
+            Takes a matplotlib axis. If none, it uses `plt.gca()` to get the
+            current axes. The lines are plotted in this axis.
 
         """
         if ax is None:
@@ -495,21 +521,20 @@ class DataSetPlotter:
             elif isinstance(con_step, np.ndarray):
                 levels = con_step
             else:
-                #TODO This assumes data has positive and negative elements.
+                # TODO This assumes data has positive and negative elements.
                 pos = np.arange(0, ds.data.max(), con_step)
                 neg = np.arange(0, -ds.data.min(), con_step)
                 levels = np.hstack((-neg[::-1][:-1], pos))
 
             if isinstance(con_filter, DataSet):
                 data = con_filter.data
-            elif con_filter is not None: #must be int or tuple of int
+            elif con_filter is not None:  # must be int or tuple of int
                 data = uniform_filter(ds, con_filter).data
             else:
                 data = ds.data
             ax.contour(x, ds.t, data, levels=levels,
                        linestyles='solid', colors='k', linewidths=0.5)
         ph.lbl_map(ax, symlog)
-
 
     def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
         """
@@ -522,16 +547,16 @@ class DataSetPlotter:
         norm : bool
             If true, each spectral will be normalized.
         ax : plt.Axis or None.
-            Axis where the spectra are plotted. If none, the
-            current axis will be used.
+            Axis where the spectra are plotted. If none, the current axis will
+            be used.
         n_average : int
-            For noisy data it may be prefered to average multiple
-            spectra together. This function plots the average of
-            `n_average` spectra around the specific time-points.
+            For noisy data it may be prefered to average multiple spectra
+            together. This function plots the average of `n_average` spectra
+            around the specific time-points.
 
         Returns
         -------
-        : list of lines
+        list of `Lines2D`
             List containing the Line2D objects belonging to the spectra.
         """
 
@@ -548,15 +573,17 @@ class DataSetPlotter:
         for i in t_list:
             idx = dv.fi(ds.t, i)
             if n_average > 0:
-                dat = uniform_filter(ds, (2*n_average + 1, 1))[idx, :]
+                dat = uniform_filter(ds, (2 * n_average + 1, 1))[idx, :]
             elif n_average == 0:
                 dat = ds.data[idx, :]
             else:
-                raise ValueError('n_average must be an Integer greater or equal 0.')
+                raise ValueError(
+                    'n_average must be an Integer greater or equal 0.')
 
             if norm:
                 dat = dat / abs(dat).max()
-            li += ax.plot(x, dat, label=ph.time_formatter(ds.t[idx], ph.time_unit),
+            li += ax.plot(x, dat,
+                          label=ph.time_formatter(ds.t[idx], ph.time_unit),
                           **kwargs)
 
         ax.set_xlabel(ph.freq_label)
@@ -567,31 +594,30 @@ class DataSetPlotter:
         return li
 
     def trans(self, wls, symlog=True, norm=False, ax=None,
-               **kwargs):
+              **kwargs):
         """
         Plot the nearest transients for given frequencies.
 
         Parameters
         ----------
         wls : list of float
-            Spectral positions, should be given in the same
-            unit as `self.freq_unit`.
+            Spectral positions, should be given in the same unit as
+            `self.freq_unit`.
         symlog : bool
             Determines if the x-scale is symlog.
         norm : bool or float
-            If `False`, no normalization is used. If `True`, each
-            transient is divided by the maximum absolute value.
-            If `norm` is a float, all transient are normalized by
-            their signal at the time `norm`.
+            If `False`, no normalization is used. If `True`, each transient
+            is divided by the maximum absolute value. If `norm` is a float,
+            all transient are normalized by their signal at the time `norm`.
         ax : plt.Axes or None
-            Takes a matplotlib axes. If none, it uses `plt.gca()` to
-            get the current axes. The lines are plotted in this axis.
+            Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
+            current axes. The lines are plotted in this axis.
 
         All other kwargs are forwarded to the plot function.
 
         Returns
         -------
-         : list of lines
+         list of Line2D
             List containing the plotted lines.
         """
         if ax is None:
@@ -606,13 +632,14 @@ class DataSetPlotter:
                 idx = dv.fi(ds.wavenumbers, i)
             dat = d[:, idx]
             if norm is True:
-                dat = np.sign(dat[np.argmax(abs(dat))])* dat / abs(dat).max()
+                dat = np.sign(dat[np.argmax(abs(dat))]) * dat / abs(dat).max()
             elif norm is False:
                 pass
             else:
                 dat = dat / dat[dv.fi(t, norm)]
             plotted_vals.append(dat)
-            l.extend(ax.plot(t, dat, label='%.1f %s'%(wl[idx], ph.freq_unit), **kwargs))
+            l.extend(ax.plot(t, dat, label='%.1f %s' % (wl[idx], ph.freq_unit),
+                             **kwargs))
 
         if symlog:
             ax.set_xscale('symlog', linthreshx=1.)
@@ -623,7 +650,7 @@ class DataSetPlotter:
 
     def overview(self):
         """
-        Plot an overview figure.
+        Plots an overview figure.
         """
         is_nm = self.freq_unit is 'nm'
         if is_nm:
@@ -633,16 +660,12 @@ class DataSetPlotter:
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
         fig, axs = plt.subplots(3, 1., figsize=(5, 6),
-                                gridspec_kw=dict(height_ratios=(2,1,1)))
+                                gridspec_kw=dict(height_ratios=(2, 1, 1)))
         self.map(ax=axs[0])
         times = np.geomspace(0, ds.t.max(), 10)
         self.spec(times, ax=axs[1])
         freqs = np.unique(np.linspace(x.min(), x.max(), 10))
-        self.trans(ax=axs[2])
-
-
-
-
+        self.trans(freqs, ax=axs[2])
 
 
 class DataSetInteractiveViewer:
@@ -669,19 +692,3 @@ class DataSetInteractiveViewer:
     def update_lines(self, event):
         """If the mouse cursor is over the 2D image, update
         the dynamic transient and spectrum"""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
