@@ -3,7 +3,7 @@ API documentation
 
 This API documentation only shows the new API,
 which internally may still use older methods and
-classes. 
+classes.
 
 DataSet
 -------
@@ -12,3 +12,4 @@ DataSet
    :members:
 
 .. autoclass:: dataset.DataSetPlotter
+   :members:

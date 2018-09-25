@@ -15,11 +15,9 @@ Contents:
    :maxdepth: 2
 
    example
-   convolution
-   
    api
 
-   
+
 Indices and tables
 ==================
 
