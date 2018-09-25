@@ -167,7 +167,7 @@ def save_txt(name, wls, t, dat):
 
 
 def svd_filter(d, n=10):
-    u, s, v = np.linalg.svd(d, full_matrices=i.set_drawstyleFalse)
+    u, s, v = np.linalg.svd(d, full_matrices=False)
     s[n:] = 0.
     return np.dot(u, np.dot(np.diag(s), v))
 
