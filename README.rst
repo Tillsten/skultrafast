@@ -78,7 +78,7 @@ the example directory or in the docmentatation.
 
 Software prerequisites
 =======================
-Works with Python versions after 3.5 only. Requires the following packages,
+Needs Python 3.6 or higher. Requires the following packages,
 which are automatically installed when using pip:
 
 * numpy
