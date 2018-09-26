@@ -5,6 +5,9 @@ from os.path import normpath, abspath, dirname, join
 here = normpath(abspath(dirname(__file__)))
 import versioneer
 
+with open('requirements.txt') as f:
+    install_reqs =  f.read().splitlines()
+
 class CleanCommand(Command):
     """Custom clean command to tidy up the project root."""
     CLEAN_FILES = './build ./dist ./*.pyc ./*.tgz ./*.egg-info ./__pycache__'.split(' ')
@@ -45,17 +48,7 @@ setup(
     license='LICENSE.txt',
     description='Python package for analyzing time-resolved spectra.',
     long_description=open('README.rst').read(),
-    install_requires=[
-        "astropy",
-        "attrs",
-        "numpy",
-        "scipy",
-        "lmfit",
-        "statsmodels",
-        "numba",
-        "scikit-learn",
-        "matplotlib"
-    ],
+    install_requires=install_reqs,
     keywords='science physics chemistry pump-probe spectroscopy time-resolved',
     python_requires='>=3.5',
 )

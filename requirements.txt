@@ -1,0 +1,9 @@
+astropy
+attrs
+numpy
+scipy
+lmfit
+statsmodels
+numba
+scikit-learn
+matplotlib
