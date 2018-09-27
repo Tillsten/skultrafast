@@ -26,10 +26,10 @@ class MesspyDataSet:
         pol_first_scan : {'magic', 'para', 'perp', 'unknown'}
             Polarization between the pump and the probe in the first scan. If
             `valid_channel` is 'both', this corresponds to the zeroth channel.
-        valid_channel : {0, 1, 'both'}
-            Indicates which channels contains a real signal. For recent data, it
-            is 0 for the visible setup and 1 for the IR setup. Older IR data
-            uses both.
+        valid_channel : `0`, `1`, 'both'
+            Indicates which channels contains a real signal. For recently
+            recorded data, it is 0 for the visible setup and 1 for the IR
+            setup. Older IR data uses both.
         """
 
         with np.load(fname) as f:
@@ -44,7 +44,7 @@ class MesspyDataSet:
     def average_scans(self, sigma=3):
         """
         Calculate the average of the scans. Uses sigma clipping, which
-        also filters nans. For polarization resovled measurements, the
+        also filters nans. For polarization resolved measurements, the
         function assumes that the polarisation switches every scan.
 
         Parameters
@@ -64,12 +64,12 @@ class MesspyDataSet:
         if not self.is_pol_resolved:
             data = stats.sigma_clip(self.data,
                                     sigma=sigma, axis=-1)
-            data = data.mean(-1)
+            mean = data.mean(-1)
             std = data.std(-1)
-            err = std / np.sqrt(std.mask.sum(-1))
+            err = std / np.sqrt(data.mask.sum(-1))
 
             if self.valid_channel in [0, 1]:
-                data = data[..., self.valid_channel]
+                mean = data[..., self.valid_channel]
                 std = std[..., self.valid_channel]
                 err = err[..., self.valid_channel]
 
@@ -77,11 +77,11 @@ class MesspyDataSet:
 
                 if num_wls > 1:
                     for i in range(num_wls):
-                        ds = DataSet(self.wl[:, i], self.t, data[i, ...],
+                        ds = DataSet(self.wl[:, i], self.t, mean[i, ...],
                                      err[i, ...])
                         out[self.pol_first_scan + str(i)] = ds
                 else:
-                    out = DataSet(self.wl[:, 0], self.t, data[0, ...],
+                    out = DataSet(self.wl[:, 0], self.t, mean[0, ...],
                                   err[0, ...])
                 return out
 
@@ -89,13 +89,13 @@ class MesspyDataSet:
             assert (self.pol_first_scan in ['para', 'perp'])
             data1 = stats.sigma_clip(self.data[..., self.valid_channel, ::2],
                                      sigma=sigma, axis=-1)
-            data1 = data1.mean(-1)
+            mean1 = data1.mean(-1)
             std1 = data1.std(-1)
             err1 = std1 / np.sqrt(data1.mask.sum(-1))
 
             data2 = stats.sigma_clip(self.data[..., self.valid_channel, 1::2],
                                      sigma=sigma, axis=-1)
-            data2 = data2.mean(-1)
+            mean2 = data2.mean(-1)
             std2 = data2.std(-1)
             err2 = std2 / np.sqrt(data2.mask.sum(-1))
 
@@ -103,11 +103,11 @@ class MesspyDataSet:
             for i in range(self.data.shape[0]):
                 out[self.pol_first_scan + str(i)] = DataSet(self.wl[:, i],
                                                             self.t,
-                                                            data1[i, ...],
+                                                            mean1[i, ...],
                                                             err1[i, ...])
                 other_pol = 'para' if self.pol_first_scan == 'perp' else 'perp'
                 out[other_pol + str(i)] = DataSet(self.wl[:, i], self.t,
-                                                  data2[i, ...], err2[i, ...])
+                                                  mean2[i, ...], err2[i, ...])
                 iso = 1 / 3 * out['para' + str(i)].data + 2 / 3 * out[
                     'perp' + str(i)].data
                 iso_err = np.sqrt(
@@ -213,7 +213,7 @@ class DataSet:
 
     def save_txt(self, fname, freq_unit='wl'):
         """
-        Save the dataset as a text file
+        Saves the dataset as a text file.
 
         Parameters
         ----------
@@ -228,7 +228,7 @@ class DataSet:
 
     def cut_freqs(self, freq_ranges=None, invert_sel=False, freq_unit='nm'):
         """
-        Remove channels inside (or outside ) of given frequency ranges.
+        Removes channels inside (or outside ) of given frequency ranges.
 
         Parameters
         ----------
@@ -663,9 +663,45 @@ class DataSetPlotter:
                                 gridspec_kw=dict(height_ratios=(2, 1, 1)))
         self.map(ax=axs[0])
         times = np.geomspace(0, ds.t.max(), 10)
-        self.spec(times, ax=axs[1])
+        sp = self.spec(times, ax=axs[1])
         freqs = np.unique(np.linspace(x.min(), x.max(), 10))
-        self.trans(freqs, ax=axs[2])
+        tr = self.trans(freqs, ax=axs[2])
+        OverviewPlot = namedtuple('OverviewPlot', 'fig axs trans spec')
+        return OverviewPlot(fig, axs, tr, sp)
+
+    def svd(self, n=5):
+        """
+        Plot the SVD-components of the dataset.
+
+        Parameters
+        ----------
+        n : int or list of int
+            Determines the plotted SVD-components. If `n` is an int, it plots
+            the first n components. If `n` is a list of ints, then every
+            number is a SVD-component to be plotted.
+        """
+        is_nm = self.freq_unit is 'nm'
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        ds = self.dataset
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        fig, axs = plt.subplots(1, 3, figsize=(5, 3))
+        u, s, v = np.linalg.svd(ds.data)
+        axs[0].stem(s)
+        axs[0].set_xlim(0, 11)
+        try:
+            len(n)
+            comps = n
+        except TypeError:
+            comps = range(n)
+
+        for i in comps:
+            axs[1].plot(ds.t, u.T[i], label=f"{i}")
+            axs[2].plot(x, v[i])
+        ph.lbl_trans(axs[1], use_symlog=True)
+        ph.lbl_spec(axs[2])
 
 
 class DataSetInteractiveViewer:
@@ -692,3 +728,4 @@ class DataSetInteractiveViewer:
     def update_lines(self, event):
         """If the mouse cursor is over the 2D image, update
         the dynamic transient and spectrum"""
+        pass
