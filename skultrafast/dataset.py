@@ -121,7 +121,19 @@ class MesspyDataSet:
 
 
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
-EstDispResult.__doc__ = 'Tuple containing the results from an dispersion estimation.'
+EstDispResult.__doc__ = """
+Tuple containing the results from an dispersion estimation.
+
+Attributes
+----------
+correct_ds : DataSet
+    A dataset were we used linear interpolation to remove the dispersion.
+tn : array
+    Array containing the results of the applied heuristic. 
+polynomial : function
+    Function which maps wavenumbers to time-zeros.
+"""
+
 
 
 class DataSet:
@@ -140,11 +152,11 @@ class DataSet:
             Array with the delay times.
         data : array of shape(n, m)
             Array with the data for each point.
-        err : array of shape(n, m) (optional)
-            Contains the std err  of the data.
+        err : array of shape(n, m) or None (optional)
+            Contains the std err of the data, can be `None`.
         name : str
             Identifier for data set. (optional)
-        freq_unit : {'nm', 'cm'}
+        freq_unit : 'nm' or 'cm'
             Unit of the wavelength array, default is 'nm'.
 
         Attributes
@@ -407,9 +419,9 @@ class DataSet:
         if heuristic == 'abs':
             idx = zero_finding.use_first_abs(self.data, heuristic_args[0])
 
-        vals, coefs = zero_finding.robust_fit_tz(self.wl, self.t[idx], deg)
+        vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers, self.t[idx], deg)
         func = np.poly1d(coefs)
-        new_data = zero_finding.interpol(self, vals)
+        new_data = zero_finding.interpol(self, func(self.wavenumbers))
         return EstDispResult(
             correct_ds=DataSet(self.wavelengths, self.t, new_data.data),
             tn=self.t[idx], polynomial=func)
@@ -513,7 +525,7 @@ class DataSetPlotter:
             ax.set_yscale('symlog', linthreshy=1)
             ph.symticks(ax, axis='y')
             ax.set_ylim(-.5)
-        plt.colorbar(mesh)
+        plt.colorbar(mesh, ax=ax)
 
         if plot_con:
             if con_step is None:
@@ -659,12 +671,13 @@ class DataSetPlotter:
             ph.ir_mode()
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
-        fig, axs = plt.subplots(3, 1., figsize=(5, 6),
+        fig, axs = plt.subplots(3, 1, figsize=(5, 12),
                                 gridspec_kw=dict(height_ratios=(2, 1, 1)))
         self.map(ax=axs[0])
-        times = np.geomspace(0, ds.t.max(), 10)
+
+        times = np.hstack((0, np.geomspace(0.1, ds.t.max(), 6)))
         sp = self.spec(times, ax=axs[1])
-        freqs = np.unique(np.linspace(x.min(), x.max(), 10))
+        freqs = np.unique(np.linspace(x.min(), x.max(), 6))
         tr = self.trans(freqs, ax=axs[2])
         OverviewPlot = namedtuple('OverviewPlot', 'fig axs trans spec')
         return OverviewPlot(fig, axs, tr, sp)
@@ -687,7 +700,7 @@ class DataSetPlotter:
             ph.ir_mode()
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
-        fig, axs = plt.subplots(1, 3, figsize=(5, 3))
+        fig, axs = plt.subplots(3, 1, figsize=(4, 5))
         u, s, v = np.linalg.svd(ds.data)
         axs[0].stem(s)
         axs[0].set_xlim(0, 11)

@@ -155,14 +155,14 @@ def make_report(fitter, info, raw=None, plot_fastest=1, make_ltm=False):
     import matplotlib.pyplot as plt
     plt.close('all')
         
-def save_txt(name, wls, t, dat):
+def save_txt(name, wls, t, dat, fmt='%.3f'):
     try:
         tmp = np.vstack((wls[None, :], dat))
         arr = np.hstack((np.vstack((0,t[:,None])), tmp))
     except ValueError:
         print('Shapes wl:', wls.shape, 't', t.shape, 'd', dat.shape)
         raise IndexError
-    np.savetxt(name, arr)
+    np.savetxt(name, arr, fmt=fmt)
     
 
 
@@ -197,5 +197,16 @@ def extract_freqs_from_gaussianlog(fname):
     
 
 def load_example():
-    pass
+    """
+    Returns a tuple containing the example data shipped with skultrafast.
+
+    Returns
+    -------
+    tuple of ndarrys
+        Tuple with wavelengths, t and data-array.
+    """
+    import skultrafast
+    a = np.load(skultrafast.__path__[0] + '\\examples\\test.npz')
+    wl, data, t = a['wl'], a['data'], a['t']
+    return wl, t*1000-2, data/3.
     
