@@ -59,9 +59,14 @@ if anyone would like to join the project!
 Installation methods
 ====================
 Released version pypi:
-    - Last released version: `pip install skultrafast`
+```
+pip install skultrafast
+```
+
 Latest development version:
-    - `pip install git+https://github.com/tillsten/skultrafast`
+```
+pip install git+https://github.com/tillsten/skultrafast
+```
 
 Basic Usage
 ===========
@@ -73,8 +78,8 @@ fit, preprocess and visualize time-resolved spectra. The class makes uses of
 older parts of the package. With time, I plan to deprecate older parts of the
 package and move all functionality to classes like `DataSet`.
 
-An example of using skultrafast to anaylize a real dataset can be found in
-the example directory or in the docmentatation.
+An example of using skultrafast to analyze a real dataset can be found in
+the example directory or in the documentation.
 
 Software prerequisites
 =======================

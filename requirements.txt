@@ -7,3 +7,4 @@ statsmodels
 numba
 scikit-learn
 matplotlib
+nbsphinx

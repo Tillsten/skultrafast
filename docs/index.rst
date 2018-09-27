@@ -15,6 +15,9 @@ Contents:
 
    example
    api
+   development
+   fitting
+   convolution
 
 
 Indices and tables
