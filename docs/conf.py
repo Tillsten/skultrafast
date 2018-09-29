@@ -253,4 +253,4 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 autoclass_content = "init"
 autodoc_member_order = 'bysource'
 body_max_width = '80em'
-
+autodoc_mock_imports = ['matplotlib', 'matplotlib.pyplot']
