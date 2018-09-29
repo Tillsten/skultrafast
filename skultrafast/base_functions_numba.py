@@ -8,7 +8,7 @@ import numpy as np
 
 
 from numba import autojit, vectorize, njit, jit
-import math 
+import math
 #from lmmv
 sq2 = math.sqrt(2)
 
@@ -35,13 +35,13 @@ def _coh_gaussian(ta, w, tz):
 
     w = w / 1.4142135623730951
     n, m = ta.shape
-    y = np.zeros(( n, m, 3))    
-    
-    
-    if tz != 0:    
+    y = np.zeros(( n, m, 3))
+
+
+    if tz != 0:
         ta = ta - tz
-    
-    _coh_loop(y, ta, w, n, m)    
+
+    _coh_loop(y, ta, w, n, m)
     y = y / np.max(np.abs(y), 0)
     return y
 
@@ -56,12 +56,12 @@ def _coh_loop(y, ta, w, n, m):
                 y[i, j, 1] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
                 y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
-@jit
+@jit(parallel=True, fastmath=True)
 def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
     a = _fold_exp(t_arr, w, tz, tau_arr)
     b = _coh_gaussian(t_arr, w, tz)
     return a, b
-    
+
 @njit
 def fast_erfc(x):
     """
@@ -91,7 +91,7 @@ def fast_erfc(x):
 
     if smaller:
         ret =  -ret + 2.
-    
+
     return ret
 
 @njit
@@ -145,15 +145,15 @@ def _fold_exp(t_arr, w, tz, tau_arr):
     n, m = t_arr.shape
     l = tau_arr.size
     out = np.empty((l, m, n))
-    _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n)    
+    _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n)
     return out.T
 
-@njit
+@njit(parallel=True, fastmath=True)
 def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
     for tau_idx in range(l):
         k = 1 / tau_arr[tau_idx]
         for j in range(m):
-            for i in range(n):                 
+            for i in range(n):
                 t = t_arr[i, j] - tz
                 if t < -5. * w:
                     ret = 0
@@ -163,7 +163,7 @@ def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
                 elif t > 5.* w:
                     ret = np.exp(k* (w*w*k/ (4.0) - t))
                 out[tau_idx, j, i] = ret
-                
+
 #jit(f8[:, :, :], [f8[:, :], f8, f8, f8[:]])
 def _exp(t_arr, w, tz, tau_arr):
     """
@@ -192,7 +192,7 @@ def _exp(t_arr, w, tz, tau_arr):
 
 
 
-    
+
 
 def calc_gaussian_fold(y_arr, sigma, slice_to_fold, slice_to_calc):
     """
