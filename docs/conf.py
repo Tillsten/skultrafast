@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.abspath('../skultrafast'))
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
               'sphinx.ext.coverage', 'nbsphinx',
+              'matplotlib.sphinxext.plot_directive',
               'sphinx.ext.mathjax', 'sphinx.ext.autosummary',
               'sphinx.ext.viewcode','sphinx.ext.napoleon']
 
@@ -253,6 +254,7 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 autoclass_content = "init"
 autodoc_member_order = 'bysource'
 body_max_width = '80em'
+plot_formats = ['svg', ('png', 150)]
 #autodoc_mock_imports = ['matplotlib', 'matplotlib.pyplot']
 import matplotlib
 matplotlib.use('agg')
