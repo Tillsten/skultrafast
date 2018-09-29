@@ -8,7 +8,7 @@ import skultrafast.dv as dv
 import scipy.ndimage as nd
 from statsmodels.api import RLM, robust
 
-from matplotlib.pyplot import plot
+import matplotlib.pyplot as plt
 #from skultrafast.fitter import _coh_gaussian
 from scipy.linalg import lstsq
 #from scipy.optimize import leastsq
@@ -29,7 +29,7 @@ def use_diff(dat, smooth=0):
     """
     Use numerical diff.
     """
-    if smooth != 0:        
+    if smooth != 0:
         dat = nd.gaussian_filter(dat, smooth)
     derivate = np.diff(dat, 1, 0)
     return np.argmax(np.abs(derivate), 0)
@@ -78,7 +78,7 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
         y = dat[:n, i]
         f = lambda p: _fit_func(t, y, -p[0], p[1], tau)
         f_sum = lambda p: (f(p)**2).sum()
-        
+
         try:
             if not np.isnan(o) and False:
                 k = o + np.diff(tn)[i]
@@ -86,7 +86,7 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
             else:
                 k = tn[i]
                 w = w0
-            
+
             #o, w = leastsq(f, list([k, w0]))[0][:2]
             # = opt.minimize(f_sum, [k,w], method='BFGS')
             #x = cma.fmin(f_sum, [o, w0], 0.03, bounds=[(0,0.04),(5, 0.2)], restarts=1, verb_log=0)
@@ -94,8 +94,8 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
                                   np.range(0.04,0.13,0.01)))
             o, w =x[0]
             if abs(o-tn[i]) > 0.04:
-                plot(t, f([o, w]) + y)
-                plot(t, y, 'o')
+                plt.plot(t, f([o, w]) + y)
+                plt.plot(t, y, 'o')
         except NameError:
             o = w =  np.NaN
 
@@ -193,7 +193,7 @@ def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
     """
     Fully automatic timezero correction.
     """
-    idx = method(tup.data, **kwargs)    
+    idx = method(tup.data, **kwargs)
     raw_tn = tup.t[idx]
     no_nan = ~np.any(np.isnan(tup.data), 0)
     fit, p = robust_fit_tz(tup.wl[no_nan], raw_tn[no_nan], deg)
