@@ -9,7 +9,7 @@ from skultrafast.base_functions_numba import fast_erfc
 import time
 from collections import namedtuple
 
-@nb.vectorize
+@nb.vectorize(fastmath=True)
 def my_erfc(x):
     return erfc(x)
 
@@ -97,45 +97,17 @@ def _fold_exp(tt, w, tz, tau):
     return y.T
 
 
-import numexpr as ne
 
-
-def _fold_exp_ne(tt, w, tz, tau):
-    """
-    Returns the values of the folded exponentials for given parameters.
-
-    Parameters
-    ----------
-    tt:  ndarray(N)
-        Array containing the time-coordinates
-    w:  float
-        The assumed width/sq2
-    tz: float
-        The assumed time zero.
-    tau: ndarray(M)
-        The M-decay rates.
-
-    Returns
-    -------
-    y: ndarray
-       Folded exponentials for given taus.
-
-    """
-    ws = w
-    k = 1 / (tau[..., None, None])
-    t = (tt + tz).T[None, ...]
-    y = ne.evaluate("exp(k * (ws * ws * k / (4.0) - t))")# * 0.5 * erfc(-t / ws + ws * k / (2.0))")
-    return y
-
-jitted = nb.njit(_fold_exp, parallel=True)
+jit1 = nb.njit(_fold_exp, parallel=True, fastmath=True)
+jit2 = nb.njit(_fold_exp, parallel=False, fastmath=True)
+jit3 = nb.njit(_fold_exp, parallel=True, fastmath=False)
+jit4 = nb.njit(_fold_exp, parallel=False, fastmath=False)
 import matplotlib.pyplot as plt
 plt.figure()
-for N in np.geomspace(10, 1000, 20):
-    res = benchmark(_fold_exp, ta_shape=(300, N), N=30)
-    res_jit = benchmark(jitted, ta_shape=(300, N), N=30)
-    res_ne = benchmark(_fold_exp_ne, ta_shape=(300, N), N=30)
-    plt.plot(np.ones_like(res.all)*N, res.all, 'x', c='r')
-    plt.plot(np.ones_like(res_jit.all) * N, res_jit.all, 'x', c='b')
+for i, j in enumerate([jit1, jit2, jit3, jit4]):
+    for N in np.geomspace(10, 1000, 20):
+        res_jit = benchmark(j, ta_shape=(300, N), N=30)
+        plt.plot(np.ones_like(res_jit.all) * N, res_jit.all, 'x', c='C'+str(i))
 
 plt.show()
 
