@@ -29,4 +29,4 @@ option for submitting the change.
 
 The code itself uses the numpy-doc style doc-strings for public functions and
 classes. These doc-strings are in the source files itself. This part of
-can be found in the API_ section.
+can be found in the `API documentation`_ section.

@@ -35,7 +35,7 @@ necessary since the heuristics are error-prone.
 Additionally, user-given heuristics are supported.
 
 The heuristics are located in the `zero_finding` module. They are only
-necessary when not using the DataSet_ class.
+necessary when not using the `DataSet`_ class.
 
 In the second step, the resulting :math:`t_0(\omega)` data is approximated
 with a polynomial of low degree, using a robust fitting method form
