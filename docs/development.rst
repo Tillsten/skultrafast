@@ -1,3 +1,5 @@
+.. _dev_docs:
+
 Developer documentation
 =======================
 We'd love your help, either as ideas, documentation, or code. If you have a new
@@ -13,9 +15,8 @@ Contributing code
 -----------------
 Contributing code is done via pull-requests on
 `github <https://github.com/tillsten/skultrafast>`_. A detailed description of
-the workflow can be found in the Matplotlib documentation:
-
-https://matplotlib.org/devel/gitwash/development_workflow.html#development-workflow
+the workflow can be found in the `Matplotlib documentation 
+<https://matplotlib.org/devel/gitwash/development_workflow.html#development-workflow>`_.
 
 
 Documentation
@@ -29,4 +30,4 @@ option for submitting the change.
 
 The code itself uses the numpy-doc style doc-strings for public functions and
 classes. These doc-strings are in the source files itself. This part of
-can be found in the `API documentation`_ section.
+can be found in the :ref:`api_docs` section.
