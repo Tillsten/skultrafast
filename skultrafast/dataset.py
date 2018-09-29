@@ -303,7 +303,7 @@ class DataSet:
         # self.wavelengths = np.ma.MaskedArray(self.wavelengths, idx)
         # self.wavenumbers = np.ma.MaskedArray(self.wavenumbers, idx)
 
-    def cut_times(self, time_ranges, invert_sel):
+    def cut_times(self, time_ranges, invert_sel=False):
         """
         Remove spectra inside (or outside) of given time-ranges.
 

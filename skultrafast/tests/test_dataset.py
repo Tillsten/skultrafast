@@ -10,5 +10,7 @@ def test_methods():
     assert(len(bds.wavelengths) == 300)
     nds = ds.cut_freqs([(400, 600)])
     assert(np.all(nds.wavelengths > 600))
+    nds = ds.cut_times([(-100, 1)])
+    assert(np.all(nds.t > .99))
 
 
