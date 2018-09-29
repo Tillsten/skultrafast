@@ -20,9 +20,9 @@ def load_datfile(datfile):
     """Load old vb-data file """
     f = lambda  s: float(s.replace(',', '.'))
     d = np.loadtxt(datfile, converters = {0:f, 1:f, 2:f, 3:f})
-    return d    
-  
-def read_data(d):    
+    return d
+
+def read_data(d):
     """
     Put raw data into arrays.
     """
@@ -47,37 +47,37 @@ def read_data(d):
 def loader_func(name):
     """ Helper function to load data from MessPy"""
     import glob
-    
+
     files = glob.glob(name + '_dat?.npy') + glob.glob(name + '_dat??.npy')
     if len(files) == 0:
         raise IOError('No file found.')
-    
-    import re    
-    num_list = [re.findall('dat\d+', i)[0][3:] for i in files]    
-    
+
+    import re
+    num_list = [re.findall('dat\d+', i)[0][3:] for i in files]
+
     endname = max(zip(map(int, num_list), files))[1]
-    
+
     a = np.load(endname)
     num_list = [str(int(i) - 1) for i in num_list]
-    
+
     num = str(max(map(int, num_list)))
-    
+
     search_string = name + '-???_'+ '*' + '_' + 'dat.npy'
-    
+
     files = glob.glob(search_string)
     wls = []
-    
+
     for i in files:
-    
+
         cwl = re.findall('-\d\d\d_', i)
         tmp = np.load(i)
         t, w = tmp[1:,0], tmp[0,1:]
         wls.append(w)
     return t, wls, a
 
-def concate_data(wls,dat):   
+def concate_data(wls,dat):
     """Puts the data from different central wavelengths into one Array"""
-    
+
     w = np.hstack(tuple(wls))
     idx = np.argsort(w)
     w = w[idx]
@@ -89,9 +89,9 @@ def concate_data(wls,dat):
 
 def concate_data_pol(wls, dat):
     w = np.hstack(tuple(wls.T))
-    idx = np.argsort(w)    
-    w = w[idx]    
-    k = dat.shape    
+    idx = np.argsort(w)
+    w = w[idx]
+    k = dat.shape
     dat =np.hstack(tuple(dat))
     #Remove wl index, it a more fancy way to write a columnstack.
     dat = dat[:, idx, :]
@@ -106,55 +106,55 @@ def save_txt_das(name, fitter):
     arr = np.column_stack((f.wl, spec))
     offset = f.model_disp+1
     taus = np.hstack((0, f.last_para[offset:]))
-    
+
     arr = np.vstack((taus, arr))
     np.savetxt(name, arr)
 
 def make_report(fitter, info, raw=None, plot_fastest=1, make_ltm=False):
-    
+
     from skultrafast import zero_finding, dv, plot_funcs
-    
+
     g = fitter
     name = info.get('name','')
-    solvent = info.get('solvent','')    
+    solvent = info.get('solvent','')
     excitation = info.get('excitation','')
     add_info = info.get('add_info', '')
     title = u"{} in {} excited at {}. {}".format(name, solvent, excitation, add_info)
-    plot_funcs.a4_overview(g, 'pics\\' + title + '.png', title=title, 
+    plot_funcs.a4_overview(g, 'pics\\' + title + '.png', title=title,
                            plot_fastest=plot_fastest)
-                           
-    
+
+
     save_txt_das(name + '_-DAS.txt', g)
     save_txt(name + '_ex' + excitation + '_iso.txt', g.wl, g.t, g.data)
     save_txt(name + '_ex' + excitation + '_iso_fit.txt', g.wl, g.t, g.model)
-    
+
     dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data),
-                                 fitter.tn, 0.0)            
+                                 fitter.tn, 0.0)
     save_txt(name + '_ex' + excitation + '_iso_timecor.txt', *dat)
     if make_ltm:
         plot_funcs.plot_ltm_page(dat, 'pics\\'+ title + 'lft_map.png')
-    
+
     fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model),
-                                 fitter.tn, 0.0)            
-    save_txt(name + '_ex' + excitation + '_iso_fit_timecor.txt', *fit)    
-    
-    
+                                 fitter.tn, 0.0)
+    save_txt(name + '_ex' + excitation + '_iso_fit_timecor.txt', *fit)
+
+
     if raw:
         save_txt(name +  '_ex' + excitation + '_raw.txt', *raw)
-    
+
     if hasattr(fitter, 'data_perp'):
         perp = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_perp),
-                                 fitter.tn, 0.0)    
-        
+                                 fitter.tn, 0.0)
+
         para = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_para),
-                                 fitter.tn, 0.0)                                   
+                                 fitter.tn, 0.0)
 
         #plot_funcs.a4_overview_second_page(fitter, para, perp, 'bla.png')
         save_txt(name + '_ex' + excitation + '_para.txt', *para)
         save_txt(name + '_ex' + excitation + '_perp.txt', *perp)
     import matplotlib.pyplot as plt
     plt.close('all')
-        
+
 def save_txt(name, wls, t, dat, fmt='%.3f'):
     try:
         tmp = np.vstack((wls[None, :], dat))
@@ -163,7 +163,7 @@ def save_txt(name, wls, t, dat, fmt='%.3f'):
         print('Shapes wl:', wls.shape, 't', t.shape, 'd', dat.shape)
         raise IndexError
     np.savetxt(name, arr, fmt=fmt)
-    
+
 
 
 def svd_filter(d, n=10):
@@ -184,7 +184,7 @@ import re
 def extract_freqs_from_gaussianlog(fname):
     f = open(fname)
     fr, ir, raman = [], [], []
-    
+
     for line in f:
         if line.lstrip().startswith('Frequencies ---'):
             fr += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
@@ -194,7 +194,7 @@ def extract_freqs_from_gaussianlog(fname):
             raman += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
     arrs = map(np.array, [fr, ir, raman])
     return np.vstack([i.flatten() for i in arrs])
-    
+
 
 def load_example():
     """
@@ -206,7 +206,6 @@ def load_example():
         Tuple with wavelengths, t and data-array.
     """
     import skultrafast
-    a = np.load(skultrafast.__path__[0] + '\\examples\\test.npz')
+    a = np.load(skultrafast.__path__[0] + '/examples/test.npz')
     wl, data, t = a['wl'], a['data'], a['t']
     return wl, t*1000-2, data/3.
-    
