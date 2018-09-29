@@ -391,7 +391,8 @@ class DataSet:
             binned_wl = - binned_wl
         return DataSet(binned_wl, self.t, binned, freq_unit)
 
-    def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2):
+    def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2,
+                            t_parameter=None):
         """
         Estimates the dispersion from a dataset by first
         applying a heuristic to each channel. The results are than
@@ -407,6 +408,9 @@ class DataSet:
             Arguments which are given to the heuristic.
         deg : int (optional)
             Degree of the polynomial used to fit the dispersion (defaults to 2).
+        t_parameter : float
+            Determines the robustness of the fit. See statsmodels documentation
+            for more info.
 
         Returns
         -------
@@ -419,7 +423,8 @@ class DataSet:
         if heuristic == 'abs':
             idx = zero_finding.use_first_abs(self.data, heuristic_args[0])
 
-        vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers, self.t[idx], deg)
+        vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers, self.t[idx],
+                                                 deg, t=t_parameter)
         func = np.poly1d(coefs)
         new_data = zero_finding.interpol(self, func(self.wavenumbers))
         return EstDispResult(

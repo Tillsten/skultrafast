@@ -27,9 +27,7 @@ install:
     - conda list
 
 script:
-    - cd skultrafast
-    - cd tests
-    - nosetests
-    
+    - pytest
+
 notifications:
   email: false

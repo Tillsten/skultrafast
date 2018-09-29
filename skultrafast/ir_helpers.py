@@ -12,6 +12,7 @@ from scipy.stats import trim_mean, linregress
 
 
 def scan_correction(dn, tidx):
+    'Scales the amplitude of each scan to be most like the first scan'
     for j in [0, 1]:
         null_spek =  trim_mean(dn[tidx:, :, j, 0], 0.2, 0)
         null_std = dn[tidx:, :, j, 0].std(0)

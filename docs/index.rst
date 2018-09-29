@@ -14,6 +14,7 @@ Contents:
    :maxdepth: 2
 
    example
+   zero-finding
    api
    development
    fitting
