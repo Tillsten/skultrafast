@@ -15,13 +15,12 @@ As its default, *skultrafast* assumes the traces have an gaussian IRF.
 Therefore, the data is described by the convolution of a sum of one-sided
 exponentials
 
-:math:`y(t, \omega)= \sum_i A(i, \omega) exp(-t/\tau_i) \Theta(t),
+:math:`y(t, \omega)= \sum_i A(i, \omega) exp(-t/\tau_i) \Theta(t)`,
 
 with :math:`\Theta` being the Heaviside-function, and gaussian instrument
 response function (IRF):
 
-:math:`IRF(t) = \frac{1}{\sqrt{2 \pi \sigma}} \exp\left
-(-\frac{t^2}{2\sigma^2}\right)`.
+:math:`IRF(t) = \frac{1}{\sqrt{2 \pi \sigma}} \exp\left(-\frac{t^2}{2\sigma^2}\right)`.
 
 The result of the convolution
 

@@ -58,11 +58,11 @@ if anyone would like to join the project!
 
 Installation methods
 ====================
-Released version pypi:
+Released version pypi::
 
     pip install skultrafast
 
-Latest development version (requires git):
+Latest development version (requires git)::
 
     pip install git+https://github.com/tillsten/skultrafast
 

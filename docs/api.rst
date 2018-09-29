@@ -1,3 +1,5 @@
+.. _api_docs:
+
 API documentation
 =================
 
@@ -11,7 +13,11 @@ DataSet
 .. autoclass:: dataset.DataSet
    :members:
 
-DataSetPlotter
---------------
 .. autoclass:: dataset.DataSetPlotter
+   :members:
+
+zero_finding
+------------
+
+.. automodule:: zero_finding
    :members:
