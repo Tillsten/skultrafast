@@ -2,12 +2,12 @@ import numpy as np
 import astropy.stats as stats
 from skultrafast.data_io import save_txt
 from skultrafast.filter import bin_channels, uniform_filter
-
-from skultrafast import zero_finding
+import lmfit
+from skultrafast import zero_finding, fitter
 import skultrafast.plot_helpers as ph
 import skultrafast.dv as dv
 from enum import Enum
-from types import SimpleNamespace
+from typing import NamedTuple
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
@@ -135,9 +135,14 @@ polynomial : function
 """
 
 
+class FitExpResult(NamedTuple):
+    lmfit_mini : lmfit.Minimizer
+    lmfit_res : lmfit.MinimizerResult
+    fitter : fitter.Fitter
 
 class DataSet:
-    def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm'):
+    def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm',
+                 auto_plot=True):
         """
         Class for working with time-resolved spectra. If offers methods for
         analyzing and pre-processing the data. To visualize the data,
@@ -189,6 +194,7 @@ class DataSet:
         self.wavelengths = self.wavelengths[idx]
         self.wavenumbers = self.wavenumbers[idx]
         self.data = self.data[:, idx]
+        self.auto_plot = True
         self.plot = DataSetPlotter(self)
 
     def __iter__(self):
@@ -431,9 +437,10 @@ class DataSet:
             correct_ds=DataSet(self.wavelengths, self.t, new_data.data),
             tn=self.t[idx], polynomial=func)
 
-    def fit_das(self, x0, fit_t0=False, fix_last_decay=True):
+    def fit_exp(self, x0, fix_sigma=True, fix_t0=False, fix_last_decay=True,
+                model_coh=True, lower_bound=0.1):
         """
-        Fit a sum of expontials to the dataset. This function assumes
+        Fit a sum of exponentials to the dataset. This function assumes
         the dataset is already corrected for dispersion.
 
         Parameters
@@ -443,14 +450,36 @@ class DataSet:
             system response time omega. If `fit_t0` is true, the second float is
             the guess of the time-zero. All other floats are interpreted as the
             guessing values for exponential decays.
-        fit_t0 : bool (optional)
-            If the time-zero should be determined by the fit too.
+        fix_t0 : bool (optional)
+            If the time-zero should be fixed in the fit.
         fix_last_decay : bool (optional)
             Fixes the value of the last tau of the initial guess. It can be
             used to add a constant by setting the last tau to a large value
             and fix it.
+        model_coh : bool (optional)
+            If coherent contributions should by modeled. If `True` a gaussian
+            with a width equal the system response time and its derivatives are
+            added to the linear model.
+        lower_bound : float (optional)
+            Lower bound for decay-constants.
         """
-        pass
+
+        f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
+        f.res(x0)
+        fixed_names = []
+        if fix_sigma:
+            fixed_names.append('w')
+        if fix_t0:
+            fixed_names.append('p0')
+
+        lm_model = f.start_lmfit(x0, fix_long=fix_last_decay,
+                            lower_bound=lower_bound)
+        ridge_alpha = abs(self.data).max()*1e-4
+        f.lsq_method = 'ridge'
+        fitter.alpha = ridge_alpha
+        result = lm_model.leastsq()
+        return FitExpResult(lm_model, result, f)
+
 
     def lft_density_map(self, taus, alpha=1e-4, ):
         """Calculates the LDM from a dataset by regularized regression.
