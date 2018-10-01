@@ -52,9 +52,9 @@ def _coh_loop(y, ta, w, n, m):
             tt = ta[i, j]
             if tt/w < 3.:
                 y[i, j, 0] = np.exp(-0.5 * (tt / w)* (tt / w))# / (w * np.sqrt(2 * 3.14159265))
-                #y[i, j, 1] = y[i, j, 0] * (-tt / w / w)
-                y[i, j, 1] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
-                y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
+                y[i, j, 1] = y[i, j, 0] * (-tt / w / w)
+                y[i, j, 2] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
+                #y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
 @jit(parallel=True, fastmath=True)
 def _fold_exp_and_coh(t_arr, w, tz, tau_arr):

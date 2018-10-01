@@ -65,7 +65,7 @@ too early estimatation. But since happens for almost all signals, the heuristic
 is very useful since it reproduces the (offsetted) dispersion curve quite well.
 
 Robust fitting
-````````
+``````````````
 
 In the second step, the resulting :math:`t_0(\omega)` data is approximated
 with a polynomial of low degree, using a robust fitting method form

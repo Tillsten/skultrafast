@@ -21,13 +21,13 @@ sys.path.insert(0, os.path.abspath('../skultrafast'))
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.8.1'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              'sphinx.ext.coverage', 'nbsphinx',
+              'sphinx.ext.coverage', 'nbsphinx', 'nbsphinx_link',
               'matplotlib.sphinxext.plot_directive',
               'sphinx.ext.mathjax', 'sphinx.ext.autosummary',
               'sphinx.ext.viewcode','sphinx.ext.napoleon']

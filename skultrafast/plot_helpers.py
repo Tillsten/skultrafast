@@ -348,7 +348,7 @@ def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
                     mec='none', ms=3)
 
         ax.text(pos[0], pos[1]+j*0.07,'%.1f - %.1f ps'%(t[t0], t[t1]),
-                color=color[j],
+                color='C%d'%j,
                 transform=ax.transAxes)
 
     lbl_spec(ax)

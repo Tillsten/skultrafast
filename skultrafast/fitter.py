@@ -28,7 +28,7 @@ def direct_solve(a, b):
 
 
 alpha = 0.001
-def solve_mat(A, b_mat, method='fast'):
+def solve_mat(A, b_mat, method='ridge'):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
     """
@@ -116,7 +116,7 @@ class Fitter(object):
         self.verbose = False
         self.model_coh = model_coh
         self.model_disp = model_disp
-        self.lsq_method = 'cho'
+        self.lsq_method = 'ridge'
 
         self.num_exponentials = -1
         self.weights = None

@@ -135,10 +135,7 @@ polynomial : function
 """
 
 
-class FitExpResult(NamedTuple):
-    lmfit_mini : lmfit.Minimizer
-    lmfit_res : lmfit.MinimizerResult
-    fitter : fitter.Fitter
+FitExpResult = namedtuple('FitExpResult', 'lmfit_mini lmfit_res fitter')
 
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm',
@@ -199,7 +196,7 @@ class DataSet:
 
     def __iter__(self):
         """For compatbility with dv.tup"""
-        return iter(self.wavelengths, self.t, self.data)
+        return iter((self.wavelengths, self.t, self.data))
 
     @classmethod
     def from_txt(cls, fname, freq_unit='nm', time_div=1., loadtxt_kws=None):
@@ -398,7 +395,7 @@ class DataSet:
         return DataSet(binned_wl, self.t, binned, freq_unit)
 
     def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2,
-                            t_parameter=None):
+                            t_parameter=1.3):
         """
         Estimates the dispersion from a dataset by first
         applying a heuristic to each channel. The results are than
@@ -473,7 +470,7 @@ class DataSet:
             fixed_names.append('p0')
 
         lm_model = f.start_lmfit(x0, fix_long=fix_last_decay,
-                            lower_bound=lower_bound)
+                            lower_bound=lower_bound, full_model=False)
         ridge_alpha = abs(self.data).max()*1e-4
         f.lsq_method = 'ridge'
         fitter.alpha = ridge_alpha
@@ -581,6 +578,8 @@ class DataSetPlotter:
             ax.contour(x, ds.t, data, levels=levels,
                        linestyles='solid', colors='k', linewidths=0.5)
         ph.lbl_map(ax, symlog)
+        if not is_nm:
+            ax.set_xlim(*ax.get_xlim()[::-1])
 
     def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
         """
@@ -619,7 +618,7 @@ class DataSetPlotter:
         for i in t_list:
             idx = dv.fi(ds.t, i)
             if n_average > 0:
-                dat = uniform_filter(ds, (2 * n_average + 1, 1))[idx, :]
+                dat = uniform_filter(ds, (2 * n_average + 1, 1)).data[idx, :]
             elif n_average == 0:
                 dat = ds.data[idx, :]
             else:
@@ -745,7 +744,7 @@ class DataSetPlotter:
             comps = range(n)
 
         for i in comps:
-            axs[1].plot(ds.t, u.T[i], label=f"{i}")
+            axs[1].plot(ds.t, u.T[i], label='%d'%i)
             axs[2].plot(x, v[i])
         ph.lbl_trans(axs[1], use_symlog=True)
         ph.lbl_spec(axs[2])
