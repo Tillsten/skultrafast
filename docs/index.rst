@@ -13,12 +13,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   example
+   tutorial
    zero-finding
    api
    development
    fitting
-   convolution
+   .. convolution
 
 
 Indices and tables
