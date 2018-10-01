@@ -18,7 +18,7 @@ from .base_functions import (_fold_exp,
                              _fold_exp_and_coh)
 
 posv = linalg.get_lapack_funcs(('posv'))
-ridge_alpha = 0.001
+
 
 def direct_solve(a, b):
     c, x, info = posv(a, b, lower=False,
