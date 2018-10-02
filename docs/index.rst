@@ -18,7 +18,6 @@ Contents:
    api
    development
    fitting
-   .. convolution
 
 
 Indices and tables
