@@ -129,47 +129,6 @@ def robust_fit_tz(wl, tn, degree=3, t=1.345):
 
 
 
-from skultrafast import ransac
-
-def find_time_zero(d, value, method='abs', polydeg=3, *args):
-    """
-    Fits the dispersion of the timezero-point with a polynom of given
-    degree. Uses the ransac algorithm to fit a approximation won by given
-    method. The default method is to find the first point where the absolute
-    value is above a given limit.
-    """
-
-    class PoloynomialLeastSquaredModel:
-        """
-        Model used for ransac, fits data to polynom of specified degree.
-        """
-
-        def __init__(self, deg):
-            self.degree=deg
-
-        def fit(self, data):
-            x=data[:,0]
-            y=data[:,1]
-            return np.polyfit(x, y, self.degree)
-
-        def get_error(self, data, model):
-            x=data[:,0]
-            y=data[:,1]
-            return (y-np.poly1d(model)(x))**2
-
-    t=d.t
-    w=d.wl
-    dat=d.data
-
-
-    if method == 'abs':
-        tn=t[np.argmin((np.abs(dat) < value),0)]
-
-    ransac_data= np.column_stack((w,tn))
-    ransac_model = PoloynomialLeastSquaredModel(polydeg)
-    m = ransac.ransac(ransac_data, ransac_model, tn.size * 0.2,
-                      500, 0.1, tn.size * 0.6)
-    return np.poly1d(m)(w), m
 
 def interpol(tup, tn, shift=0., new_t=None):
     """
