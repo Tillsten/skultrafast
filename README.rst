@@ -17,7 +17,7 @@ to include everything needed to analyze data from time-resolved spectroscopy
 experiments in the femtosecond domain. Its current features are listed further
 below.
 
-The latest version of the software is avaiable on `github <https://github
+The latest version of the software is available on `github <https://github
 .com/Tillsten/skultrafast>`_. A build of the documentation can be found at
 `Read the docs <https://skultrafast.readthedocs.io/en/latest/example.html>`_.
 
@@ -30,7 +30,7 @@ Aims of the project
 -------------------
 I like to include any kind of algorithm or data structure which comes up in
 ultrafast physics. I am also open to add a graphical interface to the
-package, but as experience shows, a GUI brings in alot of maintenance
+package, but as experience shows, a GUI brings in a lot of maintenance
 burden. Hence, the first target is a interactive data-explorer for the
 jupyter notebook.
 
@@ -56,41 +56,6 @@ Users
 At the moment it is mostly me and other people in my group. I would be happy
 if anyone would like to join the project!
 
-Installation methods
-====================
-Released version pypi::
-
-    pip install skultrafast
-
-Latest development version (requires git)::
-
-    pip install git+https://github.com/tillsten/skultrafast
-
-
-Basic Usage
-===========
-
-Dataset
--------
-New users should use the `DataSet` class, which provides methods to explore,
-fit, preprocess and visualize time-resolved spectra. The class makes uses of
-older parts of the package. With time, I plan to deprecate older parts of the
-package and move all functionality to classes like `DataSet`.
-
-An example of using skultrafast to analyze a real dataset can be found in
-the example directory or in the documentation.
-
-Software prerequisites
-=======================
-Needs Python 3.6 or higher. Requires the following packages,
-which are automatically installed when using pip:
-
-* numpy
-* scipy
-* lmfit
-* matplotlib
-* sklearn
-* statsmodels
 
 License
 =======

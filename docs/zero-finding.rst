@@ -1,5 +1,5 @@
-Dispersion correction
-=====================
+Dispersion Handling
+===================
 It is common to use chirped probe pulses in visible fs-pump-probe
 spectroscopy. This results in a wavelength depended time-zero, since the
 different probe wavelength arrive at different times at the sample. The chirp
