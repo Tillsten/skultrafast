@@ -11,7 +11,7 @@ import skultrafast.data_io
 from skultrafast import zero_finding
 from scipy.ndimage import gaussian_filter1d
 wl, t, dat = skultrafast.data_io.load_example()
-plt.rcParams['font.family'] = 'Georgia'
+plt.rcParams['font.family'] = 'serif'
 
 gw = {'height_ratios': (3, 2, 2)}
 fig, axs = plt.subplots(3, 1, num='test', figsize=(5, 6), gridspec_kw=gw,
