@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
-from __future__ import division, print_function
-import numpy as np
-from numpy.core.umath_tests import matrix_multiply, inner1d
-from scipy import linalg
-#from scipy.special import erfc #errorfunction
 
+import numpy as np
+from numpy.core.umath_tests import inner1d
+from scipy import linalg
 from scipy.stats import f #fisher
 from . import dv, zero_finding
 import lmfit
-from lmfit import report_errors
 LinAlgError = np.linalg.LinAlgError
-
-
 
 from .base_functions import (_fold_exp,
                              _coh_gaussian,
@@ -19,15 +14,14 @@ from .base_functions import (_fold_exp,
 
 posv = linalg.get_lapack_funcs(('posv'))
 
-
 def direct_solve(a, b):
     c, x, info = posv(a, b, lower=False,
                       overwrite_a=True,
                       overwrite_b=False)
     return x
 
-
 alpha = 0.001
+
 def solve_mat(A, b_mat, method='ridge'):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
@@ -58,14 +52,14 @@ def solve_mat(A, b_mat, method='ridge'):
     elif method == 'lasso':
         import sklearn.linear_model as lm
         s = lm.Lasso(fit_intercept=False)
-        s.alpha = ridge_alpha
+        s.alpha = alpha
         s.fit(A, b_mat)
         return s.coef_.T
 
     elif method == 'enet':
         import sklearn.linear_model as lm
         s = lm.ElasticNet(fit_intercept=False, l1_ratio=0.2)
-        s.alpha = ridge_alpha
+        s.alpha = alpha
         s.fit(A, b_mat)
         return s.coef_.T
 
@@ -256,9 +250,8 @@ class Fitter(object):
 
         self.last_para = para
 
-        #print(is_disp_changed, self.model_disp, end=' ')
+
         if self.model_disp != 0 and is_disp_changed or True:
-            #print('change_tn', para[:m_disp])
             self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
             self.t_mat = self.t[:, None] - self.tn[None, :]
 
@@ -268,7 +261,6 @@ class Fitter(object):
             A = self.xmat[:, i, :]
             self.c[i, :] = solve_mat(A, self.data[:, i], self.lsq_method)
 
-        #self.model[:, i] = self.xmat[:, i, :].dot(self.c[i, :])
 
         self.model = inner1d( self.xmat, self.c)
         #self.model[:, :]  = matrix_multiply(self.xmat, self.c[:, :, None]).squueze()
@@ -356,57 +348,4 @@ class Fitter(object):
         fun = full_res if full_model else res
 
         return lmfit.Minimizer(fun, p)
-
-
-    def start_cmafit(self, x0, restarts=2):
-        import cma
-        out = cma.fmin(self.res_sum, x0, 2, verb_log=0, verb_disp=50,
-                       restarts=restarts, tolfun=1e-6, tolfacupx=1e9)
-        for pi in (out[0]):
-            print("{0: .3f} +- {1:.4f}".format(pi, np.exp(pi)))
-        return out
-
-def start_pymc(fitter, x0, bounds):
-    import pymc
-
-    rs = [(pymc.Uniform('r' + str(i), lower, upper)) for
-          (i, (lower, upper)) in enumerate(bounds)]
-    z0 = pymc.Uniform('z0', -1, 1)
-    sig = pymc.Uniform('sig', 0, 0.15)
-    tau = pymc.Uniform('tau', 0, 25, size=fitter.data.shape[1])
-    #tau.value=20*self.data.shape[1]
-    H = lambda x: fitter.model(x)
-
-    @pymc.deterministic
-    def mod(z0=z0, sig=sig, rs=rs):
-        x = np.array([z0, sig] + rs)
-        H(x)
-        return fitter.model
-
-    l = []
-    for i in range(fitter.data.shape[1]):
-        l.append(pymc.Normal(observed=True, name='res' + str(i),
-                             value=fitter.data[:, i], tau=tau[i],
-                             mu=mod[:, i]))
-
-    mo = pymc.Model(set([z0, tau] + rs + l))
-    return mo
-
-
-
-def f_compare(Ndata, Nparas, new_chi, best_chi, Nfix=1.):
-    """
-    Returns the probalitiy for two given parameter sets.
-    Nfix is the number of fixed parameters.
-    """
-    Nparas = Nparas + Nfix
-    return f.cdf((new_chi / best_chi - 1) * (Ndata - Nparas) / Nfix,
-                 Nfix, Ndata - Nparas)
-
-
-
-def mod_dof_f(dof):
-    def f_mod(N, P, chi, old_chi, Nfix=1.):
-        return f_compare(N, P + dof, chi, old_chi, Nfix)
-    return f_mod
 
