@@ -1,4 +1,6 @@
 import numpy as np
+from numpy.core.multiarray import ndarray
+
 from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter
 from skultrafast import zero_finding, fitter
@@ -23,6 +25,7 @@ polynomial : function
 
 
 FitExpResult = namedtuple('FitExpResult', 'lmfit_mini lmfit_res fitter')
+
 
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm',
@@ -269,7 +272,7 @@ class DataSet:
 
     def subtract_background(self, n: int = 10):
         """Subtracts the first n-spectra from the dataset"""
-        self.data -= np.mean(self.data[:n, :], 0, keepdims=1)
+        self.data -= np.mean(self.data[:n, :], 0, keepdims=True)
 
     def bin_freqs(self, n: int, freq_unit='nm'):
         """
@@ -333,6 +336,8 @@ class DataSet:
 
         if heuristic == 'abs':
             idx = zero_finding.use_first_abs(self.data, heuristic_args[0])
+        else:
+            raise NotImplementedError('Not done yet, sorry')
 
         vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers, self.t[idx],
                                                  deg, t=t_parameter)
@@ -355,8 +360,10 @@ class DataSet:
             system response time omega. If `fit_t0` is true, the second float is
             the guess of the time-zero. All other floats are interpreted as the
             guessing values for exponential decays.
+        fix_sigma : bool (optional)
+            If to fix the IRF duration sigma.
         fix_t0 : bool (optional)
-            If the time-zero should be fixed in the fit.
+            If to fix the the time-zero.
         fix_last_decay : bool (optional)
             Fixes the value of the last tau of the initial guess. It can be
             used to add a constant by setting the last tau to a large value
@@ -367,6 +374,7 @@ class DataSet:
             added to the linear model.
         lower_bound : float (optional)
             Lower bound for decay-constants.
+            :param fix_sigma:
         """
 
         f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
@@ -378,7 +386,7 @@ class DataSet:
             fixed_names.append('p0')
 
         lm_model = f.start_lmfit(x0, fix_long=fix_last_decay,
-                            lower_bound=lower_bound, full_model=False)
+                                 lower_bound=lower_bound, full_model=False)
         ridge_alpha = abs(self.data).max()*1e-4
         f.lsq_method = 'ridge'
         fitter.alpha = ridge_alpha
@@ -390,6 +398,9 @@ class DataSet:
         """Calculates the LDM from a dataset by regularized regression.
 
         Parameters
+        ----------
+        taus : array
+            List with candiate decays.
         """
         pass
 
@@ -457,7 +468,7 @@ class DataSetPlotter:
             m = np.max(np.abs(ds.data))
             vmin, vmax = -m, m
         else:
-            vmin, vmax = ds.max(), ds.min()
+            vmin, vmax = ds.data.max(), ds.data.min()
         mesh = ax.pcolormesh(x, ds.t, ds.data, vmin=vmin,
                              vmax=vmax, cmap=cmap, **kwargs)
         if symlog:
@@ -495,7 +506,7 @@ class DataSetPlotter:
 
         Parameters
         ----------
-        t_list : list of floats
+        t_list : list or ndarray
             List of the times where the spectra are plotted.
         norm : bool
             If true, each spectral will be normalized.
@@ -553,7 +564,7 @@ class DataSetPlotter:
 
         Parameters
         ----------
-        wls : list of float
+        wls : list or ndarray
             Spectral positions, should be given in the same unit as
             `self.freq_unit`.
         symlog : bool
@@ -652,19 +663,21 @@ class DataSetPlotter:
             comps = range(n)
 
         for i in comps:
-            axs[1].plot(ds.t, u.T[i], label='%d'%i)
+            axs[1].plot(ds.t, u.T[i], label='%d' % i)
             axs[2].plot(x, v[i])
         ph.lbl_trans(axs[1], use_symlog=True)
         ph.lbl_spec(axs[2])
 
 
 class DataSetInteractiveViewer:
-    def __init__(self, dataset, fig_kws={}):
+    def __init__(self, dataset, fig_kws=None):
         """
         Class showing a interactive matplotlib window for exploring
         a dataset.
         """
-        import matplotlib.pyplot as plt
+        if fig_kws is None:
+            fig_kws = {}
+
         self.dataset = dataset
         self.figure, axs = plt.subplots(3, 1, **fig_kws)
         self.ax_img, self.ax_trans, self.ax_spec = axs
@@ -675,7 +688,7 @@ class DataSetInteractiveViewer:
         self.spec_line = self.ax_spec.plot()
 
     def init_event(self):
-        'Connect mpl events'
+        """Connect mpl events"""
         connect = self.figure.canvas.mpl_connect
         connect('motion_notify_event', self.update_lines)
 
