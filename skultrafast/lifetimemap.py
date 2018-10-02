@@ -8,8 +8,7 @@ Created on Wed Oct 29 16:06:14 2014
 from __future__ import print_function
 import numpy as np
 from sklearn import linear_model as lm
-from skultrafast import dv, zero_finding
-from skultrafast.base_functions_np import _fold_exp, _coh_gaussian
+from base_funcs.base_functions_np import _fold_exp, _coh_gaussian
 
 def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=False):
     if add_const:

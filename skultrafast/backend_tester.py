@@ -1,11 +1,8 @@
 import numpy as np
 import numba as nb
-import timeit
 from scipy.special import erfc
-import time
 
 from math import erfc
-from skultrafast.base_functions_numba import fast_erfc
 import time
 from collections import namedtuple
 
