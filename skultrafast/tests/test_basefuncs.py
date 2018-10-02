@@ -6,15 +6,15 @@ Created on Sun Apr 21 20:34:15 2013
 """
 
 
-from base_funcs.base_functions_numba import fast_erfc, _fold_exp, _exp
+from skultrafast.base_funcs.base_functions_numba import fast_erfc, _fold_exp, _exp
 
-import base_funcs.base_functions_np as bnp
+import skultrafast.base_funcs.base_functions_np as bnp
 try:
-    import base_funcs.base_functions_cl as bcl
+    import skultrafast.base_funcs.base_functions_cl as bcl
 except ImportError:
     print('Warning, pyopencl was not found. OpenCL backend ist not tested')
     bcl = bnp
-import base_funcs.base_functions_numba as bnb
+import skultrafast.base_funcs.base_functions_numba as bnb
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
