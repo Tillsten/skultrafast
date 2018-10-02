@@ -1,13 +1,14 @@
+from collections import namedtuple
+
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.core.multiarray import ndarray
 
+import skultrafast.dv as dv
+import skultrafast.plot_helpers as ph
+from skultrafast import zero_finding, fitter
 from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter
-from skultrafast import zero_finding, fitter
-import skultrafast.plot_helpers as ph
-import skultrafast.dv as dv
-from collections import namedtuple
-import matplotlib.pyplot as plt
 
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
 EstDispResult.__doc__ = """
@@ -22,7 +23,6 @@ tn : array
 polynomial : function
     Function which maps wavenumbers to time-zeros.
 """
-
 
 FitExpResult = namedtuple('FitExpResult', 'lmfit_mini lmfit_res fitter')
 
@@ -387,12 +387,11 @@ class DataSet:
 
         lm_model = f.start_lmfit(x0, fix_long=fix_last_decay,
                                  lower_bound=lower_bound, full_model=False)
-        ridge_alpha = abs(self.data).max()*1e-4
+        ridge_alpha = abs(self.data).max() * 1e-4
         f.lsq_method = 'ridge'
         fitter.alpha = ridge_alpha
         result = lm_model.leastsq()
         return FitExpResult(lm_model, result, f)
-
 
     def lft_density_map(self, taus, alpha=1e-4, ):
         """Calculates the LDM from a dataset by regularized regression.
