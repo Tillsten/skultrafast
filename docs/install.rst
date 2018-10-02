@@ -35,5 +35,3 @@ To build the docs, more packages are necessary.
 * nbsphinx
 * nbsphinx-link
 
-Running tests
--------------

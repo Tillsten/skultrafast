@@ -2,7 +2,7 @@ Importing and Exporting Data
 ============================
 
 skultrafast also offer various methods for data pre-processing. Currently,
-the package focus on working with data from *MessPy*, the software for
+the package focus is on working with data from *MessPy*, the software for
 controlling the experiments in our lab.
 
 

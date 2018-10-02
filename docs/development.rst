@@ -15,7 +15,7 @@ Contributing code
 -----------------
 Contributing code is done via pull-requests on
 `github <https://github.com/tillsten/skultrafast>`_. A detailed description of
-the workflow can be found in the `Matplotlib documentation 
+the workflow can be found in the `Matplotlib documentation
 <https://matplotlib.org/devel/gitwash/development_workflow.html#development-workflow>`_.
 
 
@@ -31,3 +31,7 @@ option for submitting the change.
 The code itself uses the numpy-doc style doc-strings for public functions and
 classes. These doc-strings are in the source files itself. This part of
 can be found in the :ref:`api_docs` section.
+
+Running tests
+-------------
+Run ``pytest`` in the source directory.
