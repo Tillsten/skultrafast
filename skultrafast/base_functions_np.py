@@ -41,7 +41,7 @@ def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
     b = _coh_gaussian(t_arr, w, tz)
     return a, b
     
-
+exp_half = np.exp(0.5)
 def _coh_gaussian(t, w, tz):
     """Models artifacts proportional to a gaussian and it's derivatives
 
@@ -62,12 +62,11 @@ def _coh_gaussian(t, w, tz):
     """
     w = w / sq2
     tt = t + tz
-    idx = (tt/w < 4)    
-    y = np.where(idx, np.exp(-0.5 * (tt / w) ** 2) / (w * np.sqrt(2 * 3.14159265)), 0)
+    idx = (tt/w < 3.)
+    y = np.where(idx, np.exp(-0.5 * (tt / w) * (tt / w)), 0)
     y = np.tile(y[..., None], (1, 1, 3))
     tt = tt[idx]
-    #y[idx,..., 1] *= (-tt / w ** 2)
-    y[idx,..., 1] *= (tt ** 2 / w ** 4 - 1 / w ** 2)
-    y[idx,..., 2] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
-    y /= np.max(np.abs(y), 0)
+    y[idx,..., 1] *= (-tt * exp_half / w)
+    y[idx,..., 2] *= (tt * tt / w / w - 1)
+    #y[idx,..., 2] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
     return y
