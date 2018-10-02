@@ -92,6 +92,8 @@ class MesspyDataSet:
                     out = DataSet(self.wl[:, 0], self.t, mean[0, ...],
                                   err[0, ...], disp_freq_unit=disp_freq_unit)
                 return out
+            else:
+                raise NotImplementedError('TODO')
 
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
             assert (self.pol_first_scan in ['para', 'perp'])
