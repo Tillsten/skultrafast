@@ -166,6 +166,8 @@ class DataSet:
 
         Attributes
         ----------
+        wavelengths, wavenumbers, t, data : ndarray
+            Arrays with the data itself.
         plot : DataSetPlotter
             Helper class which can plot the dataset using `matplotlib`.
         t_idx : function
