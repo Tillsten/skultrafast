@@ -16,7 +16,7 @@ tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
              (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
 
 tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
-#plt.rcParams['axes.color_cycle'] = tableau20[::2]
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
