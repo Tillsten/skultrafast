@@ -22,7 +22,7 @@ before_install:
 install:
     - if [[ $version == latest ]]; then conda create -q -n test_env python=$TRAVIS_PYTHON_VERSION numpy scipy six pandas matplotlib dill nose statsmodels scikit-learn; fi
     - source activate test_env
-    - pip install lmfit
+    - pip install lmfit, nbsphinx, nbsphinx-link
     - python setup.py install
     - conda list
 
