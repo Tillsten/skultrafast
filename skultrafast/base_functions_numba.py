@@ -42,9 +42,10 @@ def _coh_gaussian(ta, w, tz):
         ta = ta - tz
 
     _coh_loop(y, ta, w, n, m)
-    y = y / np.max(np.abs(y), 0)
+    #y_n = y / np.max(np.abs(y), 0)
     return y
 
+exp_half = np.exp(0.5)
 @njit
 def _coh_loop(y, ta, w, n, m):
     for i in range(n):
@@ -52,8 +53,8 @@ def _coh_loop(y, ta, w, n, m):
             tt = ta[i, j]
             if tt/w < 3.:
                 y[i, j, 0] = np.exp(-0.5 * (tt / w)* (tt / w))# / (w * np.sqrt(2 * 3.14159265))
-                y[i, j, 1] = y[i, j, 0] * (-tt / w / w)
-                y[i, j, 2] = y[i, j, 0] * (tt * tt / w / w  / w / w - 1 / w /w)
+                y[i, j, 1] = y[i, j, 0] * (-tt * exp_half/ w )
+                y[i, j, 2] = y[i, j, 0] * (tt * tt / w / w - 1)
                 #y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
 @jit(parallel=True, fastmath=True)
@@ -94,7 +95,7 @@ def fast_erfc(x):
 
     return ret
 
-@njit
+@njit(fastmath=True, parallel=True)
 def folded_fit_func(t, tz, w, k):
     """
     Returns the value of a folded exponentials.
