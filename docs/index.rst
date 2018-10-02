@@ -13,8 +13,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   install
    tutorial
    zero-finding
+   data_io
    api
    development
    fitting
