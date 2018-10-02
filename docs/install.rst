@@ -28,3 +28,12 @@ which are automatically installed when using pip:
 * matplotlib
 * sklearn
 * statsmodels
+
+To build the docs, more packages are necessary.
+
+* sphinx
+* nbsphinx
+* nbsphinx-link
+
+Running tests
+-------------
