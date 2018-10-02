@@ -56,7 +56,9 @@ class MesspyDataSet:
         Returns
         -------
         dict or DataSet
-            DataSet or Dict of DataSets containing the averaged datasets.
+            DataSet or Dict of DataSets containing the averaged datasets. If
+            the first delay-time are identical, they are interpreted as
+            background and their mean is subtracted.
 
         """
         if max_scan is None:
