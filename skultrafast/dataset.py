@@ -139,7 +139,7 @@ FitExpResult = namedtuple('FitExpResult', 'lmfit_mini lmfit_res fitter')
 
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm',
-                 display_unit=None, auto_plot=True):
+                 disp_freq_unit=None, auto_plot=True):
         """
         Class for working with time-resolved spectra. If offers methods for
         analyzing and pre-processing the data. To visualize the data,
@@ -160,7 +160,7 @@ class DataSet:
             Identifier for data set.
         freq_unit : 'nm' or 'cm' (optional)
             Unit of the wavelength array, default is 'nm'.
-        display_unit : 'nm','cm' or None (optional)
+        disp_freq_unit : 'nm','cm' or None (optional)
             Unit which is used by default for plotting. If `None`, it defaults
             to `freq_unit`.
 
@@ -168,6 +168,8 @@ class DataSet:
         ----------
         plot : DataSetPlotter
             Helper class which can plot the dataset using `matplotlib`.
+        t_idx : function
+            Helper function to find the nearest index in t for a given time.
         wl_idx : function
             Helper function to search for the nearest wavelength index for a
             given wavelength.
@@ -201,14 +203,15 @@ class DataSet:
         self.data = self.data[:, idx]
         self.auto_plot = True
         self.plot = DataSetPlotter(self)
+        self.t_idx = dv.make_fi(self.t)
         self.wl_idx = dv.make_fi(self.wavelengths)
         self.wn_idx = dv.make_fi(self.wavenumbers)
 
-        if display_unit is None:
-            self.display_unit = freq_unit
+        if disp_freq_unit is None:
+            self.disp_freq_unit = freq_unit
         else:
-            self.display_unit = display_unit
-        self.plot.freq_unit = display_unit
+            self.disp_freq_unit = disp_freq_unit
+        self.plot.freq_unit = self.disp_freq_unit
 
     def __iter__(self):
         """For compatbility with dv.tup"""
@@ -503,7 +506,7 @@ class DataSet:
 
 
 class DataSetPlotter:
-    def __init__(self, dataset: DataSet, freq_unit='nm'):
+    def __init__(self, dataset: DataSet, disp_freq_unit='nm'):
         """
         Class which can Plot a `DataSet` using matplotlib.
 
@@ -511,12 +514,12 @@ class DataSetPlotter:
         ----------
         dataset : DataSet
             The DataSet to work with.
-        freq_unit : {'nm', 'cm'} (optional)
+        disp_freq_unit : {'nm', 'cm'} (optional)
             The default unit of the plots. To change
             the unit afterwards, set the attribute directly.
         """
         self.dataset = dataset
-        self.freq_unit = freq_unit
+        self.freq_unit = disp_freq_unit
 
     def map(self, symlog=True, equal_limits=True,
             plot_con=True, con_step=None, con_filter=None, ax=None,
