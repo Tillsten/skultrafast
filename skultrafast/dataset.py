@@ -139,7 +139,7 @@ FitExpResult = namedtuple('FitExpResult', 'lmfit_mini lmfit_res fitter')
 
 class DataSet:
     def __init__(self, wl, t, data, err=None, name=None, freq_unit='nm',
-                 auto_plot=True):
+                 display_unit=None, auto_plot=True):
         """
         Class for working with time-resolved spectra. If offers methods for
         analyzing and pre-processing the data. To visualize the data,
@@ -156,16 +156,24 @@ class DataSet:
             Array with the data for each point.
         err : array of shape(n, m) or None (optional)
             Contains the std err of the data, can be `None`.
-        name : str
-            Identifier for data set. (optional)
-        freq_unit : 'nm' or 'cm'
+        name : str (optional)
+            Identifier for data set.
+        freq_unit : 'nm' or 'cm' (optional)
             Unit of the wavelength array, default is 'nm'.
+        display_unit : 'nm','cm' or None (optional)
+            Unit which is used by default for plotting. If `None`, it defaults
+            to `freq_unit`.
 
         Attributes
         ----------
         plot : DataSetPlotter
             Helper class which can plot the dataset using `matplotlib`.
-
+        wl_idx : function
+            Helper function to search for the nearest wavelength index for a
+            given wavelength.
+        wn_idx : function
+            Helper function to search for the nearest wavelength index for a
+            given wavelength.
         """
 
         assert ((t.shape[0], wl.shape[0]) == data.shape)
@@ -193,6 +201,14 @@ class DataSet:
         self.data = self.data[:, idx]
         self.auto_plot = True
         self.plot = DataSetPlotter(self)
+        self.wl_idx = dv.make_fi(self.wavelengths)
+        self.wn_idx = dv.make_fi(self.wavenumbers)
+
+        if display_unit is None:
+            self.display_unit = freq_unit
+        else:
+            self.display_unit = display_unit
+        self.plot.freq_unit = display_unit
 
     def __iter__(self):
         """For compatbility with dv.tup"""
