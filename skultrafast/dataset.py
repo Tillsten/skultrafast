@@ -382,11 +382,10 @@ class DataSet:
         fixed_names = []
         if fix_sigma:
             fixed_names.append('w')
-        if fix_t0:
-            fixed_names.append('p0')
 
-        lm_model = f.start_lmfit(x0, fix_long=fix_last_decay,
-                                 lower_bound=lower_bound, full_model=False)
+        lm_model = f.start_lmfit(x0, fix_long=fix_last_decay, fix_disp=fix_t0,
+                                 lower_bound=lower_bound, full_model=False,
+                                 fixed_names=fixed_names)
         ridge_alpha = abs(self.data).max() * 1e-4
         f.lsq_method = 'ridge'
         fitter.alpha = ridge_alpha
@@ -402,6 +401,29 @@ class DataSet:
             List with candiate decays.
         """
         pass
+
+
+    def concat_datasets(self, other_ds):
+        """
+        Merge the dataset with another dataset. The other dataset need to
+        have the same time axis.
+
+        Parameters
+        ----------
+        other_ds : DataSet
+            The dataset to merge with
+
+        Returns
+        -------
+        DataSet
+            The merged dataset.
+        """
+
+        all_wls = np.hstack((self.wavelengths, other_ds.wavelengths))
+        all_data = np.hstack((self.data, other_ds.data))
+
+        return DataSet(all_wls, self.t, all_data, freq_unit='nm',
+                       disp_freq_unit=self.disp_freq_unit)
 
 
 class DataSetPlotter:
@@ -444,7 +466,7 @@ class DataSetPlotter:
             Since contours are strongly affected by noise, it can be prefered to
             filter the dataset before calculating the contours. If `con_filter`
             is a dataset, the data of that set will be used for the contours. If
-            it is a int or tuple or int, the data will be filtered with an
+            it is a tuple of int, the data will be filtered with an
             uniform filter before calculation the contours. If `None`, no data
             prepossessing will be applied.
         ax : plt.Axis or None
@@ -585,14 +607,19 @@ class DataSetPlotter:
         """
         if ax is None:
             ax = plt.gca()
+        is_nm = self.freq_unit == 'nm'
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
         ds = self.dataset
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+
         wl, t, d = ds.wl, ds.t, ds.data
         l, plotted_vals = [], []
         for i in wls:
-            if self.freq_unit is 'nm':
-                idx = dv.fi(wl, i)
-            else:
-                idx = dv.fi(ds.wavenumbers, i)
+            idx = dv.fi(x, i)
+
             dat = d[:, idx]
             if norm is True:
                 dat = np.sign(dat[np.argmax(abs(dat))]) * dat / abs(dat).max()
@@ -601,13 +628,13 @@ class DataSetPlotter:
             else:
                 dat = dat / dat[dv.fi(t, norm)]
             plotted_vals.append(dat)
-            l.extend(ax.plot(t, dat, label='%.1f %s' % (wl[idx], ph.freq_unit),
+            l.extend(ax.plot(t, dat, label='%.1f %s' % (x[idx], ph.freq_unit),
                              **kwargs))
 
         if symlog:
             ax.set_xscale('symlog', linthreshx=1.)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
-        ax.legend(loc='best', ncol=2, title='Wavelength')
+        ax.legend(loc='best', ncol=3)
         ax.set_xlim(right=t.max())
         return l
 
