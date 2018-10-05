@@ -10,5 +10,5 @@ matplotlib
 sphinx>=1.8
 ipykernel
 nbsphinx
-nbsphinx-link==1.1.0
+nbsphinx-link
 pytest
