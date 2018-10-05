@@ -52,8 +52,8 @@ class DataSet:
         freq_unit : 'nm' or 'cm' (optional)
             Unit of the wavelength array, default is 'nm'.
         disp_freq_unit : 'nm','cm' or None (optional)
-            Unit which is used by default for plotting. If `None`, it defaults
-            to `freq_unit`.
+            Unit which is used by default for plotting, masking and cutting
+            the dataset. If `None`, it defaults to `freq_unit`.
 
         Attributes
         ----------
@@ -153,7 +153,7 @@ class DataSet:
         wl = self.wavelengths if freq_unit is 'wl' else self.wavenumbers
         save_txt(fname, wl, self.t, self.data)
 
-    def cut_freqs(self, freq_ranges=None, invert_sel=False, freq_unit='nm'):
+    def cut_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
         """
         Removes channels inside (or outside ) of given frequency ranges.
 
@@ -164,7 +164,7 @@ class DataSet:
             frequencies to keep.
         invert_sel : bool
             Invert the final selection.
-        freq_unit : {'nm', 'cm'}
+        freq_unit : 'nm', 'cm' or None
             Unit of the given edges.
 
         Returns
@@ -173,6 +173,8 @@ class DataSet:
             DataSet containing only the listed regions.
         """
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        if freq_unit is None:
+            freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit is 'nm' else self.wavenumbers
         for (lower, upper) in freq_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
@@ -184,7 +186,7 @@ class DataSet:
             err = None
         return DataSet(arr[idx], self.t, self.data[:, idx], err, freq_unit)
 
-    def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit='nm'):
+    def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
         """
         Mask channels inside of given frequency ranges.
 
@@ -196,7 +198,7 @@ class DataSet:
         invert_sel : bool
             When True, it inverts the selection. Can be used
             mark everything outside selected ranges.
-        freq_unit : {'nm', 'cm'}
+        freq_unit : 'nm', 'cm' or None
             Unit of the given edges.
 
         Returns
@@ -205,6 +207,8 @@ class DataSet:
             DataSet containing only the listed regions.
         """
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        if freq_unit is None:
+            freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit is 'nm' else self.wavenumbers
 
         for (lower, upper) in freq_ranges:
@@ -275,7 +279,7 @@ class DataSet:
         """Subtracts the first n-spectra from the dataset"""
         self.data -= np.mean(self.data[:n, :], 0, keepdims=True)
 
-    def bin_freqs(self, n: int, freq_unit='nm'):
+    def bin_freqs(self, n: int, freq_unit=None):
         """
         Bins down the dataset by averaging over several transients.
 
@@ -284,15 +288,18 @@ class DataSet:
         n : int
             The number of bins. The edges are calculated by
             np.linspace(freq.min(), freq.max(), n+1).
-        freq_unit : {'nm', 'cm'}
-            Whether to calculate the bin-borders in
-            frequency- of wavelength-space.
+        freq_unit : 'nm', 'cm' or None
+            Whether to calculate the bin-borders in frequency- of wavelength
+            space. If `None`, it defaults to `self.disp_freq_unit`.
+
         Returns
         -------
         DataSet
             Binned down `DataSet`
         """
         # We use the negative of the wavenumbers to make the array sorted
+        if freq_unit is None:
+            freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit is 'nm' else -self.wavenumbers
         # Slightly offset edges to include themselves.
         edges = np.linspace(arr.min() - 0.002, arr.max() + 0.002, n + 1)
@@ -412,7 +419,6 @@ class DataSet:
             added to the linear model.
         lower_bound : float (optional)
             Lower bound for decay-constants.
-            :param fix_sigma:
         """
 
         f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
@@ -463,8 +469,186 @@ class DataSet:
         return DataSet(all_wls, self.t, all_data, freq_unit='nm',
                        disp_freq_unit=self.disp_freq_unit)
 
+class PolDataSet:
+    def __init__(self, para: DataSet, perp: DataSet):
+        """
+        Class for working with a polazation resolved datasets. Assumes the same
+        frequency and time axis for both polarisations.
 
-class DataSetPlotter:
+        Parameters
+        ----------
+        para : DataSet
+            The dataset with parallel pump/probe pol.
+        perp : DataSet
+            The DataSet with perpendicular pump/probe
+
+        Attributes
+        ----------
+        plot : PolDataSetPlotter
+            Helper class containing the plotting methods.
+        """
+
+        assert(para.data.shape == perp.data.shape)
+        self.para = para
+        self.perp = perp
+        self.wavenumbers = para.wavenumbers
+        self.wavelengths = para.wavelengths
+        self.t = para.t
+        self.disp_freq_unit = para.disp_freq_unit
+        self.plot = PolDataSetPlotter(self, self.disp_freq_unit)
+
+
+    def fit_exp(self, x0, fix_sigma=True, fix_t0=False, fix_last_decay=True,
+                from_t=None, model_coh=True, lower_bound=0.1):
+        """
+        Fit a sum of exponentials to the dataset. This function assumes
+        the two datasets is already corrected for dispersion.
+
+        Parameters
+        ----------
+        x0 : list of floats or array
+            Starting values of the fit. The first value is the estimate of the
+            system response time omega. If `fit_t0` is true, the second float is
+            the guess of the time-zero. All other floats are interpreted as the
+            guessing values for exponential decays.
+        fix_sigma : bool (optional)
+            If to fix the IRF duration sigma.
+        fix_t0 : bool (optional)
+            If to fix the the time-zero.
+        fix_last_decay : bool (optional)
+            Fixes the value of the last tau of the initial guess. It can be
+            used to add a constant by setting the last tau to a large value
+            and fix it.
+        from_t : float or None
+            If not None, data with t<from_t will be ignored for the fit.
+        model_coh : bool (optional)
+            If coherent contributions should by modeled. If `True` a gaussian
+            with a width equal the system response time and its derivatives are
+            added to the linear model.
+        lower_bound : float (optional)
+            Lower bound for decay-constants.
+        """
+        pa, pe = self.para, self.perp
+        if not from_t is None:
+            pa = pa.cut_times([-np.inf, from_t]),
+            pe = pe.cut_times([-np.inf, from_t])
+        all_data = np.hstack((pa.data, pe.data))
+        all_wls = np.hstack((pa.wavelengths, pe.wavelengths))
+        all_tup = dv.tup(all_wls, all_data)
+
+        f = fitter.Fitter(all_tup, model_coh=model_coh,
+                          model_disp=1)
+        f.res(x0)
+        fixed_names = []
+        if fix_sigma:
+            fixed_names.append('w')
+
+        lm_model = f.start_lmfit(x0, fix_long=fix_last_decay, fix_disp=fix_t0,
+                                 lower_bound=lower_bound, full_model=False,
+                                 fixed_names=fixed_names)
+        ridge_alpha = abs(self.data).max() * 1e-4
+        f.lsq_method = 'ridge'
+        fitter.alpha = ridge_alpha
+        result = lm_model.leastsq()
+        return FitExpResult(lm_model, result, f)
+
+
+class Plotter:
+    def lbl_spec(self, ax=None):
+        if ax is None:
+            ax = plt.gca()
+        ax.set_xlabel(ph.freq_label)
+        ax.set_ylabel(ph.sig_label)
+        ax.autoscale(1, 'x', 1)
+        ax.axhline(0, color='k', lw=0.5, zorder=1.9)
+        ax.legend(loc='best', ncol=2, title='Delay time')
+        ax.minorticks_on()
+
+
+class PolDataSetPlotter(Plotter):
+    def __init__(self, pol_dataset : PolDataSet, disp_freq_unit='nm'):
+        """
+        Plotting commands for a PolDataSet
+
+        Parameters
+        ----------
+        pol_dataset : PolDataSet
+            The Data
+        disp_freq_unit : {'nm', 'cm'} (optional)
+            The default unit of the plots. To change
+            the unit afterwards, set the attribute directly.
+        """
+        self.pol_ds = pol_dataset
+        self.freq_unit = disp_freq_unit
+        self.perp_ls = dict(linewidth=1)
+        self.para_ls = dict(linewidth=3)
+
+    def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
+        """
+        Plot spectra at given times.
+
+        Parameters
+        ----------
+        t_list : list or ndarray
+            List of the times where the spectra are plotted.
+        norm : bool
+            If true, each spectral will be normalized.
+        ax : plt.Axis or None.
+            Axis where the spectra are plotted. If none, the current axis will
+            be used.
+        n_average : int
+            For noisy data it may be prefered to average multiple spectra
+            together. This function plots the average of `n_average` spectra
+            around the specific time-points.
+
+        Returns
+        -------
+        tuple of (List of `Lines2D`)
+            List containing the Line2D objects belonging to the spectra.
+        """
+
+        pa, pe = self.pol_ds.para, self.pol_ds.perp
+        l1 = pa.plot.spec(t_list, norm, ax, n_average,
+                          **self.para_ls, **kwargs)
+        l2 = pe.plot.spec(t_list, norm, ax, n_average,
+                          **self.perp_ls, **kwargs)
+        dv.equal_color(l1,l2)
+        return l1, l2
+
+    def trans(self, wls, symlog=True, norm=False, ax=None,
+              **kwargs):
+        """
+        Plot the nearest transients for given frequencies.
+
+        Parameters
+        ----------
+        wls : list or ndarray
+            Spectral positions, should be given in the same unit as
+            `self.freq_unit`.
+        symlog : bool
+            Determines if the x-scale is symlog.
+        norm : bool or float
+            If `False`, no normalization is used. If `True`, each transient
+            is divided by the maximum absolute value. If `norm` is a float,
+            all transient are normalized by their signal at the time `norm`.
+        ax : plt.Axes or None
+            Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
+            current axes. The lines are plotted in this axis.
+
+        All other kwargs are forwarded to the plot function.
+
+        Returns
+        -------
+         list of Line2D
+            Tuple of lists containing the plotted lines.
+        """
+        pa, pe = self.pol_ds.para, self.pol_ds.perp
+        l1 = pa.plot.trans(wls, symlog, norm, ax, **kwargs, **self.para_ls)
+        l2 = pe.plot.trans(wls, symlog, norm, ax, **kwargs, **self.perp_ls)
+        dv.equal_color(l1, l2)
+        return l1, l2
+
+class DataSetPlotter(Plotter):
     def __init__(self, dataset: DataSet, disp_freq_unit='nm'):
         """
         Class which can Plot a `DataSet` using matplotlib.
@@ -576,7 +760,7 @@ class DataSetPlotter:
             Axis where the spectra are plotted. If none, the current axis will
             be used.
         n_average : int
-            For noisy data it may be prefered to average multiple spectra
+            For noisy data it may be preferred to average multiple spectra
             together. This function plots the average of `n_average` spectra
             around the specific time-points.
 
@@ -612,12 +796,7 @@ class DataSetPlotter:
                           label=ph.time_formatter(ds.t[idx], ph.time_unit),
                           **kwargs)
 
-        ax.set_xlabel(ph.freq_label)
-        ax.set_ylabel(ph.sig_label)
-        ax.autoscale(1, 'x', 1)
-        ax.axhline(0, color='k', lw=0.5, zorder=1.9)
-        ax.legend(loc='best', ncol=2, title='Delay time')
-        ax.minorticks_on()
+        self.lbl_spec(ax)
         return li
 
     def trans(self, wls, symlog=True, norm=False, ax=None,
@@ -735,7 +914,7 @@ class DataSetPlotter:
             axs[1].plot(ds.t, u.T[i], label='%d' % i)
             axs[2].plot(x, v[i])
         ph.lbl_trans(axs[1], use_symlog=True)
-        ph.lbl_spec(axs[2])
+        self.lbl_spec(axs[2])
 
 
 class DataSetInteractiveViewer:
