@@ -145,7 +145,7 @@ class DataSet:
         Parameters
         ----------
         fname : str
-            Filename (can include filepath)
+            Filename (can include path)
 
         freq_unit : 'nm' or 'cm' (default 'nm')
             Which frequency unit is used.
@@ -300,11 +300,16 @@ class DataSet:
         binned = np.empty((self.data.shape[0], n))
         binned_wl = np.empty(n)
         for i in range(n):
-            binned[:, i] = np.average(self.data[:, idx[i]:idx[i + 1]], 1)
+            if self.err is None:
+                weights = None
+            else:
+                weights = 1/self.err[:, idx[i]:idx[i+1]]
+            binned[:, i] = np.average(self.data[:, idx[i]:idx[i + 1]], 1,
+                                      weights=weights)
             binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
         if freq_unit is 'cm':
             binned_wl = - binned_wl
-        return DataSet(binned_wl, self.t, binned, freq_unit,
+        return DataSet(binned_wl, self.t, binned, freq_unit=freq_unit,
                        disp_freq_unit=self.disp_freq_unit)
 
     def bin_times(self, n, start_index=0):
