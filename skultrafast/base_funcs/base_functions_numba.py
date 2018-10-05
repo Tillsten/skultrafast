@@ -143,11 +143,16 @@ def _fold_exp(t_arr, w, tz, tau_arr):
     y: ndarray(N, M, K)
        Folded exponentials for given taus.
     """
-    n, m = t_arr.shape
-    l = tau_arr.size
-    out = np.empty((l, m, n))
-    _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n)
-    return out.T
+    if w != 0:
+        n, m = t_arr.shape
+        l = tau_arr.size
+        out = np.empty((l, m, n))
+        _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n)
+        return out.T
+    else:
+        k = 1/tau_arr
+        out = np.exp(-(t_arr[:, :, None]-tz)*k[None, None, :])
+        return out
 
 @njit(parallel=True, fastmath=True)
 def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):

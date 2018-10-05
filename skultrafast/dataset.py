@@ -530,11 +530,11 @@ class PolDataSet:
         """
         pa, pe = self.para, self.perp
         if not from_t is None:
-            pa = pa.cut_times([-np.inf, from_t]),
-            pe = pe.cut_times([-np.inf, from_t])
+            pa = pa.cut_times([(-np.inf, from_t)])
+            pe = pe.cut_times([(-np.inf, from_t)])
         all_data = np.hstack((pa.data, pe.data))
         all_wls = np.hstack((pa.wavelengths, pe.wavelengths))
-        all_tup = dv.tup(all_wls, all_data)
+        all_tup = dv.tup(all_wls, pa.t, all_data)
 
         f = fitter.Fitter(all_tup, model_coh=model_coh,
                           model_disp=1)
@@ -546,14 +546,24 @@ class PolDataSet:
         lm_model = f.start_lmfit(x0, fix_long=fix_last_decay, fix_disp=fix_t0,
                                  lower_bound=lower_bound, full_model=False,
                                  fixed_names=fixed_names)
-        ridge_alpha = abs(self.data).max() * 1e-4
+        ridge_alpha = abs(all_data).max() * 1e-4
         f.lsq_method = 'ridge'
         fitter.alpha = ridge_alpha
         result = lm_model.leastsq()
-        return FitExpResult(lm_model, result, f)
+
+        self.exp_fit_result = FitExpResult(lm_model, result, f)
+        return self.exp_fit_result
 
 
 class Plotter:
+    @property
+    def x(self):
+        if self.freq_unit is 'cm':
+            return self._get_wn()
+        else:
+            return self._get_wl()
+
+
     def lbl_spec(self, ax=None):
         if ax is None:
             ax = plt.gca()
@@ -566,6 +576,7 @@ class Plotter:
 
 
 class PolDataSetPlotter(Plotter):
+
     def __init__(self, pol_dataset : PolDataSet, disp_freq_unit='nm'):
         """
         Plotting commands for a PolDataSet
@@ -582,6 +593,12 @@ class PolDataSetPlotter(Plotter):
         self.freq_unit = disp_freq_unit
         self.perp_ls = dict(linewidth=1)
         self.para_ls = dict(linewidth=3)
+
+    def _get_wl(self):
+        return self.pol_ds.para.wavelengths
+
+    def _get_wn(self):
+        return self.pol_ds.para.wavenumbers
 
     def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
         """
@@ -648,7 +665,52 @@ class PolDataSetPlotter(Plotter):
         dv.equal_color(l1, l2)
         return l1, l2
 
+    def das(self, ax=None, **kwargs):
+        """
+        Plot a DAS, if available.
+
+        Parameters
+        ----------
+        ax : plt.Axes or None
+            Axes to plot.
+        kwargs : dict
+            Keyword args given to the plot function
+
+        Returns
+        -------
+        Tuple of (List of Lines2D)
+        """
+        ds = self.pol_ds
+        if not hasattr(self.pol_ds, 'exp_fit_result'):
+            raise ValueError('The PolDataSet must have successfully fit the '
+                             'data')
+        if ax is None:
+            ax = plt.gca()
+        is_nm = self.freq_unit == 'nm'
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        f = ds.exp_fit_result.fitter
+        num_exp = f.num_exponentials
+        leg_text = [ph.nsf(i)+' '+ph.time_unit for i in f.last_para[-num_exp:]]
+        if max(f.last_para) > 5 * f.t.max():
+            leg_text[-1] = 'const.'
+        n = ds.para.wavelengths.size
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        l1 = ax.plot(self.x, f.c[:n, :], **kwargs, **self.para_ls)
+        l2 = ax.plot(self.x, f.c[n:, :], **kwargs, **self.perp_ls)
+
+        dv.equal_color(l1, l2)
+        ax.legend(l1, leg_text, title='Decay\nConstants')
+        return l1, l2
+
+
+
+
 class DataSetPlotter(Plotter):
+    _ds_name = 'self.pol_ds.para'
+
     def __init__(self, dataset: DataSet, disp_freq_unit='nm'):
         """
         Class which can Plot a `DataSet` using matplotlib.

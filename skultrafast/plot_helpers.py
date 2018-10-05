@@ -24,22 +24,6 @@ ma = np.ma
 
 linewidth = 2
 
-class Data(object):
-    def __init__(self, tup, name=''):
-        self.tup = tup
-        self.name = name
-
-    def plot_spec(self, t_list, *args, **kwargs):
-        return plot_spec(self.tup, t_list, *args, **kwargs)
-
-    def plot_trans(self, wl_list, *args, **kwargs):
-        return plot_trans(self.tup, wl_list, *args, **kwargs)
-
-    def plot_map(self, *args, **kwargs):
-        tup = self.tup
-        return nice_map(tup.wl, tup.t, tup.data, *args, **kwargs)
-
-
 def ir_mode():
     global freq_label
     global inv_freq
@@ -630,12 +614,14 @@ def stack_ax(num_rows=2, num_cols=1, height_rations=[2,1]):
 
 def nsf(num, n=1):
     """n-Significant Figures"""
-    if num > 10:
-        return str(int(num))
+    if num > 30:
+        return '%4.0f'%np.around(num, -1)
+    if num > 3:
+        return '%4.0f'%num
     if num > 1:
-        return '%.1f'%num
+        return '%4.1f'%num
     if num < 1:
-        return '%.2f'%num
+        return '%4.2f'%num
 
 def plot_das(fitter):
     pass
