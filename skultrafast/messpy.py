@@ -1,7 +1,7 @@
 import numpy as np
 from astropy import stats as stats
 from skultrafast.dataset import DataSet
-
+import matplotlib.pyplot as plt
 
 class MesspyDataSet:
     def __init__(self, fname, invert_data=False, is_pol_resolved=False,
@@ -35,8 +35,6 @@ class MesspyDataSet:
         self.pol_first_scan = pol_first_scan
         self.is_pol_resolved = is_pol_resolved
         self.valid_channel = valid_channel
-        print(self.data.shape)
-
 
     def average_scans(self, sigma=3, max_scan=None, disp_freq_unit=None):
         """
@@ -66,6 +64,7 @@ class MesspyDataSet:
         else:
             sub_data = self.data[..., :max_scan]
         num_wls = self.data.shape[0]
+
         if disp_freq_unit is None:
             disp_freq_unit = 'nm' if self.wl.shape[1] > 32 else 'cm'
 
@@ -130,3 +129,50 @@ class MesspyDataSet:
             return out
         else:
             raise NotImplementedError("Iso correction not supported yet.")
+
+    def recalculate_wavelengths(self, dispersion, center_ch=None):
+        """Recalculates the wavelengths, assuming linear dispersion.
+
+        Parameters
+        ----------
+        dispersion : float
+            The dispersion per channel.
+        center_ch : int
+            Determines the mid-channel. Defaults to len(wl)/2.
+        """
+        n = self.wl.shape[1]
+        if center_ch is None:
+            center_ch = n//2
+
+        center_wls = self.wl[:, center_ch]
+        new_wl = np.arange(-n//2, n//2)*dispersion
+        self.wl = np.add.outer(center_wls, new_wl)
+
+class MessPyPlotter:
+    def __init__(self, messpyds):
+        """
+        Class to plot utility plots
+
+        Parameters
+        ----------
+        messpyds : MesspyDataSet
+            The MessPyDataSet.
+        """
+
+        self.ds = messpyds
+
+    def background(self, n=10, ax=None):
+        """
+        Plot the backgrounds each center wl.
+        """
+        if ax is None:
+            ax = plt.gca()
+
+        out = self.ds.average_scans()
+        if isinstance(out, dict):
+            for i in out:
+                ds = out[i]
+                ax.plot(ds.data[:n, :].mean(0))
+
+        else:
+            return
