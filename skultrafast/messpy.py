@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def _add_rel_errors():
     pass
 
-class MesspyDataSet:
+class MessPyFile:
     def __init__(self, fname, invert_data=False, is_pol_resolved=False,
                  pol_first_scan='unknown', valid_channel='both'):
         """Class for working with data files from MessPy.
@@ -162,7 +162,7 @@ class MessPyPlotter:
 
         Parameters
         ----------
-        messpyds : MesspyDataSet
+        messpyds : MessPyFile
             The MessPyDataSet.
         """
 
