@@ -12,5 +12,6 @@ def test_methods():
     assert(np.all(nds.wavelengths > 600))
     nds = ds.cut_times([(-100, 1)])
     assert(np.all(nds.t > .99))
+    nds = ds.bin_times(5)
 
 

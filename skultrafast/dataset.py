@@ -3,12 +3,13 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.core.multiarray import ndarray
+from astropy.stats import sigma_clip
 
 import skultrafast.dv as dv
 import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter
 from skultrafast.data_io import save_txt
-from skultrafast.filter import uniform_filter
+from skultrafast.filter import uniform_filter, svd_filter
 
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
 EstDispResult.__doc__ = """
@@ -303,7 +304,39 @@ class DataSet:
             binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
         if freq_unit is 'cm':
             binned_wl = - binned_wl
-        return DataSet(binned_wl, self.t, binned, freq_unit)
+        return DataSet(binned_wl, self.t, binned, freq_unit,
+                       disp_freq_unit=self.disp_freq_unit)
+
+    def bin_times(self, n, start_index=0):
+        """
+        Bins down the dataset by binning `n` sequential spectra together.
+
+        Parameters
+        ----------
+        n : int
+            How many spectra are binned together.
+        start_index : int
+            Determines the starting index of the binning
+
+        Returns
+        -------
+        DataSet
+            Binned down `DataSet`
+        """
+
+        out = []
+        out_t = []
+        m = len(self.t)
+        for i in range(start_index, m, n):
+            end_idx = min(i + n, m)
+            out.append(sigma_clip(self.data[i:end_idx, :], sigma=2.5, iters=1,
+                                     axis=0).mean(0))
+            out_t.append(self.t[i:end_idx].mean())
+
+        new_data = np.array(out)
+        new_t = np.array(out_t)
+        return DataSet(self.wavelengths, new_t, new_data,
+                       disp_freq_unit=self.disp_freq_unit)
 
     def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2,
                             t_parameter=1.3):
@@ -512,7 +545,10 @@ class DataSetPlotter:
             if isinstance(con_filter, DataSet):
                 data = con_filter.data
             elif con_filter is not None:  # must be int or tuple of int
-                data = uniform_filter(ds, con_filter).data
+                if isinstance(con_filter, tuple):
+                    data = uniform_filter(ds, con_filter).data
+                else:
+                    data = svd_filter(ds, con_filter).data
             else:
                 data = ds.data
             ax.contour(x, ds.t, data, levels=levels,
@@ -563,7 +599,7 @@ class DataSetPlotter:
                 dat = ds.data[idx, :]
             else:
                 raise ValueError(
-                    'n_average must be an Integer greater or equal 0.')
+                    'n_average must be an Integer >= 0.')
 
             if norm:
                 dat = dat / abs(dat).max()
@@ -576,6 +612,7 @@ class DataSetPlotter:
         ax.autoscale(1, 'x', 1)
         ax.axhline(0, color='k', lw=0.5, zorder=1.9)
         ax.legend(loc='best', ncol=2, title='Delay time')
+        ax.minorticks_on()
         return li
 
     def trans(self, wls, symlog=True, norm=False, ax=None,
@@ -636,6 +673,7 @@ class DataSetPlotter:
         ph.lbl_trans(ax=ax, use_symlog=symlog)
         ax.legend(loc='best', ncol=3)
         ax.set_xlim(right=t.max())
+        ax.yaxis.set_tick_params(which='minor', left=True)
         return l
 
     def overview(self):

@@ -344,7 +344,7 @@ def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
             t0, t1 = dv.fi(t, x), dv.fi(t, y)
             pd = np.mean(d[t0:t1, :], 0)
             lw = 2 if i == 0 else 1
-            l+= ax.plot(wl, pd, color='C%d'%i, marker=markers[i], lw=lw,
+            l+= ax.plot(wl, pd, color='C%d'%j, marker=markers[i], lw=lw,
                     mec='none', ms=3)
 
         ax.text(pos[0], pos[1]+j*0.07,'%.1f - %.1f ps'%(t[t0], t[t1]),
@@ -358,21 +358,6 @@ def mean_spec(wl, t, p, t_range, ax=None, pos=(0.1, 0.1),
         ax.set_title('mean signal from {0:.1f} to {1:.1f} ps'.format(t[t0], t[t1]))
     return l
 
-def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
-             linscaley=1, cmap='coolwarm',
-             **kwargs):
-    if norm is None:
-        norm = SymLogNorm(linthresh, linscale=linscale)
-    con = plt.contourf(wl, t, d, lvls, norm=norm, cmap=cmap,  **kwargs)
-    cb = plt.colorbar(pad=0.02)
-    cb.set_label(sig_label)
-    plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
-
-    plt.yscale('symlog', linthreshy=1, linscaley=linscaley, suby=[2,3,4,5,6,7,8,9])
-    plt.ylim(-.5, )
-    plt.xlabel(freq_label)
-    plt.ylabel(time_label)
-    return con
 
 def nice_map(wl, t, d, lvls=20, linthresh=10, linscale=1, norm=None,
              linscaley=1, cmap='coolwarm',
