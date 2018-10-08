@@ -184,7 +184,8 @@ class DataSet:
             err = self.err[:, idx]
         else:
             err = None
-        return DataSet(arr[idx], self.t, self.data[:, idx], err, freq_unit)
+        return DataSet(self.wavelengths[idx], self.t, self.data[:, idx], err,
+                       'nm', disp_freq_unit=self.disp_freq_unit)
 
     def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
         """
@@ -575,6 +576,7 @@ class Plotter:
         ax.minorticks_on()
 
 
+
 class PolDataSetPlotter(Plotter):
 
     def __init__(self, pol_dataset : PolDataSet, disp_freq_unit='nm'):
@@ -630,6 +632,7 @@ class PolDataSetPlotter(Plotter):
         l2 = pe.plot.spec(t_list, norm, ax, n_average,
                           **self.perp_ls, **kwargs)
         dv.equal_color(l1,l2)
+        self.lbl_spec(ax)
         return l1, l2
 
     def trans(self, wls, symlog=True, norm=False, ax=None,
@@ -859,6 +862,8 @@ class DataSetPlotter(Plotter):
                           **kwargs)
 
         self.lbl_spec(ax)
+        if not is_nm:
+            ax.set_xlim(x.max(), x.min())
         return li
 
     def trans(self, wls, symlog=True, norm=False, ax=None,
