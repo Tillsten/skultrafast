@@ -27,7 +27,15 @@ The result of the convolution
 :math:`y_{\textrm{conv}} = IRF \circledast y`
 
 can be expressed in terms of the complementary error-function `erfc`. Using
-sympy, the calculation is done in `convolution.ipynb`_ notebook.
+sympy, the calculation is done in `convolution.ipynb`_ notebook. Therefore,
+by default *skultrafast* fits the function
+
+:math:`y(t, \omega)= A \exp(\frac{-t}{\tau_i}+\frac{\sigma^2}{2\tau_i^2})
+       \frac{1}{2} erfc(\frac{\sigma}{\sqrt 2 \tau_i}-\frac{t}{\sqrt 2\sigma})`.
+
+For given :math:`\tau` and :math:`\omega`, the least squares problem is
+linear since the function is a sum where only the coefficents are missing.
+
 
 
 

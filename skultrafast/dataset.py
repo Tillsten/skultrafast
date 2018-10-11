@@ -435,7 +435,9 @@ class DataSet:
         f.lsq_method = 'ridge'
         fitter.alpha = ridge_alpha
         result = lm_model.leastsq()
-        return FitExpResult(lm_model, result, f)
+        result_tuple = FitExpResult(lm_model, result, f)
+        self.fit_result_ = result_tuple
+        return result_tuple
 
     def lft_density_map(self, taus, alpha=1e-4, ):
         """Calculates the LDM from a dataset by regularized regression.
@@ -552,7 +554,7 @@ class PolDataSet:
         fitter.alpha = ridge_alpha
         result = lm_model.leastsq()
 
-        self.exp_fit_result = FitExpResult(lm_model, result, f)
+        self.fit_result_ = FitExpResult(lm_model, result, f)
         return self.exp_fit_result
 
 
@@ -694,7 +696,7 @@ class PolDataSetPlotter(Plotter):
             ph.vis_mode()
         else:
             ph.ir_mode()
-        f = ds.exp_fit_result.fitter
+        f = ds.fit_result_.fitter
         num_exp = f.num_exponentials
         leg_text = [ph.nsf(i)+' '+ph.time_unit for i in f.last_para[-num_exp:]]
         if max(f.last_para) > 5 * f.t.max():
