@@ -79,7 +79,7 @@ class MessPyFile:
             err = std / np.sqrt((~data.mask).sum(-1))
 
             if self.valid_channel in [0, 1]:
-                mean = data[..., self.valid_channel]
+                mean = mean[..., self.valid_channel]
                 std = std[..., self.valid_channel]
                 err = err[..., self.valid_channel]
 
