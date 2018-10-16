@@ -72,6 +72,9 @@ class DataSet:
         """
 
         assert ((t.shape[0], wl.shape[0]) == data.shape)
+        t  = t.copy()
+        wl = wl.copy()
+        data = data.copy()
 
         if freq_unit == 'nm':
             self.wavelengths = wl
