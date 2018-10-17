@@ -7,13 +7,13 @@ This API documentation only shows the new API,
 which internally may still use older methods and
 classes.
 
-DataSet
+TimeResSpec
 -------
 
-.. autoclass:: dataset.DataSet
+.. autoclass:: dataset.TimeResSpec
    :members:
 
-.. autoclass:: dataset.DataSetPlotter
+.. autoclass:: dataset.TimeResSpecPlotter
    :members:
 
 zero_finding

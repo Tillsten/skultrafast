@@ -43,7 +43,23 @@ class SingleSpec:
         i1, i2 = self.fi(a), self.fi(b)
         self.back -= self.y[i1:i2, ...].mean(0)
 
-    def cut(self, region):
+    def cut(self, region, invert_sel=True):
+        """
+        Cuts part of the spectrum away.
+
+        Parameters
+        ----------
+        region : tuple of floats
+            Defines the region to be cutted away.
+        invert_sel : bool
+            If `True`, the cutted region is inverted.
+
+        Returns
+        -------
+        SingleSpec
+            Cutted spectra.
+
+        """
         a, b = region
         i1, i2 = self.fi(a), self.fi(b)
         new_x, new_y = self.x[i1:i2], self.y[i1:i2, ...]
