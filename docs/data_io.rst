@@ -21,7 +21,7 @@ the `MessPyFile`-class. The constructor takes all necessary information to
 average the data down into datasets.
 
 This is done via `MessPyFile.average_scans`, which either returns a
-``DataSet`` or dict of ``DataSet``'s. For data recorded after 2017, the
+``TimeResSpec`` or dict of ``TimeResSpec``'s. For data recorded after 2017, the
 following recipes should work.
 
 How to *load data from Vis-pump Vis-Probe data, not polarisation resolved?*::

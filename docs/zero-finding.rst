@@ -23,7 +23,7 @@ Heuristics
 *skultrafast* comes with different heuristics to estimate the time-zero from
 a single trace. The heuristic functions are located in the :py:mod:`zero_finding`
 module. Additionally, user-given heuristics are supported. Working directly with
-the functions should not be necessary, when using the :py:obj:`~dataset.DataSet`
+the functions should not be necessary, when using the :py:obj:`~dataset.TimeResSpec`
 class.
 
 1.  `use_diff`, returns the index where the largest signal change is located.    
