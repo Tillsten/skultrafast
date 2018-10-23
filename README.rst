@@ -19,7 +19,7 @@ below.
 
 The latest version of the software is available on `github <https://github
 .com/Tillsten/skultrafast>`_. A build of the documentation can be found at
-`Read the docs <https://skultrafast.readthedocs.io/en/latest/example.html>`_.
+`Read the docs <https://skultrafast.readthedocs.io/en/latest/>`_.
 
 The package was created and is maintained by *Till Stensitzki*. All coding was
 done while being employed in the `Heyne group <http://www.physik.fu-berlin
