@@ -208,8 +208,7 @@ class TimeResSpec:
 
         Returns
         -------
-        : TimeResSpec
-            TimeResSpec containing only the listed regions.
+        : None
         """
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
         if freq_unit is None:
@@ -218,10 +217,11 @@ class TimeResSpec:
 
         for (lower, upper) in freq_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
-        if not invert_sel:
+        if invert_sel:
             idx = ~idx
         if self.err is not None:
-            self.err.mask[:, idx] = True
+            self.err = np.ma.MaskedArray(self.err)
+            self.err[:, idx] = np.ma.masked
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
 
@@ -590,7 +590,6 @@ def delgator(pol_tr : PolTRSpec, method : typing.Callable):
         method returns a new TimeResSpec.
     """
     name = method.__name__
-    print(method)
     hints = typing.get_type_hints(method)
     if 'return' in hints:
         do_return =  hints['return'] == TimeResSpec

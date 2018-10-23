@@ -2,6 +2,7 @@
 from skultrafast.dataset import TimeResSpec, PolTRSpec
 from skultrafast.data_io import  load_example
 import numpy as np
+from numpy.testing import assert_almost_equal
 
 wl, t, data = load_example()
 
@@ -14,14 +15,27 @@ def test_methods():
     nds = ds.cut_times([(-100, 1)])
     assert(np.all(nds.t > .99))
     nds = ds.bin_times(5)
+    assert(nds.t.size == np.ceil(ds.t.size/5))
+    ds.mask_freqs([(400, 600)])
+    assert(np.all(ds.data.mask[:, ds.wl_idx(550)]))
+
 
 def test_pol_tr():
     ds = TimeResSpec(wl, t, data)
-    ps = PolTRSpec(para=ds, perp=ds)
-    ps.bin_freqs(10)
+    ds2 = TimeResSpec(wl, t, data)
+    ps = PolTRSpec(para=ds, perp=ds2)
+    out = ps.bin_freqs(10)
+    assert(out.para.wavenumbers.size == 10)
+    assert(out.perp.wavenumbers.size == 10)
+    assert_almost_equal(out.perp.data, out.para.data)
     ps.subtract_background()
-    ps.mask_freqs([(500, 550)])
-    ps.cut_freqs([(500, 550)])
+    ps.mask_freqs([(400, 550)])
+    print(ps.para.data.mask, ps.para.data.mask[1, ps.para.wl_idx(520)])
+
+    assert(ps.para.data.mask[1, ps.para.wl_idx(520)] )
+    out = ps.cut_freqs([(400, 550)])
+    assert(np.all(out.para.wavelengths >= 550))
+    assert(np.all(out.perp.wavelengths >= 550))
     ps.bin_times(6)
 
 def test_plot():
