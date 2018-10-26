@@ -12,3 +12,4 @@ ipykernel
 nbsphinx
 nbsphinx-link
 pytest
+ipywidgets

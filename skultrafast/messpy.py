@@ -1,7 +1,9 @@
 import numpy as np
 from astropy import stats as stats
 from skultrafast.dataset import TimeResSpec, Plotter
+from skultrafast import  plot_helpers as ph
 import matplotlib.pyplot as plt
+from .dv import make_fi
 
 def _add_rel_errors(data1, err1, data2, err2):
     #TODO Implement
@@ -42,9 +44,11 @@ class MessPyFile:
         if valid_channel is not None:
             self.valid_channel = valid_channel
         else:
-            self.valid_channel = self.wl.shape[0] > 32
+            self.valid_channel = 1 if self.wl.shape[0] > 32 else 0
 
         self.num_cwl = self.data.shape[0]
+        self.plot = MessPyPlotter(self)
+        self.t_idx = make_fi(self.t)
 
 
     def average_scans(self, sigma=3, max_scan=None, disp_freq_unit=None):
@@ -188,7 +192,7 @@ class MessPyPlotter(Plotter):
         if isinstance(out, dict):
             for i in out:
                 ds = out[i]
-                ax.plot(ds.data[:n, :].mean(0), label=i)
+                ax.plot(ds.wavelengths, ds.data[:n, :].mean(0), label=i)
             self.lbl_spec(ax)
         else:
             return
@@ -221,20 +225,48 @@ class MessPyPlotter(Plotter):
 
         n = self.ds.num_cwl
         ds = self.ds
+        t = self.ds.t
         if not hasattr(ds, 'av_scans_'):
             return
         for i in range(n):
             c = 'C%d'%i
+            sl = (t_region[0] < t) & (t < t_region[1])
             if 'para' + str(i) in ds.av_scans_:
-                d = ds.av_scans_['para' + str(i)].data
-                sl = slice(d.t_idx(t_region(0)),d.t_idx(t_region(0)))
-                ax.plot(d.wl, d[sl,:].mean(0), c=c)
+                d = ds.av_scans_['para' + str(i)]
+                ax.plot(d.wl, d.data[sl,:].mean(0), c=c, lw=2)
 
             if 'perp' + str(i) in ds.av_scans_:
-                d = ds.av_scans_['para' + str(i)].data
-                sl = slice(d.t_idx(t_region(0)),d.t_idx(t_region(0)))
-                ax.plot(d.wl, d[sl,:].mean(0), c=c)
+                d = ds.av_scans_['perp' + str(i)]
+                ax.plot(d.wavelengths, d.data[sl,:].mean(0), c=c, lw=1)
+
+        ph.lbl_spec()
 
 
+    def compare_scans(self, t_region=(0, 4), channel=0, cmap='jet'):
+        fig, ax = plt.subplots(figsize=(4, 2))
+        n_scans = self.ds.data.shape[-1]
+        d = self.ds.data
+        t = self.ds.t
+        sl = (t_region[0] < t) & (t < t_region[1])
+        colors = plt.cm.get_cmap(cmap)
+        if not self.ds.is_pol_resolved:
+            for i in range(n_scans):
+                c = colors(i/n_scans)
+                for j in range(d.shape[0]):
+
+                    plt.plot(self.ds.wl[:, j], d[j, sl, :, channel, i].mean(0),
+                             label='%d'%i, c=c)
+        else:
+            for i in range(0, n_scans, 2):
+                c = colors(2*i / n_scans)
+                for j in range(d.shape[0]):
+                    x = self.ds.wl[:, j]
+                    y = d[j, sl, :, channel, i].mean(0)
+                    plt.plot(x, y, label='%d' % i, c=c)
+                    if i + 1 < n_scans:
+                        y = d[j, sl, :, channel, i+1].mean(0)
+                        plt.plot(x, y, label='%d' % (i+1), c=c)
+
+        ph.lbl_spec()
 
 
