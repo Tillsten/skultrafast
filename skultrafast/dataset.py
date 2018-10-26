@@ -511,6 +511,9 @@ class PolTRSpec:
         self.mask_freqs = delgator(self, trs.mask_freqs)
         self.mask_times = delgator(self, trs.mask_times)
         self.subtract_background = delgator(self, trs.subtract_background)
+        self.t_idx = para.t_idx
+        self.wn_idx = para.wn_idx
+        self.wl_idx = para.wl_idx
 
 
 
@@ -757,6 +760,27 @@ class PolDataSetPlotter(Plotter):
         dv.equal_color(l1, l2)
         ax.legend(l1, leg_text, title='Decay\nConstants')
         return l1, l2
+
+    def trans_anisotropy(self, wls, symlog=True, ax=None):
+        ds = self.pol_ds
+        is_nm = self.freq_unit == 'nm'
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        l = []
+        for i in wls:
+            idx = dv.fi(x, i)
+            pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
+            aniso = (pa-pe)/(2*pe+pa)
+            l += plt.plot(ds.para.t, aniso,
+                     label=ph.time_formatter(ds.t[idx], ph.time_unit))
+
+
+
+
+
 
 
 class TimeResSpecPlotter(Plotter):
@@ -1071,6 +1095,34 @@ class TimeResSpecPlotter(Plotter):
         l1 = ax.plot(self.x, f.c[:, :], **kwargs)
         ax.legend(l1, leg_text, title='Decay\nConstants')
         return l1
+
+    def interactive(self):
+        """
+        Generates a jupyter widgets UI for exploring a spectra.
+        """
+        import ipywidgets as wid
+        from IPython.display import display
+        is_nm = self.freq_unit is 'nm'
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        ds = self.dataset
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        #fig, ax = plt.subplots()
+        wl_slider = wid.FloatSlider(
+            None, min=x.min(), max=x.max(), step=1,
+            description='Freq (%s)'%self.freq_unit)
+        def func(x):
+
+            #ax.cla()
+            self.trans([x])
+            #plt.show()
+
+        ui = wid.interactive(func, x=wl_slider, continuous_update=False)
+        display(ui)
+        return ui
+
 
 
 class DataSetInteractiveViewer:
