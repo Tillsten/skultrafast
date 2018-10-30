@@ -27,20 +27,23 @@ def _fold_exp(tt, w, tz, tau):
     -------
     y: ndarray
        Folded exponentials for given taus.
-       
+
     """
+    if w == 0:
+        k = -1/tau_arr
+        return np.exp((t_arr.reshape(n, m, 1), -tz)*k.reshape(1,1,-1))
     ws = w
     k = 1 / (tau[..., None, None])
     t = (tt + tz).T[None, ...]
     y = np.exp(k * (ws * ws * k / (4.0) - t))
     y *= 0.5 * erfc(-t / ws + ws * k / (2.0))
     return y.T
-    
+
 def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
     a = _fold_exp(t_arr, w, tz, tau_arr)
     b = _coh_gaussian(t_arr, w, tz)
     return a, b
-    
+
 exp_half = np.exp(0.5)
 def _coh_gaussian(t, w, tz):
     """Models artifacts proportional to a gaussian and it's derivatives
