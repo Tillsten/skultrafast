@@ -4,6 +4,8 @@ import numpy as np
 import scipy.stats as st
 import scipy.signal as sig
 from collections import namedtuple
+from scipy.constants import electron_volt, c, h, hbar, physical_constants
+
 
 tup = namedtuple('tup','wl t data')
 
@@ -25,6 +27,25 @@ def fs2cm(t):
 
 def cm2fs(cm):
     return  1/(cm * 3e-5)
+
+def nm2cm(nm):
+    return 1e7/nm
+
+def cm2nm(cm):
+    return 1e7/cm
+
+def cm2eV(cm):
+    eV_m = physical_constants['electron volt-inverse meter relationship'][0]
+    eV_cm = eV_m/100
+    return cm/eV_cm
+
+def eV2cm(eV):
+    eV_m = physical_constants['electron volt-inverse meter relationship'][0]
+    eV_cm = eV_m/100
+    return eV*eV_cm
+
+def cm2THz(cm):
+    return c/(cm*100)
 
 def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     arr = np.sort(arr, axis=axis)

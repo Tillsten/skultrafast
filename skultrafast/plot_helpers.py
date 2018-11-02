@@ -4,6 +4,7 @@ Created on Tue May 27 15:35:22 2014
 
 @author: tillsten
 """
+from typing import Any, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -63,6 +64,35 @@ def plot_singular_values(dat):
     plt.xlabel('N')
     plt.ylabel('Value')
 
+def make_dual_axis(ax : plt.Axes, axis='y', unit='nm'):
+    if axis == 'y':
+        pseudo_ax = ax.twiny()
+        pseudo_ax.set_xlim(ax.get_xlim())
+        sub_axis = pseudo_ax.xaxis
+    elif axis == 'x':
+        pseudo_ax = ax.twinx()
+        pseudo_ax.set_ylim(ax.get_ylim())
+        sub_axis = pseudo_ax.yaxis
+        lbl = line
+    else:
+        raise ValueError('axis must be either x or y.')
+
+    if unit is 'nm':
+        def fr(x, y):
+            return '%.f' % (1e7/ float(x))
+    elif unit is 'cm':
+        def fr(x, y):
+            return '%.f' % (1e7 / float(x))
+
+    fr = plt.FuncFormatter(fr)
+
+    sub_axis.yaxis.set_major_formatter(fr)
+    lbl
+    sub_axis.set_ylabel('Wavelengths [nm]', labelpad=2)
+    sub_axis.yaxis.set_ticks(1e4 / np.array([500, 600, 700, 800, 900]))
+    sub_axis.yaxis.set_ticks(1e4 / np.array([525, 550, 575, 625, 650, 675, 725, 750, 775, 825, 850, 875]),
+                        minor=True)
+
 def plot_svd_components(tup, n=4, from_t = None):
     wl, t, d = tup.wl, tup.t, tup.data
     if from_t:
@@ -70,7 +100,7 @@ def plot_svd_components(tup, n=4, from_t = None):
         t = t[idx:]
         d = d[idx:, :]
     u, s, v = np.linalg.svd(d)
-    ax1 = plt.subplot(311)
+    ax1: plt.Axes = plt.subplot(311)
     ax1.set_xlim(-1, t.max())
 
 
@@ -607,7 +637,7 @@ def stack_ax(num_rows=2, num_cols=1, height_rations=[2,1]):
 
         axes.append(row)
 
-        fo
+
 
 
 
