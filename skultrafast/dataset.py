@@ -10,6 +10,7 @@ import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter
 from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter, svd_filter
+import lmfit
 
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
 EstDispResult.__doc__ = """
@@ -69,6 +70,8 @@ class TimeResSpec:
         wn_idx : function
             Helper function to search for the nearest wavelength index for a
             given wavelength.
+        auto_plot : bool
+            When True, some function will display their result automatically.
         """
 
         assert ((t.shape[0], wl.shape[0]) == data.shape)
@@ -112,6 +115,12 @@ class TimeResSpec:
     def __iter__(self):
         """For compatibility with dv.tup"""
         return iter((self.wavelengths, self.t, self.data))
+
+    def copy(self):
+        "Returns a copy of the TimeResSpec."
+        return TimeResSpec(self.wavelengths, self.t, self.data,
+                           disp_freq_unit=self.disp_freq_unit,
+                           err=self.err)
 
     @classmethod
     def from_txt(cls, fname, freq_unit='nm', time_div=1., loadtxt_kws=None):
@@ -391,13 +400,41 @@ class TimeResSpec:
         vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers, self.t[idx],
                                                  deg, t=t_parameter)
         func = np.poly1d(coefs)
-        new_data = zero_finding.interpol(self, func(self.wavenumbers))
-        return EstDispResult(
-            correct_ds=TimeResSpec(self.wavelengths, self.t, new_data.data),
-            tn=self.t[idx], polynomial=func)
+        result = EstDispResult(
+            correct_ds=self.interpolate_disp(func),
+            tn=self.t[idx],
+            polynomial=func)
+        if self.auto_plot:
+            self.plot.plot_disp_result(result)
+        return result
+
+
+    def interpolate_disp(self, polyfunc) -> 'TimeResSpec':
+        """
+        Correct for dispersion by linear interpolation .
+
+        Parameters
+        ----------
+        polyfunc : function
+            Function which takes wavenumbers and returns time-zeros.
+
+        Returns
+        -------
+        TimeResSpec
+            New TimeResSpec where the data is interpolated so that all channels
+            have the same delay point.
+        """
+        c = self.copy()
+        zeros = polyfunc(self.wavenumbers)
+        ntc = zero_finding.interpol(self, zeros)
+        tmp_tup = dv.tup(self.wavelengths, self.t, self.data)
+        ntc_err = zero_finding.interpol(tmp_tup, zeros)
+        c.data = ntc.data
+        c.err = ntc_err.data
+        return c
 
     def fit_exp(self, x0, fix_sigma=True, fix_t0=False, fix_last_decay=True,
-                model_coh=True, lower_bound=0.1):
+                model_coh=True, lower_bound=0.1, verbose=True, use_error=False):
         """
         Fit a sum of exponentials to the dataset. This function assumes
         the dataset is already corrected for dispersion.
@@ -423,10 +460,17 @@ class TimeResSpec:
             added to the linear model.
         lower_bound : float (optional)
             Lower bound for decay-constants.
+        verbose : bool
+            Prints the results out if True.
+        use_error : bool
+            If the errors are used in the fit.
         """
 
         f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
+        if use_error:
+            f.weights = 1/self.err
         f.res(x0)
+
         fixed_names = []
         if fix_sigma:
             fixed_names.append('w')
@@ -440,6 +484,8 @@ class TimeResSpec:
         result = lm_model.leastsq()
         result_tuple = FitExpResult(lm_model, result, f)
         self.fit_exp_result_ = result_tuple
+        if verbose:
+            lmfit.fit_report(result)
         return result_tuple
 
     def lft_density_map(self, taus, alpha=1e-4, ):
@@ -805,6 +851,12 @@ class TimeResSpecPlotter(Plotter):
 
         self.freq_unit = disp_freq_unit
 
+    def _get_wl(self):
+        return self.dataset.wavelengths
+
+    def _get_wn(self):
+        return self.dataset.wavenumbers
+
     def map(self, symlog=True, equal_limits=True,
             plot_con=True, con_step=None, con_filter=None, ax=None,
             **kwargs):
@@ -1075,7 +1127,7 @@ class TimeResSpecPlotter(Plotter):
         Tuple of (List of Lines2D)
         """
         ds = self.dataset
-        if not hasattr(self.ds, 'fit_exp_result_'):
+        if not hasattr(ds, 'fit_exp_result_'):
             raise ValueError('The PolTRSpec must have successfully fit the '
                              'data first')
         if ax is None:
@@ -1090,10 +1142,11 @@ class TimeResSpecPlotter(Plotter):
         leg_text = [ph.nsf(i)+' '+ph.time_unit for i in f.last_para[-num_exp:]]
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = 'const.'
-        n = ds.wavelengths.size
+
         x = ds.wavelengths if is_nm else ds.wavenumbers
-        l1 = ax.plot(self.x, f.c[:, :], **kwargs)
+        l1 = ax.plot(self.x, f.c[:, :num_exp], **kwargs)
         ax.legend(l1, leg_text, title='Decay\nConstants')
+        ph.lbl_spec(ax)
         return l1
 
     def interactive(self):
@@ -1123,6 +1176,23 @@ class TimeResSpecPlotter(Plotter):
         display(ui)
         return ui
 
+    def plot_disp_result(self, result : EstDispResult):
+        """Visualize the result of a dispersion correction"""
+        ds = self.dataset
+        fig, (ax1, ax2) = plt.subplots(2,1, sharex='col', figsize=(3, 4))
+        tmp_unit = self.freq_unit, result.correct_ds.plot.freq_unit
+        self.freq_unit = 'cm'
+        result.correct_ds.plot.freq_unit = 'cm'
+        self.map(symlog=False, plot_con=False, ax=ax1)
+        ylim = max(ds.t.min(), -2), min(2, ds.t.max())
+        ax1.set_ylim(*ylim)
+        ax1.plot(ds.wavenumbers, result.tn)
+        ax1.plot(ds.wavenumbers, result.polynomial(ds.wavenumbers))
+
+        result.correct_ds.map(symlog=True, con_filter=3,
+                           con_step=np.ptp(ds.data)//10)
+        self.freq_unit = tmp_unit[0]
+        result.correct_ds.plot.freq_unit = tmp_unit[1]
 
 
 class DataSetInteractiveViewer:
