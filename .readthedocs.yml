@@ -5,4 +5,4 @@ python:
   version: 3.6
   setup_py_install: true
   use_system_site_packages: true
-  requirements_file: requirements.txt
+  requirements_file: doc_requirements.txt

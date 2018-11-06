@@ -4,20 +4,10 @@ Created on Tue May 27 15:35:22 2014
 
 @author: tillsten
 """
-from typing import Any, Tuple
-
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 import skultrafast.dv as dv
-
-tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
-             (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),
-             (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),
-             (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),
-             (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229)]
-
-tableau20 = [(r/255., g/255., b/255.) for r,g,b, in tableau20]
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import Normalize, SymLogNorm
 import  matplotlib.cbook as cbook
@@ -64,34 +54,55 @@ def plot_singular_values(dat):
     plt.xlabel('N')
     plt.ylabel('Value')
 
-def make_dual_axis(ax : plt.Axes, axis='y', unit='nm'):
-    if axis == 'y':
+
+def make_dual_axis(ax: plt.Axes = None, axis='x', unit='nm', minor_ticks=True):
+    if ax is None:
+        ax = plt.gca()
+
+    if axis == 'x':
         pseudo_ax = ax.twiny()
-        pseudo_ax.set_xlim(ax.get_xlim())
+        limits = ax.get_xlim()
+        u, l = 1e7 / np.array(limits)
+        pseudo_ax.set_xlim(limits)
         sub_axis = pseudo_ax.xaxis
-    elif axis == 'x':
+
+    elif axis == 'y':
         pseudo_ax = ax.twinx()
-        pseudo_ax.set_ylim(ax.get_ylim())
+        limits = ax.get_ylim()
+        u, l = 1e7 / np.array(limits)
+        pseudo_ax.set_ylim(limits)
         sub_axis = pseudo_ax.yaxis
-        lbl = line
     else:
         raise ValueError('axis must be either x or y.')
 
+    def conv(x, y):
+        return '%.0f' % (1e7 / x)
+
+    ff = plt.FuncFormatter(conv)
+    sub_axis.set_major_formatter(ff)
+    major = [1000, 500, 200, 100, 50]
+    minor = [200, 100, 50, 25, 10]
+    for x, m in zip(major, minor):
+        a, b = math.ceil(u / x), math.ceil(l / x)
+        n = abs(b - a)
+        if n > 4:
+            ticks = np.arange(a * x, b * x, x, )
+
+            a, b = math.floor(u / m), math.floor(l / m)
+            min_ticks = np.arange(a * m, b * m, m)
+
+            break
+
+    sub_axis.set_ticks(1e7 / ticks)
+    sub_axis.set_ticks(1e7 / min_ticks, minor=True)
+    if minor_ticks:
+        ax.minorticks_on()
+        # pseudo_ax.minorticks_on()
     if unit is 'nm':
-        def fr(x, y):
-            return '%.f' % (1e7/ float(x))
+        sub_axis.set_label('Wavelengths [nm]')
     elif unit is 'cm':
-        def fr(x, y):
-            return '%.f' % (1e7 / float(x))
+        sub_axis.set_label('Wavenumber [1/cm]')
 
-    fr = plt.FuncFormatter(fr)
-
-    sub_axis.yaxis.set_major_formatter(fr)
-    lbl
-    sub_axis.set_ylabel('Wavelengths [nm]', labelpad=2)
-    sub_axis.yaxis.set_ticks(1e4 / np.array([500, 600, 700, 800, 900]))
-    sub_axis.yaxis.set_ticks(1e4 / np.array([525, 550, 575, 625, 650, 675, 725, 750, 775, 825, 850, 875]),
-                        minor=True)
 
 def plot_svd_components(tup, n=4, from_t = None):
     wl, t, d = tup.wl, tup.t, tup.data

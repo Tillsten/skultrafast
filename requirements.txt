@@ -7,9 +7,4 @@ statsmodels
 numba
 scikit-learn
 matplotlib
-sphinx>=1.8
-ipykernel
-nbsphinx
-nbsphinx-link
 pytest
-ipywidgets

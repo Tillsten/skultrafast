@@ -8,6 +8,9 @@ import versioneer
 with open('requirements.txt') as f:
     install_reqs =  f.read().splitlines()
 
+with open('doc_requirements.txt') as f:
+    doc_reqs = f.read().splitlines()
+
 class CleanCommand(Command):
     """Custom clean command to tidy up the project root."""
     CLEAN_FILES = './build ./dist ./*.pyc ./*.tgz ./*.egg-info ./__pycache__'.split(' ')
@@ -34,7 +37,6 @@ class CleanCommand(Command):
 
 cmdclass = {'clean': CleanCommand}
 cmdclass.update(versioneer.get_cmdclass())
-
 
 setup(
     cmdclass=cmdclass,
