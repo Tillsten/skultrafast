@@ -9,7 +9,7 @@ dispersion affected spectra, it is necessary to know to dispersion curve.restr
 There are various ways to measure the dispersion directly.
 Alternatively, one can estimate the dispersion directly form the data. The
 estimate can used to correct the spectrum directly, or if the dispersion is
-explictly part of the fitted model, used as the starting guess.
+explicitly part of the fitted model, used as the starting guess.
 
 Estimation of the dispersion from the data
 ------------------------------------------
@@ -70,7 +70,20 @@ Robust fitting
 In the second step, the resulting :math:`t_0(\omega)` data is approximated
 with a polynomial of low degree, using a robust fitting method form
 statsmodels. The regression of the time-zeros uses wavenumbers as the 
-depend varible, since the dispersion is propotional to the frequency. 
+depend variable, since the dispersion is proportional to the frequency. 
 
 Using the estimate
 ------------------
+There are three different ways to use the resulting dispersion curve.
+
+1. Use linear interpolation to correct the dispersion. Here, for every
+   channel we interpolate the data by shift the data-points from 
+   (t, y) to (t - disp(wl), y_new).
+
+2. The new values are used to generate binning borders, which are then
+   used to generate the new t-vector.
+
+3. We fit a full model in which the dispersion is explicitly modeled.
+
+For a quick exploration, I recommend the first method. An interpolated 
+dataset is necessary for plotting spectra and maps anyway.

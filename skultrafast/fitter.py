@@ -93,7 +93,7 @@ class Fitter(object):
         Array containing the time-coordinates.
     data :  ndarry(N,M)
         The 2d-data to fit.
-    model_coh : boolhttps://gist.github.com/Tillsten/00becc85f76c6d9ea2dd
+    model_coh : bool
         If the  model contains coherent artifacts at the time zero,
         defaults to False.
     model_disp : int

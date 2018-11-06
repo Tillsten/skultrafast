@@ -1,16 +1,16 @@
 from collections import namedtuple
 
+import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.core.multiarray import ndarray
 from astropy.stats import sigma_clip
+from numpy.core.multiarray import ndarray
 
 import skultrafast.dv as dv
 import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter
 from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter, svd_filter
-import lmfit
 
 EstDispResult = namedtuple('EstDispResult', 'correct_ds tn polynomial')
 EstDispResult.__doc__ = """
@@ -75,7 +75,7 @@ class TimeResSpec:
         """
 
         assert ((t.shape[0], wl.shape[0]) == data.shape)
-        t  = t.copy()
+        t = t.copy()
         wl = wl.copy()
         data = data.copy()
 
@@ -117,7 +117,7 @@ class TimeResSpec:
         return iter((self.wavelengths, self.t, self.data))
 
     def copy(self):
-        "Returns a copy of the TimeResSpec."
+        """Returns a copy of the TimeResSpec."""
         return TimeResSpec(self.wavelengths, self.t, self.data,
                            disp_freq_unit=self.disp_freq_unit,
                            err=self.err)
@@ -197,8 +197,9 @@ class TimeResSpec:
             err = self.err[:, idx]
         else:
             err = None
-        return TimeResSpec(self.wavelengths[idx], self.t, self.data[:, idx], err,
-                       'nm', disp_freq_unit=self.disp_freq_unit)
+        return TimeResSpec(self.wavelengths[idx], self.t, self.data[:, idx],
+                           err,
+                           'nm', disp_freq_unit=self.disp_freq_unit)
 
     def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
         """
@@ -234,8 +235,7 @@ class TimeResSpec:
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
 
-
-    def cut_times(self, time_ranges, invert_sel=False)  -> 'TimeResSpec':
+    def cut_times(self, time_ranges, invert_sel=False) -> 'TimeResSpec':
         """
         Remove spectra inside (or outside) of given time-ranges.
 
@@ -260,7 +260,8 @@ class TimeResSpec:
             err = self.err[idx, :]
         else:
             err = None
-        return TimeResSpec(self.wavelengths, self.t[idx], self.data[idx, :], err)
+        return TimeResSpec(self.wavelengths, self.t[idx], self.data[idx, :],
+                           err)
 
     def mask_times(self, time_ranges, invert_sel=False):
         """
@@ -292,7 +293,7 @@ class TimeResSpec:
         """Subtracts the first n-spectra from the dataset"""
         self.data -= np.mean(self.data[:n, :], 0, keepdims=True)
 
-    def bin_freqs(self, n: int, freq_unit=None)  -> 'TimeResSpec':
+    def bin_freqs(self, n: int, freq_unit=None) -> 'TimeResSpec':
         """
         Bins down the dataset by averaging over several transients.
 
@@ -323,7 +324,7 @@ class TimeResSpec:
             if self.err is None:
                 weights = None
             else:
-                weights = 1/self.err[:, idx[i]:idx[i+1]]
+                weights = 1 / self.err[:, idx[i]:idx[i + 1]]
             binned[:, i] = np.average(self.data[:, idx[i]:idx[i + 1]], 1,
                                       weights=weights)
             binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
@@ -332,7 +333,7 @@ class TimeResSpec:
         return TimeResSpec(binned_wl, self.t, binned, freq_unit=freq_unit,
                            disp_freq_unit=self.disp_freq_unit)
 
-    def bin_times(self, n, start_index=0)  -> 'TimeResSpec':
+    def bin_times(self, n, start_index=0) -> 'TimeResSpec':
         """
         Bins down the dataset by binning `n` sequential spectra together.
 
@@ -355,7 +356,7 @@ class TimeResSpec:
         for i in range(start_index, m, n):
             end_idx = min(i + n, m)
             out.append(sigma_clip(self.data[i:end_idx, :], sigma=2.5, iters=1,
-                                     axis=0).mean(0))
+                                  axis=0).mean(0))
             out_t.append(self.t[i:end_idx].mean())
 
         new_data = np.array(out)
@@ -363,8 +364,8 @@ class TimeResSpec:
         return TimeResSpec(self.wavelengths, new_t, new_data,
                            disp_freq_unit=self.disp_freq_unit)
 
-    def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,), deg=2,
-                            t_parameter=1.3):
+    def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,),
+                            deg=2, shift_result=0, t_parameter=1.3):
         """
         Estimates the dispersion from a dataset by first
         applying a heuristic to each channel. The results are than
@@ -380,6 +381,8 @@ class TimeResSpec:
             Arguments which are given to the heuristic.
         deg : int (optional)
             Degree of the polynomial used to fit the dispersion (defaults to 2).
+        shift_disp : float
+            The resulting dispersion curve is shifted by this value. Default 0.
         t_parameter : float
             Determines the robustness of the fit. See statsmodels documentation
             for more info.
@@ -399,15 +402,15 @@ class TimeResSpec:
 
         vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers, self.t[idx],
                                                  deg, t=t_parameter)
+        coefs[-1] += shift_result
         func = np.poly1d(coefs)
         result = EstDispResult(
             correct_ds=self.interpolate_disp(func),
-            tn=self.t[idx],
+            tn=self.t[idx]+shift_result,
             polynomial=func)
         if self.auto_plot:
             self.plot.plot_disp_result(result)
         return result
-
 
     def interpolate_disp(self, polyfunc) -> 'TimeResSpec':
         """
@@ -468,7 +471,7 @@ class TimeResSpec:
 
         f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
         if use_error:
-            f.weights = 1/self.err
+            f.weights = 1 / self.err
         f.res(x0)
 
         fixed_names = []
@@ -495,9 +498,10 @@ class TimeResSpec:
         ----------
         taus : array
             List with candiate decays.
+        alpha : float
+            The regularization factor.
         """
         pass
-
 
     def concat_datasets(self, other_ds):
         """
@@ -521,6 +525,7 @@ class TimeResSpec:
         return TimeResSpec(all_wls, self.t, all_data, freq_unit='nm',
                            disp_freq_unit=self.disp_freq_unit)
 
+
 class PolTRSpec:
     def __init__(self, para: TimeResSpec, perp: TimeResSpec):
         """
@@ -540,7 +545,7 @@ class PolTRSpec:
             Helper class containing the plotting methods.
         """
 
-        assert(para.data.shape == perp.data.shape)
+        assert (para.data.shape == perp.data.shape)
         self.para = para
         self.perp = perp
         self.wavenumbers = para.wavenumbers
@@ -560,11 +565,6 @@ class PolTRSpec:
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
-
-
-
-
-
 
     def fit_exp(self, x0, fix_sigma=True, fix_t0=False, fix_last_decay=True,
                 from_t=None, model_coh=True, lower_bound=0.1):
@@ -619,14 +619,14 @@ class PolTRSpec:
         fitter.alpha = ridge_alpha
         result = lm_model.leastsq()
 
-        self.fit_result_ = FitExpResult(lm_model, result, f)
-        return self.exp_fit_result
-
+        self.fit_exp_result_ = FitExpResult(lm_model, result, f)
+        return self.fit_exp_result_
 
 
 import functools
 import typing
-def delgator(pol_tr : PolTRSpec, method : typing.Callable):
+
+def delgator(pol_tr: PolTRSpec, method: typing.Callable):
     """
     Helper function to delegate methods calls from PolTRSpec to
     the methods of TimeResSpec.
@@ -641,7 +641,7 @@ def delgator(pol_tr : PolTRSpec, method : typing.Callable):
     name = method.__name__
     hints = typing.get_type_hints(method)
     if 'return' in hints:
-        do_return =  hints['return'] == TimeResSpec
+        do_return = hints['return'] == TimeResSpec
     else:
         do_return = False
 
@@ -656,6 +656,7 @@ def delgator(pol_tr : PolTRSpec, method : typing.Callable):
     func.__name__ = name
     return func
 
+
 class Plotter:
     @property
     def x(self):
@@ -664,7 +665,6 @@ class Plotter:
         else:
             return self._get_wl()
 
-
     def lbl_spec(self, ax=None):
         if ax is None:
             ax = plt.gca()
@@ -672,161 +672,8 @@ class Plotter:
         ax.set_ylabel(ph.sig_label)
         ax.autoscale(1, 'x', 1)
         ax.axhline(0, color='k', lw=0.5, zorder=1.9)
-        ax.legend(loc='best', ncol=2, title='Delay time')
+        #ax.legend(loc='best', ncol=2, title='Delay time')
         ax.minorticks_on()
-
-
-class PolDataSetPlotter(Plotter):
-
-    def __init__(self, pol_dataset : PolTRSpec, disp_freq_unit='nm'):
-        """
-        Plotting commands for a PolDataSet
-
-        Parameters
-        ----------
-        pol_dataset : PolTRSpec
-            The Data
-        disp_freq_unit : {'nm', 'cm'} (optional)
-            The default unit of the plots. To change
-            the unit afterwards, set the attribute directly.
-        """
-        self.pol_ds = pol_dataset
-        self.freq_unit = disp_freq_unit
-        self.perp_ls = dict(linewidth=1)
-        self.para_ls = dict(linewidth=3)
-
-    def _get_wl(self):
-        return self.pol_ds.para.wavelengths
-
-    def _get_wn(self):
-        return self.pol_ds.para.wavenumbers
-
-    def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
-        """
-        Plot spectra at given times.
-
-        Parameters
-        ----------
-        t_list : list or ndarray
-            List of the times where the spectra are plotted.
-        norm : bool
-            If true, each spectral will be normalized.
-        ax : plt.Axis or None.
-            Axis where the spectra are plotted. If none, the current axis will
-            be used.
-        n_average : int
-            For noisy data it may be prefered to average multiple spectra
-            together. This function plots the average of `n_average` spectra
-            around the specific time-points.
-
-        Returns
-        -------
-        tuple of (List of `Lines2D`)
-            List containing the Line2D objects belonging to the spectra.
-        """
-
-        pa, pe = self.pol_ds.para, self.pol_ds.perp
-        l1 = pa.plot.spec(t_list, norm, ax, n_average,
-                          **self.para_ls, **kwargs)
-        l2 = pe.plot.spec(t_list, norm, ax, n_average,
-                          **self.perp_ls, **kwargs)
-        dv.equal_color(l1,l2)
-        self.lbl_spec(ax)
-        return l1, l2
-
-    def trans(self, wls, symlog=True, norm=False, ax=None,
-              **kwargs):
-        """
-        Plot the nearest transients for given frequencies.
-
-        Parameters
-        ----------
-        wls : list or ndarray
-            Spectral positions, should be given in the same unit as
-            `self.freq_unit`.
-        symlog : bool
-            Determines if the x-scale is symlog.
-        norm : bool or float
-            If `False`, no normalization is used. If `True`, each transient
-            is divided by the maximum absolute value. If `norm` is a float,
-            all transient are normalized by their signal at the time `norm`.
-        ax : plt.Axes or None
-            Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
-            current axes. The lines are plotted in this axis.
-
-        All other kwargs are forwarded to the plot function.
-
-        Returns
-        -------
-         list of Line2D
-            Tuple of lists containing the plotted lines.
-        """
-        pa, pe = self.pol_ds.para, self.pol_ds.perp
-        l1 = pa.plot.trans(wls, symlog, norm, ax, **kwargs, **self.para_ls)
-        l2 = pe.plot.trans(wls, symlog, norm, ax, **kwargs, **self.perp_ls)
-        dv.equal_color(l1, l2)
-        return l1, l2
-
-    def das(self, ax=None, **kwargs):
-        """
-        Plot a DAS, if available.
-
-        Parameters
-        ----------
-        ax : plt.Axes or None
-            Axes to plot.
-        kwargs : dict
-            Keyword args given to the plot function
-
-        Returns
-        -------
-        Tuple of (List of Lines2D)
-        """
-        ds = self.pol_ds
-        if not hasattr(self.pol_ds, 'exp_fit_result'):
-            raise ValueError('The PolTRSpec must have successfully fit the '
-                             'data')
-        if ax is None:
-            ax = plt.gca()
-        is_nm = self.freq_unit == 'nm'
-        if is_nm:
-            ph.vis_mode()
-        else:
-            ph.ir_mode()
-        f = ds.fit_result_.fitter
-        num_exp = f.num_exponentials
-        leg_text = [ph.nsf(i)+' '+ph.time_unit for i in f.last_para[-num_exp:]]
-        if max(f.last_para) > 5 * f.t.max():
-            leg_text[-1] = 'const.'
-        n = ds.para.wavelengths.size
-        x = ds.wavelengths if is_nm else ds.wavenumbers
-        l1 = ax.plot(self.x, f.c[:n, :], **kwargs, **self.para_ls)
-        l2 = ax.plot(self.x, f.c[n:, :], **kwargs, **self.perp_ls)
-
-        dv.equal_color(l1, l2)
-        ax.legend(l1, leg_text, title='Decay\nConstants')
-        return l1, l2
-
-    def trans_anisotropy(self, wls, symlog=True, ax=None):
-        ds = self.pol_ds
-        is_nm = self.freq_unit == 'nm'
-        x = ds.wavelengths if is_nm else ds.wavenumbers
-        if is_nm:
-            ph.vis_mode()
-        else:
-            ph.ir_mode()
-        l = []
-        for i in wls:
-            idx = dv.fi(x, i)
-            pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
-            aniso = (pa-pe)/(2*pe+pa)
-            l += plt.plot(ds.para.t, aniso,
-                     label=ph.time_formatter(ds.t[idx], ph.time_unit))
-
-
-
-
-
 
 
 class TimeResSpecPlotter(Plotter):
@@ -994,7 +841,7 @@ class TimeResSpecPlotter(Plotter):
             ax.set_xlim(x.max(), x.min())
         return li
 
-    def trans(self, wls, symlog=True, norm=False, ax=None,
+    def trans(self, wls, symlog=True, norm=False, ax=None, freq_unit='auto',
               **kwargs):
         """
         Plot the nearest transients for given frequencies.
@@ -1013,6 +860,9 @@ class TimeResSpecPlotter(Plotter):
         ax : plt.Axes or None
             Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
             current axes. The lines are plotted in this axis.
+        freq_unit : 'auto', 'cm' or 'nm'
+            How to interpret the given frequencies. If 'auto' it defaults to
+            the plotters freq_unit.
 
         All other kwargs are forwarded to the plot function.
 
@@ -1023,7 +873,9 @@ class TimeResSpecPlotter(Plotter):
         """
         if ax is None:
             ax = plt.gca()
-        is_nm = self.freq_unit == 'nm'
+
+        tmp = self.freq_unit if freq_unit is 'auto' else freq_unit
+        is_nm = tmp == 'nm'
         if is_nm:
             ph.vis_mode()
         else:
@@ -1139,7 +991,8 @@ class TimeResSpecPlotter(Plotter):
             ph.ir_mode()
         f = ds.fit_exp_result_.fitter
         num_exp = f.num_exponentials
-        leg_text = [ph.nsf(i)+' '+ph.time_unit for i in f.last_para[-num_exp:]]
+        leg_text = [ph.nsf(i) + ' ' + ph.time_unit for i in
+                    f.last_para[-num_exp:]]
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = 'const.'
 
@@ -1162,24 +1015,25 @@ class TimeResSpecPlotter(Plotter):
             ph.ir_mode()
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
-        #fig, ax = plt.subplots()
+        # fig, ax = plt.subplots()
         wl_slider = wid.FloatSlider(
             None, min=x.min(), max=x.max(), step=1,
-            description='Freq (%s)'%self.freq_unit)
+            description='Freq (%s)' % self.freq_unit)
+
         def func(x):
 
-            #ax.cla()
+            # ax.cla()
             self.trans([x])
-            #plt.show()
+            # plt.show()
 
         ui = wid.interactive(func, x=wl_slider, continuous_update=False)
         display(ui)
         return ui
 
-    def plot_disp_result(self, result : EstDispResult):
+    def plot_disp_result(self, result: EstDispResult):
         """Visualize the result of a dispersion correction"""
         ds = self.dataset
-        fig, (ax1, ax2) = plt.subplots(2,1, sharex='col', figsize=(3, 4))
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(3, 4))
         tmp_unit = self.freq_unit, result.correct_ds.plot.freq_unit
         self.freq_unit = 'cm'
         result.correct_ds.plot.freq_unit = 'cm'
@@ -1190,9 +1044,183 @@ class TimeResSpecPlotter(Plotter):
         ax1.plot(ds.wavenumbers, result.polynomial(ds.wavenumbers))
 
         result.correct_ds.map(symlog=True, con_filter=3,
-                           con_step=np.ptp(ds.data)//10)
+                              con_step=np.ptp(ds.data) // 10)
         self.freq_unit = tmp_unit[0]
         result.correct_ds.plot.freq_unit = tmp_unit[1]
+
+
+class PolDataSetPlotter(Plotter):
+
+    def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit='nm'):
+        """
+        Plotting commands for a PolDataSet
+
+        Parameters
+        ----------
+        pol_dataset : PolTRSpec
+            The Data
+        disp_freq_unit : {'nm', 'cm'} (optional)
+            The default unit of the plots. To change
+            the unit afterwards, set the attribute directly.
+        """
+        self.pol_ds = pol_dataset
+        self.freq_unit = disp_freq_unit
+        self.perp_ls = dict(linewidth=1)
+        self.para_ls = dict(linewidth=3)
+
+    def _get_wl(self):
+        return self.pol_ds.para.wavelengths
+
+    def _get_wn(self):
+        return self.pol_ds.para.wavenumbers
+
+    def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
+        """
+        Plot spectra at given times.
+
+        Parameters
+        ----------
+        t_list : list or ndarray
+            List of the times where the spectra are plotted.
+        norm : bool
+            If true, each spectral will be normalized.
+        ax : plt.Axis or None.
+            Axis where the spectra are plotted. If none, the current axis will
+            be used.
+        n_average : int
+            For noisy data it may be prefered to average multiple spectra
+            together. This function plots the average of `n_average` spectra
+            around the specific time-points.
+
+        Returns
+        -------
+        tuple of (List of `Lines2D`)
+            List containing the Line2D objects belonging to the spectra.
+        """
+
+        pa, pe = self.pol_ds.para, self.pol_ds.perp
+        l1 = pa.plot.spec(t_list, norm, ax, n_average,
+                          **self.para_ls, **kwargs)
+        l2 = pe.plot.spec(t_list, norm, ax, n_average,
+                          **self.perp_ls, **kwargs)
+        dv.equal_color(l1, l2)
+        self.lbl_spec(ax)
+        return l1, l2
+
+    def trans(self, wls, symlog=True, norm=False, ax=None,
+              **kwargs):
+        """
+        Plot the nearest transients for given frequencies.
+
+        Parameters
+        ----------
+        wls : list or ndarray
+            Spectral positions, should be given in the same unit as
+            `self.freq_unit`.
+        symlog : bool
+            Determines if the x-scale is symlog.
+        norm : bool or float
+            If `False`, no normalization is used. If `True`, each transient
+            is divided by the maximum absolute value. If `norm` is a float,
+            all transient are normalized by their signal at the time `norm`.
+        ax : plt.Axes or None
+            Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
+            current axes. The lines are plotted in this axis.
+
+        All other kwargs are forwarded to the plot function.
+
+        Returns
+        -------
+         list of Line2D
+            Tuple of lists containing the plotted lines.
+        """
+        pa, pe = self.pol_ds.para, self.pol_ds.perp
+        l1 = pa.plot.trans(wls, symlog, norm, ax, **kwargs, **self.para_ls)
+        l2 = pe.plot.trans(wls, symlog, norm, ax, **kwargs, **self.perp_ls)
+        dv.equal_color(l1, l2)
+        return l1, l2
+
+    def das(self, ax=None, **kwargs):
+        """
+        Plot a DAS, if available.
+
+        Parameters
+        ----------
+        ax : plt.Axes or None
+            Axes to plot.
+        kwargs : dict
+            Keyword args given to the plot function
+
+        Returns
+        -------
+        Tuple of (List of Lines2D)
+        """
+        ds = self.pol_ds
+        if not hasattr(self.pol_ds, 'exp_fit_result'):
+            raise ValueError('The PolTRSpec must have successfully fit the '
+                             'data')
+        if ax is None:
+            ax = plt.gca()
+        is_nm = self.freq_unit == 'nm'
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        f = ds.fit_exp_result_.fitter
+        num_exp = f.num_exponentials
+        leg_text = [ph.nsf(i) + ' ' + ph.time_unit for i in
+                    f.last_para[-num_exp:]]
+        if max(f.last_para) > 5 * f.t.max():
+            leg_text[-1] = 'const.'
+        n = ds.para.wavelengths.size
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        l1 = ax.plot(self.x, f.c[:n, :], **kwargs, **self.para_ls)
+        l2 = ax.plot(self.x, f.c[n:, :], **kwargs, **self.perp_ls)
+
+        dv.equal_color(l1, l2)
+        ax.legend(l1, leg_text, title='Decay\nConstants')
+        return l1, l2
+
+    def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit='auto'):
+        """
+        Plots the anisotropy over time for given frequencies.
+        Parameters
+        ----------
+        wls : list of floats
+            Which frequencies are plotted.
+        symlog : bool
+            Use symlog scale
+        ax : plt.Axes or None
+            Matplotlib Axes, if `None`, defaults to `plt.gca()`.
+
+        Returns
+        -------
+        : list of Line2D
+            List with the line objects.
+
+        """
+        if ax is None:
+            ax = ax.gca()
+        ds = self.pol_ds
+        tmp = self.freq_unit if freq_unit == 'auto' else freq_unit
+        is_nm = tmp == 'nm'
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        l = []
+        for i in wls:
+            idx = dv.fi(x, i)
+            pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
+            aniso = (pa - pe) / (2 * pe + pa)
+            l += ax.plot(ds.para.t, aniso,
+                          label=ph.time_formatter(ds.t[idx], ph.time_unit))
+        ph.lbl_trans(use_symlog=symlog)
+        if symlog:
+            ax.set_xscale('symlog')
+        ax.set_xlim(-1,)
+        return l
 
 
 class DataSetInteractiveViewer:
