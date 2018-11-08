@@ -72,7 +72,7 @@ def angle_to_dichro(x):
 
 
 def angle_to_aniso(ang):
-    return  r=2/5*(3*np.cos(ang)**2-1)/2
+    return  2/5*(3*np.cos(ang)**2-1)/2
 
 
 def aniso_to_angle(r):
