@@ -6,12 +6,11 @@ Contains functions to find the time-zero and to interpolate the data.
 import numpy as np
 import skultrafast.dv as dv
 import scipy.ndimage as nd
-from statsmodels.api import RLM, robust
 
 import matplotlib.pyplot as plt
 #from skultrafast.fitter import _coh_gaussian
 from scipy.linalg import lstsq
-#from scipy.optimize import leastsq
+from scipy.optimize import least_squares
 
 class est(object):
     pass
@@ -123,9 +122,14 @@ def robust_fit_tz(wl, tn, degree=3, t=1.345):
     """
     powers = np.arange(degree+1)
     X = wl[:,None] ** powers[None, :]
-    norm = robust.norms.HuberT(t=t)
-    r = RLM(tn, X, M=norm).fit()
-    return r.predict(), r.params[::-1]
+    c = np.linalg.lstsq(x, tn)[0]
+
+    def fit_func(p):
+        return tn - X @ p
+
+    o = least_squares(fit_func, c, loss='cauchy')
+    zeros = X @ o.x
+    return zeros, o.x[::-1]
 
 
 
