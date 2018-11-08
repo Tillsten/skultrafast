@@ -1,1 +1,10 @@
 nbsphinx
+astropy
+attrs
+numpy
+scipy
+lmfit
+numba
+scikit-learn
+matplotlib
+pytest
