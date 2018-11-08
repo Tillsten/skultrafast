@@ -20,14 +20,12 @@ Software prerequisites
 Needs Python 3.6 or higher. Requires the following packages,
 which are automatically installed when using pip:
 
-* astropy
 * numpy
 * numba
 * scipy
 * lmfit
 * matplotlib
 * sklearn
-* statsmodels
 
 To build the docs, more packages are necessary.
 

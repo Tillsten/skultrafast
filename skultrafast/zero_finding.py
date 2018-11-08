@@ -122,8 +122,7 @@ def robust_fit_tz(wl, tn, degree=3, t=1.345):
     """
     powers = np.arange(degree+1)
     X = wl[:,None] ** powers[None, :]
-    c = np.linalg.lstsq(x, tn)[0]
-
+    c = np.linalg.lstsq(x, tn, rcond=1e-10)[0]
     def fit_func(p):
         return tn - X @ p
 
