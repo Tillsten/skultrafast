@@ -1156,7 +1156,7 @@ class PolDataSetPlotter(Plotter):
         Tuple of (List of Lines2D)
         """
         ds = self.pol_ds
-        if not hasattr(self.pol_ds, 'exp_fit_result'):
+        if not hasattr(self.pol_ds, 'fit_exp_result_'):
             raise ValueError('The PolTRSpec must have successfully fit the '
                              'data')
         if ax is None:

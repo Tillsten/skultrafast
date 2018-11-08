@@ -6,6 +6,8 @@ Module to fit the whole spektrum by peak functions.
 from __future__ import print_function
 import scipy.optimize as opt
 from scipy.special import wofz
+
+import skultrafast.unit_conversions
 from . import dv
 import numpy as np
 import lmfit
@@ -83,7 +85,7 @@ def fit_spectrum(x, y, start_peaks_list,
         fit = p.reshape((3+n, -1), order='f')
         base_peak = peak_func(x, np.ones_like(fit[0, :]), *fit[[-2, -1], :])
 
-        dichro = dv.angle_to_dichro(np.deg2rad(fit[-3, :]))
+        dichro = skultrafast.unit_conversions.angle_to_dichro(np.deg2rad(fit[-3, :]))
 
         resi = []
         for i in range(n):

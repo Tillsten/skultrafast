@@ -1,7 +1,7 @@
 """
 This module contains functions to covert between units.
 """
-
+import numpy as np
 from scipy.constants import physical_constants, c
 
 
@@ -61,3 +61,19 @@ def THz2cm(THz):
     return cm2fs(1e3/THz)
 
 print(fs2cm.__doc__)
+
+
+def dichro_to_angle(d):
+    return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
+
+
+def angle_to_dichro(x):
+    return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
+
+
+def angle_to_aniso(ang):
+    return  r=2/5*(3*np.cos(ang)**2-1)/2
+
+
+def aniso_to_angle(r):
+    return np.arccos(np.sqrt((r*10/2+1)/3))

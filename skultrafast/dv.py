@@ -4,7 +4,7 @@ import numpy as np
 import scipy.stats as st
 import scipy.signal as sig
 from collections import namedtuple
-from scipy.constants import electron_volt, c, h, hbar, physical_constants
+from scipy.constants import c, physical_constants
 
 
 tup = namedtuple('tup','wl t data')
@@ -64,12 +64,6 @@ def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     std = np.nanstd(arr, axis, ddof=1)/n
     return mean, std
 
-
-def dichro_to_angle(d):
-    return np.arccos(np.sqrt((2*d-1)/(d+2)))/np.pi*180
-
-def angle_to_dichro(x):
-    return (1+2*np.cos(x)**2)/(2-np.cos(x)**2)
 
 from scipy.interpolate import UnivariateSpline
 
