@@ -1,4 +1,3 @@
-astropy
 attrs
 numpy
 scipy
