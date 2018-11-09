@@ -1,7 +1,7 @@
 import torch
 import attr
 import numpy as np
-from .dataset import TimeResSpec
+from skultrafast.dataset import TimeResSpec
 import math
 exp_half = math.exp(1 / 2.)
 from scipy.optimize import least_squares

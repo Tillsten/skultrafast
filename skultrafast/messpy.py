@@ -1,7 +1,7 @@
 import numpy as np
-from astropy import stats as stats
 from skultrafast.dataset import TimeResSpec, Plotter
 from skultrafast import  plot_helpers as ph
+from skultrafast.utils import  sigma_clip
 import matplotlib.pyplot as plt
 from .dv import make_fi
 
@@ -85,7 +85,7 @@ class MessPyFile:
         kwargs = dict(disp_freq_unit=disp_freq_unit)
 
         if not self.is_pol_resolved:
-            data = stats.sigma_clip(sub_data,   sigma=sigma, axis=-1)
+            data = sigma_clip(sub_data,   sigma=sigma, axis=-1)
             mean = data.mean(-1)
             std = data.std(-1)
             err = std / np.sqrt((~data.mask).sum(-1))
@@ -111,13 +111,13 @@ class MessPyFile:
 
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
             assert (self.pol_first_scan in ['para', 'perp'])
-            data1 = stats.sigma_clip(sub_data[..., self.valid_channel, ::2],
+            data1 = sigma_clip(sub_data[..., self.valid_channel, ::2],
                                      sigma=sigma, axis=-1)
             mean1 = data1.mean(-1)
             std1 = np.ma.std(-1)
             err1 = std1 / np.sqrt(np.ma.count(data1, -1))
 
-            data2 = stats.sigma_clip(sub_data[..., self.valid_channel, 1::2],
+            data2 = sigma_clip(sub_data[..., self.valid_channel, 1::2],
                                      sigma=sigma, axis=-1)
             mean2 = data2.mean(-1)
             std2 = data2.std(-1)
