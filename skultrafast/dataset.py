@@ -3,10 +3,11 @@ from collections import namedtuple
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-from astropy.stats import sigma_clip
+
 from numpy.core.multiarray import ndarray
 
 import skultrafast.dv as dv
+from skultrafast.utils import sigma_clip
 import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter
 from skultrafast.data_io import save_txt
