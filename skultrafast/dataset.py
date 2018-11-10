@@ -356,8 +356,8 @@ class TimeResSpec:
         m = len(self.t)
         for i in range(start_index, m, n):
             end_idx = min(i + n, m)
-            out.append(sigma_clip(self.data[i:end_idx, :], sigma=2.5, iters=1,
-                                  axis=0).mean(0))
+            out.append(sigma_clip(self.data[i:end_idx, :], sigma=2.5,
+                                  max_iters=1, axis=0).mean(0))
             out_t.append(self.t[i:end_idx].mean())
 
         new_data = np.array(out)
