@@ -1,4 +1,5 @@
 nbsphinx
+nbsphinx-link
 attrs
 numpy
 scipy
