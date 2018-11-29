@@ -1,5 +1,5 @@
 nbsphinx
-nbsphinx-link
+nbsphinx-link == 1.10
 attrs
 numpy
 scipy
