@@ -164,9 +164,25 @@ class MessPyFile:
         if center_ch is None:
             center_ch = n//2
 
-        center_wls = self.wl[:, center_ch]
+        center_wls = self.wl[center_ch, :]
         new_wl = np.arange(-n//2, n//2)*dispersion
         self.wl = np.add.outer(center_wls, new_wl)
+
+
+    def subtract_background(self, n=10):
+        self.data -= self.data[:, :n, ...].mean(0, keepdims=1)
+
+    def avg_and_concat(self):
+        if not hasattr(self, "av_scans_"):
+            self.average_scans()
+        out = []
+        for pol in ['para', 'perp', 'iso']:
+            tmp = out[pol+"0"]
+            for i in range(1, self.wl.shape[1]):
+                tmp.concat_dataset(out[pol+str(i)])
+            out.append(pol)
+        para, perp, iso = out
+        return para, perp, iso
 
 class MessPyPlotter(Plotter):
     def __init__(self, messpyds):
@@ -216,11 +232,18 @@ class MessPyPlotter(Plotter):
 
     def compare_spec(self, t_region=(0, 4)):
         """
+        Plots the averaged spectra of every central wavelenth and polarisation.
+        
+        Parameters
+        ----------
+        t_region : tuple of floats
+            Contains the the start and end-point of the times to average.
 
         Returns
         -------
-
+        None
         """
+        
         fig, ax = plt.subplots(figsize=(4, 2))
 
         n = self.ds.num_cwl
