@@ -97,7 +97,6 @@ class FitterTorch:
         t_zeros = np.poly1d(disp_coefs)(ds.wavenumbers)
         tt = np.subtract.outer(ds.t, t_zeros).T
         c, model, res = self.eval_torch(tt, w, taus, True)
-        torch.cuda.synchronize()
         return res.cpu().numpy().ravel()
 
     def start_fit(self, w, taus, fix_last_tau=False, fix_width=False,
