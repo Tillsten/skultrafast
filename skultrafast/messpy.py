@@ -170,14 +170,16 @@ class MessPyFile:
 
 
     def subtract_background(self, n=10):
+        """Substracts the the first n-points of the data"""
         self.data -= self.data[:, :n, ...].mean(0, keepdims=1)
 
     def avg_and_concat(self):
+        """Averages the data and concatenates the resulting TimeResSpec"""
         if not hasattr(self, "av_scans_"):
             self.average_scans()
         out = []
         for pol in ['para', 'perp', 'iso']:
-            tmp = out[pol+"0"]
+            tmp = self.av_scans_[pol+"0"]
             for i in range(1, self.wl.shape[1]):
                 tmp.concat_dataset(out[pol+str(i)])
             out.append(pol)
@@ -230,20 +232,22 @@ class MessPyPlotter(Plotter):
             axs[i].set_ylim(0, 50)
 
 
-    def compare_spec(self, t_region=(0, 4)):
+    def compare_spec(self, t_region=(0, 4), every_nth=1):
         """
         Plots the averaged spectra of every central wavelenth and polarisation.
-        
+
         Parameters
         ----------
         t_region : tuple of floats
             Contains the the start and end-point of the times to average.
+        every_nth: int
+            Only every n-th scan is plotted.
 
         Returns
         -------
         None
         """
-        
+
         fig, ax = plt.subplots(figsize=(4, 2))
 
         n = self.ds.num_cwl
@@ -251,7 +255,7 @@ class MessPyPlotter(Plotter):
         t = self.ds.t
         if not hasattr(ds, 'av_scans_'):
             return
-        for i in range(n):
+        for i in range(0, n, every_nth):
             c = 'C%d'%i
             sl = (t_region[0] < t) & (t < t_region[1])
             if 'para' + str(i) in ds.av_scans_:
