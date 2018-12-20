@@ -254,7 +254,7 @@ class MessPyPlotter(Plotter):
         ds = self.ds
         t = self.ds.t
         if not hasattr(ds, 'av_scans_'):
-            return
+            self.ds.average_scans()
         for i in range(0, n, every_nth):
             c = 'C%d'%i
             sl = (t_region[0] < t) & (t < t_region[1])
