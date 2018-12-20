@@ -1,4 +1,5 @@
 from collections import namedtuple
+from enum import auto
 
 import lmfit
 import matplotlib.pyplot as plt
@@ -101,7 +102,7 @@ class TimeResSpec:
         self.wavelengths = self.wavelengths[idx]
         self.wavenumbers = self.wavenumbers[idx]
         self.data = self.data[:, idx]
-        self.auto_plot = True
+        self.auto_plot = auto_plot
         self.plot = TimeResSpecPlotter(self)
         self.t_idx = dv.make_fi(self.t)
         self.wl_idx = dv.make_fi(self.wavelengths)
@@ -121,7 +122,7 @@ class TimeResSpec:
         """Returns a copy of the TimeResSpec."""
         return TimeResSpec(self.wavelengths, self.t, self.data,
                            disp_freq_unit=self.disp_freq_unit,
-                           err=self.err)
+                           err=self.err, auto_plot=self.auto_plot)
 
     @classmethod
     def from_txt(cls, fname, freq_unit='nm', time_div=1., loadtxt_kws=None):
@@ -362,8 +363,10 @@ class TimeResSpec:
 
         new_data = np.array(out)
         new_t = np.array(out_t)
-        return TimeResSpec(self.wavelengths, new_t, new_data,
-                           disp_freq_unit=self.disp_freq_unit)
+        out = self.copy()
+        out.t = new_t
+        out.data = new_data
+        return out
 
     def estimate_dispersion(self, heuristic='abs', heuristic_args=(1,),
                             deg=2, shift_result=0, t_parameter=1.3):
@@ -382,7 +385,7 @@ class TimeResSpec:
             Arguments which are given to the heuristic.
         deg : int (optional)
             Degree of the polynomial used to fit the dispersion (defaults to 2).
-        shift_disp : float
+        shift_result : float
             The resulting dispersion curve is shifted by this value. Default 0.
         t_parameter : float
             Determines the robustness of the fit. See statsmodels documentation
