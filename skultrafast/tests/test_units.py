@@ -1,4 +1,4 @@
-from skultrafast.unit_conversions import *
+from skultrafast.unit_conversions import cm2eV, eV2cm, cm2fs, fs2cm, cm2nm, nm2cm, cm2THz, THz2cm
 import numpy as np
 
 def test_roundtrip():

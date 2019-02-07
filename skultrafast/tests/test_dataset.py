@@ -20,6 +20,12 @@ def test_methods():
     assert(np.all(ds.data.mask[:, ds.wl_idx(550)]))
 
 
+def test_fitter():
+    ds = TimeResSpec(wl, t, data)
+    x0 = [0.1, 0.1, 1, 1000]
+    out = ds.fit_exp(x0)
+
+
 def test_pol_tr():
     ds = TimeResSpec(wl, t, data)
     ds2 = TimeResSpec(wl, t, data)
@@ -41,10 +47,10 @@ def test_pol_tr():
 def test_plot():
     ds = TimeResSpec(wl, t, data)
     ds = ds.bin_freqs(50)
-    ds.trans([550])
-    ds.spec([2, 10])
-    ds.trans([550], norm=1)
-    ds.trans([550], norm=1, marker='o')
+    ds.plot.trans([550])
+    ds.plot.spec([2, 10])
+    ds.plot.trans([550], norm=1)
+    ds.plot.trans([550], norm=1, marker='o')
     ds.plot.map(plot_con=0)
     ds.plot.svd()
 

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from numpy.core.umath_tests import inner1d
-from scipy import linalg
 from scipy.stats import f #fisher
 from . import dv, zero_finding
 import lmfit
@@ -11,7 +9,7 @@ LinAlgError = np.linalg.LinAlgError
 from .base_functions import (_fold_exp,
                              _coh_gaussian,
                              _fold_exp_and_coh)
-
+import scipy.linalg as linalg
 posv = linalg.get_lapack_funcs(('posv'))
 
 def direct_solve(a, b):
@@ -263,6 +261,7 @@ class Fitter(object):
 
 
         self.model = inner1d( self.xmat, self.c)
+        self.model = np.dot(self.xmat, self.c)
         #self.model[:, :]  = matrix_multiply(self.xmat, self.c[:, :, None]).squueze()
 
     def _build_xmat(self, para, is_disp_changed):
