@@ -125,7 +125,7 @@ class TimeResSpec:
                            err=self.err, auto_plot=self.auto_plot)
 
     @classmethod
-    def from_txt(cls, fname, freq_unit='nm', time_div=1., loadtxt_kws=None):
+    def from_txt(cls, fname, freq_unit='nm', time_div=1., transpose=False, loadtxt_kws=None):
         """
         Directly create a dataset from a text file.
 
@@ -141,12 +141,16 @@ class TimeResSpec:
             Since `skultrafast` prefers to work with picoseconds and programs
             may use different units, it divides the time-values by `time_div`.
             Use `1`, the default, to not change the time values.
+        transpose : bool
+            Transposes the loaded array.
         loadtxt_kws : dict
             Dict containing keyword arguments to `np.loadtxt`.
         """
         if loadtxt_kws is None:
             loadtxt_kws = {}
         tmp = np.loadtxt(fname, **loadtxt_kws)
+        if transpose:
+            tmp = tmp.T
         t = tmp[1:, 0] / time_div
         freq = tmp[0, 1:]
         data = tmp[1:, 1:]

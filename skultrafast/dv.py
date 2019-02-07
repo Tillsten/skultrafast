@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
 import numpy as np
 import scipy.stats as st
 import scipy.signal as sig
@@ -125,8 +124,23 @@ def binner(n, wl, dat, func=np.mean):
         binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
-def fi(w,x):
-    """needs global w as array. gives idnex to nearest value"""
+def fi(w, x):
+    """
+    Given a value, it finds the index of the nearest value in the array.
+
+    Parameters
+    ----------
+    w : np.ndarray
+        Array where to look.
+    x : float or list of floats
+        Value or values to look for.
+
+    Returns
+    -------
+    int or list of ints
+        Indicies of the nearest values.
+
+    """
     try:
         len(x)
     except TypeError:
@@ -478,4 +492,4 @@ def make_fi(data_to_search):
     #show()
 
 
-    
+
