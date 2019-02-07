@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr 17 17:03:26 2013
-
-@author: Tillsten
+Numba implementation of the base matrix building functions.
 """
 import numpy as np
-
-
 from numba import autojit, vectorize, njit, jit
 import math
 #from lmmv
@@ -122,7 +118,7 @@ def folded_fit_func(t, tz, w, k):
         return np.exp(k* (w*w*k/ (4.0) - t))
 
 
-
+@njit
 def _fold_exp(t_arr, w, tz, tau_arr):
     """
     Returns the values of the folded exponentials for given parameters.
@@ -151,7 +147,7 @@ def _fold_exp(t_arr, w, tz, tau_arr):
         return out.T
     else:
         k = -1/tau_arr
-        out = np.exp((t_arr.reshape(n, m, 1), -tz)*k.reshape(1,1,-1))
+        out = np.exp((t_arr.reshape(n, m, 1)-tz)*k.reshape(1,1,-1))
         return out
 
 @njit(parallel=True, fastmath=True)
