@@ -54,16 +54,11 @@ def shift_linear_part(p, steps, t):
     p[lp[0]+steps:lp[1], ...] = p[lp[0]:lp[1]-steps, ...]
     return p
 
-import statsmodels.api as sm
-
-
-
-def robust_mean_back(d, n=10):
-    d = d.copy()
-    mean_backs = d[:n, ...].mean(0)
-    mean_backs_std = d[:n, ...].std(0)
-    return np.average(mean_backs, -1, 1/mean_backs_std**2).mean(-1)
-
+try:
+    import statsmodels.api as sm
+    has_statsmodels = True
+except ImportError:
+    has_statsmodels = False
 
 def back_correction(d, n=10, use_robust=True):
     d = d.copy()
@@ -72,30 +67,31 @@ def back_correction(d, n=10, use_robust=True):
 
     out0 = []
     out1 = []
-    if use_robust:
+    if use_robust and has_statmodels:
         for i in range(d.shape[-1]):
             rlm_model = sm.RLM(scan_means[:, 0, i], mean_back[:, None],
-                               M=sm.robust.norms.HuberT())
+                            M=sm.robust.norms.HuberT())
             rlm_results = rlm_model.fit()
             out0.append(rlm_results.params)
 
             rlm_model = sm.RLM(scan_means[:, 1, i], mean_back[:, None],
-                               M=sm.robust.norms.HuberT())
+                            M=sm.robust.norms.HuberT())
             rlm_results = rlm_model.fit()
             out1.append(rlm_results.params)
 
         c1 = np.array(out0).T
         c2 = np.array(out1).T
+    elif use_robust and not has_statsmodels:
+        raise ImportError('use robust requieres statsmodels')
     else:
         c1 = np.linalg.lstsq(mean_back[:, None], scan_means[:, 0, : ])[0]
         c2 = np.linalg.lstsq(mean_back[:, None], scan_means[:, 1, : ])[0]
 
+#print c1.shape
 
-    #print c1.shape
-
-    d[..., 0, :] -= mean_back[:, None].dot(c1)[None, :,  :]
-    d[..., 1, :] -= mean_back[:, None].dot(c2)[None, :,  :]
-    return d, mean_back[...]
+d[..., 0, :] -= mean_back[:, None].dot(c1)[None, :,  :]
+d[..., 1, :] -= mean_back[:, None].dot(c2)[None, :,  :]
+return d, mean_back[...]
 
 
 import scipy.signal as sig
@@ -181,6 +177,16 @@ def data_preparation(wl, t, d, wiener=3, trunc_back=0.05, trunc_scans=0, start_d
         plt.legend(['iso_0', 'iso_1 * %.2f'%iso_factor])
 
     return iso, para, senk
+
+
+
+def robust_mean_back(d, n=10):
+    d = d.copy()
+    mean_backs = d[:n, ...].mean(0)
+    mean_backs_std = d[:n, ...].std(0)
+    return np.average(mean_backs, -1, 1/mean_backs_std**2).mean(-1)
+
+
 
 from collections import namedtuple
 

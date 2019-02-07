@@ -160,13 +160,13 @@ class MessPyFile:
         center_ch : int
             Determines the mid-channel. Defaults to len(wl)/2.
         """
-        n = self.wl.shape[1]
+        n = self.wl.shape[0]
         if center_ch is None:
             center_ch = n//2
 
         center_wls = self.wl[center_ch, :]
         new_wl = np.arange(-n//2, n//2)*dispersion
-        self.wl = np.add.outer(center_wls, new_wl)
+        self.wl = np.add.outer(new_wl, center_wls)
 
 
     def subtract_background(self, n=10):
@@ -182,7 +182,7 @@ class MessPyFile:
             tmp = self.av_scans_[pol+"0"]
             for i in range(1, self.wl.shape[1]):
                 tmp.concat_dataset(out[pol+str(i)])
-            out.append(pol)
+            out.append(tmp)
         para, perp, iso = out
         return para, perp, iso
 
@@ -232,7 +232,7 @@ class MessPyPlotter(Plotter):
             axs[i].set_ylim(0, 50)
 
 
-    def compare_spec(self, t_region=(0, 4), every_nth=1):
+    def compare_spec(self, t_region=(0, 4), every_nth=1, ax=None):
         """
         Plots the averaged spectra of every central wavelenth and polarisation.
 
@@ -248,7 +248,8 @@ class MessPyPlotter(Plotter):
         None
         """
 
-        fig, ax = plt.subplots(figsize=(4, 2))
+        if ax is None:
+            ax = plt.gca()
 
         n = self.ds.num_cwl
         ds = self.ds
@@ -261,16 +262,20 @@ class MessPyPlotter(Plotter):
             if 'para' + str(i) in ds.av_scans_:
                 d = ds.av_scans_['para' + str(i)]
                 ax.plot(d.wl, d.data[sl,:].mean(0), c=c, lw=2)
-
             if 'perp' + str(i) in ds.av_scans_:
                 d = ds.av_scans_['perp' + str(i)]
                 ax.plot(d.wavelengths, d.data[sl,:].mean(0), c=c, lw=1)
+            if 'iso' + str(i) in ds.av_scans_:
+                d = ds.av_scans_['perp' + str(i)]
+                ax.plot(d.wavelengths, d.data[sl,:].mean(0), c=c, lw=1)
+        ph.lbl_spec(ax)
 
-        ph.lbl_spec()
 
-
-    def compare_scans(self, t_region=(0, 4), channel=0, cmap='jet'):
-        fig, ax = plt.subplots(figsize=(4, 2))
+    def compare_scans(self, t_region=(0, 4), channel=None, cmap='jet', ax=None):
+        if ax is None:
+            ax = plt.gca()
+        if channel is None:
+            channel = self.ds.valid_channel
         n_scans = self.ds.data.shape[-1]
         d = self.ds.data
         t = self.ds.t
@@ -281,7 +286,7 @@ class MessPyPlotter(Plotter):
                 c = colors(i/n_scans)
                 for j in range(d.shape[0]):
 
-                    plt.plot(self.ds.wl[:, j], d[j, sl, :, channel, i].mean(0),
+                    ax.plot(self.ds.wl[:, j], d[j, sl, :, channel, i].mean(0),
                              label='%d'%i, c=c)
         else:
             for i in range(0, n_scans, 2):
@@ -289,11 +294,11 @@ class MessPyPlotter(Plotter):
                 for j in range(d.shape[0]):
                     x = self.ds.wl[:, j]
                     y = d[j, sl, :, channel, i].mean(0)
-                    plt.plot(x, y, label='%d' % i, c=c)
+                    ax.plot(x, y, label='%d' % i, c=c)
                     if i + 1 < n_scans:
                         y = d[j, sl, :, channel, i+1].mean(0)
-                        plt.plot(x, y, label='%d' % (i+1), c=c)
+                        ax.plot(x, y, label='%d' % (i+1), c=c)
 
-        ph.lbl_spec()
+        ph.lbl_spec(ax)
 
 
