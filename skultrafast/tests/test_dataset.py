@@ -19,6 +19,11 @@ def test_methods():
     ds.mask_freqs([(400, 600)])
     assert(np.all(ds.data.mask[:, ds.wl_idx(550)]))
 
+def test_est_disp():
+    ds = TimeResSpec(wl, t, data)
+    ds.auto_plot =  False
+    for s in ['abs', 'diff', 'gauss_diff', 'max']:
+        ds.estimate_dispersion(heuristic=s)
 
 def test_fitter():
     ds = TimeResSpec(wl, t, data)
@@ -53,6 +58,8 @@ def test_plot():
     ds.plot.trans([550], norm=1, marker='o')
     ds.plot.map(plot_con=0)
     ds.plot.svd()
+
+
 
 def test_pol_plot():
     ds = TimeResSpec(wl, t, data)

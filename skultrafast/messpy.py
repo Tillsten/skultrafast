@@ -1,5 +1,5 @@
 import numpy as np
-from skultrafast.dataset import TimeResSpec, Plotter
+from skultrafast.dataset import TimeResSpec, PlotterMixin
 from skultrafast import  plot_helpers as ph
 from skultrafast.utils import  sigma_clip
 import matplotlib.pyplot as plt
@@ -186,7 +186,7 @@ class MessPyFile:
         para, perp, iso = out
         return para, perp, iso
 
-class MessPyPlotter(Plotter):
+class MessPyPlotter(PlotterMixin):
     def __init__(self, messpyds):
         """
         Class to plot utility plots
