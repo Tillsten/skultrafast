@@ -57,7 +57,7 @@ class SingleSpec:
         Returns
         -------
         SingleSpec
-            Cutted spectra.
+            Cut spectra.
 
         """
         a, b = region

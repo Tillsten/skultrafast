@@ -940,6 +940,61 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(x.max(), x.min())
         return li
 
+
+    def trans_integrals(self, *args, symlog:bool=True, norm=False, ax=None, **kwargs) -> typing.List[plt.Line2D]:
+        """
+        Plot the transients of integrated region. The integration will use np.tranpz in
+        wavenumber-space.
+
+        Parameters
+        ----------
+        args : tuples of floats
+            Tuple of wavenumbers determining the region to be integrated.
+        symlog : bool
+            If to use a symlog scale for the delay-time.
+        norm : bool or float
+            If `true`, normalize to transients. If it is a float, the transients are normalzied to
+            value at the delaytime norm.
+        ax : plt.Axes or None
+            Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
+            current axes. The lines are plotted in this ax
+
+        kwargs : Further arguments passed to plt.plot
+
+        Returns
+        -------
+        list of Line2D
+            List containing the plotted lines.
+        """
+        if ax is None:
+            ax = plt.gca()
+        ph.ir_mode()
+        ds = self.dataset
+        l = []
+        for (a, b) in args:
+            a, b = sorted([a, b])
+            idx = (a < ds.wavenumbers) & (ds.wavenumbers < b)
+            dat = np.trapz(ds.data[:, idx], ds.wavenumbers[idx], axis=1)
+
+            if norm is True:
+                dat = np.sign(dat[np.argmax(abs(dat))]) * dat / abs(dat).max()
+            elif norm is False:
+                pass
+            else:
+                dat = dat / dat[ds.t_idx(norm)]
+            l.extend(
+                ax.plot(ds.t, dat, label=f"{a: .0f} cm-1 to {b: .0f}", **kwargs)
+                )
+
+        if symlog:
+            ax.set_xscale("symlog", linthreshx=1.0)
+        ph.lbl_trans(ax=ax, use_symlog=symlog)
+        ax.legend(loc="best", ncol=3)
+        ax.set_xlim(right=ds.t.max())
+        ax.yaxis.set_tick_params(which="minor", left=True)
+        return l
+
+
     def trans(self, wls, symlog=True, norm=False, ax=None, freq_unit="auto", **kwargs):
         """
         Plot the nearest transients for given frequencies.

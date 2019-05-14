@@ -34,6 +34,7 @@ class MessPyFile:
 
         with np.load(fname) as f:
             self.wl = f['wl']
+            self.initial_wl = self.wl.copy()
             self.t = f['t']/1000.
             self.data = f['data']
             if invert_data:
@@ -150,7 +151,7 @@ class MessPyFile:
         else:
             raise NotImplementedError("Iso correction not supported yet.")
 
-    def recalculate_wavelengths(self, dispersion, center_ch=None):
+    def recalculate_wavelengths(self, dispersion, center_ch=None, offset=0):
         """Recalculates the wavelengths, assuming linear dispersion.
 
         Parameters
@@ -164,14 +165,14 @@ class MessPyFile:
         if center_ch is None:
             center_ch = n//2
 
-        center_wls = self.wl[center_ch, :]
+        center_wls = self.initial_wl[center_ch, :]
         new_wl = np.arange(-n//2, n//2)*dispersion
-        self.wl = np.add.outer(new_wl, center_wls)
+        self.wl = np.add.outer(new_wl, center_wls)+offset
 
 
     def subtract_background(self, n=10):
         """Substracts the the first n-points of the data"""
-        self.data -= self.data[:, :n, ...].mean(0, keepdims=1)
+        self.data -= self.data[:, :n, ...].mean(1, keepdims=1)
 
     def avg_and_concat(self):
         """Averages the data and concatenates the resulting TimeResSpec"""
@@ -181,7 +182,7 @@ class MessPyFile:
         for pol in ['para', 'perp', 'iso']:
             tmp = self.av_scans_[pol+"0"]
             for i in range(1, self.wl.shape[1]):
-                tmp.concat_dataset(out[pol+str(i)])
+                tmp = tmp.concat_datasets(self.av_scans_[pol+str(i)])
             out.append(tmp)
         para, perp, iso = out
         return para, perp, iso
@@ -261,7 +262,7 @@ class MessPyPlotter(PlotterMixin):
             sl = (t_region[0] < t) & (t < t_region[1])
             if 'para' + str(i) in ds.av_scans_:
                 d = ds.av_scans_['para' + str(i)]
-                ax.plot(d.wl, d.data[sl,:].mean(0), c=c, lw=2)
+                ax.plot(d.wavelengths, d.data[sl,:].mean(0), c=c, lw=2)
             if 'perp' + str(i) in ds.av_scans_:
                 d = ds.av_scans_['perp' + str(i)]
                 ax.plot(d.wavelengths, d.data[sl,:].mean(0), c=c, lw=1)
