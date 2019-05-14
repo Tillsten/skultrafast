@@ -54,6 +54,8 @@ def test_plot():
     ds = ds.bin_freqs(50)
     ds.plot.trans([550])
     ds.plot.spec([2, 10])
+    ds.plot.trans_integrals((1e7/550, 1e7/600))
+    ds.plot.trans_integrals((1e7/600, 1e7/500))
     ds.plot.trans([550], norm=1)
     ds.plot.trans([550], norm=1, marker='o')
     ds.plot.map(plot_con=0)

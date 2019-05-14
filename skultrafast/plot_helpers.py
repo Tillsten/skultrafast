@@ -217,7 +217,8 @@ def lbl_spec(ax=None):
     if inv_freq:
         x, y = ax.get_xlim()
         ax.set_xlim(sorted((x,y))[::-1])
-    ax.axhline(0, c='k', zorder=1.5)
+    c = plt.rcParams['grid.color']
+    ax.axhline(0, c=c, zorder=1.5)
 
     plt.minorticks_on()
 
