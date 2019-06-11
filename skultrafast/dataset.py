@@ -288,7 +288,15 @@ class TimeResSpec:
             err = self.err[idx, :]
         else:
             err = None
-        return TimeResSpec(self.wavelengths, self.t[idx], self.data[idx, :], err)
+
+        return TimeResSpec(
+            self.wavelengths,
+            self.t[idx],
+            self.data[idx, :],
+            err,
+            "nm",
+            disp_freq_unit=self.disp_freq_unit,
+        )
 
     def mask_times(self, time_ranges, invert_sel=False):
         """
@@ -706,6 +714,20 @@ class PolTRSpec:
         self.fit_exp_result_ = FitExpResult(lm_model, result, f)
         return self.fit_exp_result_
 
+    def save_txt(self, fname, freq_unit="wl"):
+        """
+        Saves the dataset as a text file.
+
+        Parameters
+        ----------
+        fname : str
+            Filename (can include path). This functions adds `_para.txt` and 
+            '_perp.txt' for the corresponding dataset to the fname.
+        freq_unit : 'nm' or 'cm' (default 'nm')
+            Which frequency unit is used.
+        """
+        self.para.save_txt(fname + '_para.txt', freq_unit)
+        self.perp.save_txt(fname + '_perp.txt', freq_unit)
 
 import functools
 import typing
@@ -1203,13 +1225,14 @@ class TimeResSpecPlotter(PlotterMixin):
         ax1.plot(ds.wavenumbers, result.tn)
         ax1.plot(ds.wavenumbers, result.polynomial(ds.wavenumbers))
 
-        result.correct_ds.map(symlog=True, con_filter=3, con_step=np.ptp(ds.data) // 10)
+        result.correct_ds.map(symlog=True, con_filter=3,
+                              con_step=None)
         self.freq_unit = tmp_unit[0]
         result.correct_ds.plot.freq_unit = tmp_unit[1]
 
 
 class PolDataSetPlotter(PlotterMixin):
-    def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit="nm"):
+    def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
         """
         Plotting commands for a PolDataSet
 
@@ -1222,7 +1245,9 @@ class PolDataSetPlotter(PlotterMixin):
             the unit afterwards, set the attribute directly.
         """
         self.pol_ds = pol_dataset
-        self.freq_unit = disp_freq_unit
+        if disp_freq_unit is not None:
+            self.freq_unit = disp_freq_unit
+            
         self.perp_ls = dict(linewidth=1)
         self.para_ls = dict(linewidth=3)
 
@@ -1295,7 +1320,7 @@ class PolDataSetPlotter(PlotterMixin):
         dv.equal_color(l1, l2)
         return l1, l2
 
-    def das(self, ax=None, **kwargs):
+    def das(self, ax=None, plot_first_das=True, **kwargs):
         """
         Plot a DAS, if available.
 
@@ -1303,6 +1328,9 @@ class PolDataSetPlotter(PlotterMixin):
         ----------
         ax : plt.Axes or None
             Axes to plot.
+        plot_first_das : bool
+            If true, the first DAS is omitted. This is useful, when the first
+            component is very fast and only modeles coherent contributions.
         kwargs : dict
             Keyword args given to the plot function
 
@@ -1316,6 +1344,7 @@ class PolDataSetPlotter(PlotterMixin):
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
+        print(is_nm, self.freq_unit)
         if is_nm:
             ph.vis_mode()
         else:
@@ -1326,12 +1355,16 @@ class PolDataSetPlotter(PlotterMixin):
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
         n = ds.para.wavelengths.size
-        x = ds.wavelengths if is_nm else ds.wavenumbers
-        l1 = ax.plot(self.x, f.c[:n, :], **kwargs, **self.para_ls)
-        l2 = ax.plot(self.x, f.c[n:, :], **kwargs, **self.perp_ls)
-
-        dv.equal_color(l1, l2)
-        ax.legend(l1, leg_text, title="Decay\nConstants")
+        x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
+        start = 0 if plot_first_das else 1
+        for i in range(start, num_exp):
+            l1 = ax.plot(x, f.c[:n, -num_exp+i], 
+                         **kwargs, **self.para_ls, label=leg_text[i])
+            l2 = ax.plot(x, f.c[n:, -num_exp+i], 
+                         **kwargs, **self.perp_ls)
+            dv.equal_color(l1, l2)
+        ph.lbl_spec()
+        ax.legend(title="Decay\nConstants", ncol=2)
         return l1, l2
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
@@ -1353,7 +1386,7 @@ class PolDataSetPlotter(PlotterMixin):
 
         """
         if ax is None:
-            ax = ax.gca()
+            ax = plt.gca()
         ds = self.pol_ds
         tmp = self.freq_unit if freq_unit == "auto" else freq_unit
         is_nm = tmp == "nm"
