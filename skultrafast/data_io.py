@@ -53,7 +53,7 @@ def loader_func(name):
         raise IOError('No file found.')
 
     import re
-    num_list = [re.findall('dat\d+', i)[0][3:] for i in files]
+    num_list = [re.findall(r'dat\d+', i)[0][3:] for i in files]
 
     endname = max(zip(map(int, num_list), files))[1]
 
@@ -69,7 +69,7 @@ def loader_func(name):
 
     for i in files:
 
-        cwl = re.findall('-\d\d\d_', i)
+        cwl = re.findall(r'-\d\d\d_', i)
         tmp = np.load(i)
         t, w = tmp[1:,0], tmp[0,1:]
         wls.append(w)
