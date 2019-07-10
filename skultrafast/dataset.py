@@ -4,8 +4,8 @@ from enum import auto
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-
 from numpy.core.multiarray import ndarray
+from scipy.interpolate import interp1d
 
 import skultrafast.dv as dv
 from skultrafast.utils import sigma_clip
@@ -33,15 +33,15 @@ FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
 
 class TimeResSpec:
     def __init__(
-        self,
-        wl,
-        t,
-        data,
-        err=None,
-        name=None,
-        freq_unit="nm",
-        disp_freq_unit=None,
-        auto_plot=True,
+            self,
+            wl,
+            t,
+            data,
+            err=None,
+            name=None,
+            freq_unit="nm",
+            disp_freq_unit=None,
+            auto_plot=True,
     ):
         """
         Class for working with time-resolved spectra. If offers methods for
@@ -139,9 +139,12 @@ class TimeResSpec:
         )
 
     @classmethod
-    def from_txt(
-        cls, fname, freq_unit="nm", time_div=1.0, transpose=False, loadtxt_kws=None
-    ):
+    def from_txt(cls,
+                 fname,
+                 freq_unit="nm",
+                 time_div=1.0,
+                 transpose=False,
+                 loadtxt_kws=None):
         """
         Directly create a dataset from a text file.
 
@@ -184,12 +187,11 @@ class TimeResSpec:
         freq_unit : 'nm' or 'cm' (default 'nm')
             Which frequency unit is used.
         """
-        wl = self.wavelengths if freq_unit is "wl" else self.wavenumbers
+        wl = self.wavelengths if freq_unit == "wl" else self.wavenumbers
         save_txt(fname, wl, self.t, self.data)
 
-    def cut_freqs(
-        self, freq_ranges=None, invert_sel=False, freq_unit=None
-    ) -> "TimeResSpec":
+    def cut_freqs(self, freq_ranges=None, invert_sel=False,
+                  freq_unit=None) -> "TimeResSpec":
         """
         Removes channels inside (or outside ) of given frequency ranges.
 
@@ -211,7 +213,7 @@ class TimeResSpec:
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
-        arr = self.wavelengths if freq_unit is "nm" else self.wavenumbers
+        arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
         for (lower, upper) in freq_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
@@ -251,7 +253,7 @@ class TimeResSpec:
         idx = np.zeros_like(self.wavelengths, dtype=np.bool)
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
-        arr = self.wavelengths if freq_unit is "nm" else self.wavenumbers
+        arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
 
         for (lower, upper) in freq_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
@@ -349,7 +351,7 @@ class TimeResSpec:
         # We use the negative of the wavenumbers to make the array sorted
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
-        arr = self.wavelengths if freq_unit is "nm" else -self.wavenumbers
+        arr = self.wavelengths if freq_unit == "nm" else -self.wavenumbers
         # Slightly offset edges to include themselves.
         edges = np.linspace(arr.min() - 0.002, arr.max() + 0.002, n + 1)
         idx = np.searchsorted(arr, edges)
@@ -359,12 +361,12 @@ class TimeResSpec:
             if self.err is None:
                 weights = None
             else:
-                weights = 1 / self.err[:, idx[i] : idx[i + 1]]
-            binned[:, i] = np.average(
-                self.data[:, idx[i] : idx[i + 1]], 1, weights=weights
-            )
-            binned_wl[i] = np.mean(arr[idx[i] : idx[i + 1]])
-        if freq_unit is "cm":
+                weights = 1 / self.err[:, idx[i]:idx[i + 1]]
+            binned[:, i] = np.average(self.data[:, idx[i]:idx[i + 1]],
+                                      1,
+                                      weights=weights)
+            binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
+        if freq_unit == "cm":
             binned_wl = -binned_wl
         return TimeResSpec(
             binned_wl,
@@ -397,10 +399,10 @@ class TimeResSpec:
         for i in range(start_index, m, n):
             end_idx = min(i + n, m)
             out.append(
-                sigma_clip(self.data[i:end_idx, :], sigma=2.5, max_iter=1, axis=0).mean(
-                    0
-                )
-            )
+                sigma_clip(self.data[i:end_idx, :],
+                           sigma=2.5,
+                           max_iter=1,
+                           axis=0).mean(0))
             out_t.append(self.t[i:end_idx].mean())
 
         new_data = np.array(out)
@@ -410,9 +412,12 @@ class TimeResSpec:
         out.data = new_data
         return out
 
-    def estimate_dispersion(
-        self, heuristic="abs", heuristic_args=(), deg=2, shift_result=0, t_parameter=1.3
-    ):
+    def estimate_dispersion(self,
+                            heuristic="abs",
+                            heuristic_args=(),
+                            deg=2,
+                            shift_result=0,
+                            t_parameter=1.3):
         """
         Estimates the dispersion from a dataset by first
         applying a heuristic to each channel. The results are than
@@ -454,14 +459,13 @@ class TimeResSpec:
         elif heuristic in func_dict:
             idx = func_dict[heuristic](self.data, *heuristic_args)
         else:
-            raise ValueError(
-                "`heuristic` must be either a callable or"
-                " one of `max`, `abs`, `diff` or `gauss_diff`."
-            )
+            raise ValueError("`heuristic` must be either a callable or"
+                             " one of `max`, `abs`, `diff` or `gauss_diff`.")
 
-        vals, coefs = zero_finding.robust_fit_tz(
-            self.wavenumbers, self.t[idx], deg, t=t_parameter
-        )
+        vals, coefs = zero_finding.robust_fit_tz(self.wavenumbers,
+                                                 self.t[idx],
+                                                 deg,
+                                                 t=t_parameter)
         coefs[-1] += shift_result
         func = np.poly1d(coefs)
         result = EstDispResult(
@@ -498,15 +502,15 @@ class TimeResSpec:
         return c
 
     def fit_exp(
-        self,
-        x0,
-        fix_sigma=True,
-        fix_t0=False,
-        fix_last_decay=True,
-        model_coh=True,
-        lower_bound=0.1,
-        verbose=True,
-        use_error=False,
+            self,
+            x0,
+            fix_sigma=True,
+            fix_t0=False,
+            fix_last_decay=True,
+            model_coh=True,
+            lower_bound=0.1,
+            verbose=True,
+            use_error=False,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -647,14 +651,14 @@ class PolTRSpec:
         self.wl_idx = para.wl_idx
 
     def fit_exp(
-        self,
-        x0,
-        fix_sigma=True,
-        fix_t0=False,
-        fix_last_decay=True,
-        from_t=None,
-        model_coh=True,
-        lower_bound=0.1,
+            self,
+            x0,
+            fix_sigma=True,
+            fix_t0=False,
+            fix_last_decay=True,
+            from_t=None,
+            model_coh=True,
+            lower_bound=0.1,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -729,6 +733,7 @@ class PolTRSpec:
         self.para.save_txt(fname + '_para.txt', freq_unit)
         self.perp.save_txt(fname + '_perp.txt', freq_unit)
 
+
 import functools
 import typing
 
@@ -767,7 +772,7 @@ def delgator(pol_tr: PolTRSpec, method: typing.Callable):
 class PlotterMixin:
     @property
     def x(self):
-        if self.freq_unit is "cm":
+        if self.freq_unit == "cm":
             return self._get_wn()
         else:
             return self._get_wl()
@@ -781,6 +786,17 @@ class PlotterMixin:
         ax.axhline(0, color="k", lw=0.5, zorder=1.9)
         # ax.legend(loc='best', ncol=2, title='Delay time')
         ax.minorticks_on()
+
+    def upsample_spec(self, y, kind='cubic', factor=4):
+
+        x = self.x
+        assert (y.shape[0] == x.size)
+        inter = interp1d(x, y, kind=kind, assume_sorted=False)
+        fac = factor + 1
+        diff = np.diff(x) / (fac)
+        new_points = x[:-1, None] + np.arange(1, fac)[None, :] * diff[:, None]
+        xn = np.sort(np.concatenate((x, new_points.ravel())))
+        return xn, inter(xn)
 
 
 class TimeResSpecPlotter(PlotterMixin):
@@ -811,16 +827,14 @@ class TimeResSpecPlotter(PlotterMixin):
     def _get_wn(self):
         return self.dataset.wavenumbers
 
-    def map(
-        self,
-        symlog=True,
-        equal_limits=True,
-        plot_con=True,
-        con_step=None,
-        con_filter=None,
-        ax=None,
-        **kwargs
-    ):
+    def map(self,
+            symlog=True,
+            equal_limits=True,
+            plot_con=True,
+            con_step=None,
+            con_filter=None,
+            ax=None,
+            **kwargs):
         """
         Plot a colormap of the dataset with optional contour lines.
 
@@ -866,9 +880,13 @@ class TimeResSpecPlotter(PlotterMixin):
             vmin, vmax = -m, m
         else:
             vmin, vmax = ds.data.max(), ds.data.min()
-        mesh = ax.pcolormesh(
-            x, ds.t, ds.data, vmin=vmin, vmax=vmax, cmap=cmap, **kwargs
-        )
+        mesh = ax.pcolormesh(x,
+                             ds.t,
+                             ds.data,
+                             vmin=vmin,
+                             vmax=vmax,
+                             cmap=cmap,
+                             **kwargs)
         if symlog:
             ax.set_yscale("symlog", linthreshy=1)
             ph.symticks(ax, axis="y")
@@ -908,7 +926,13 @@ class TimeResSpecPlotter(PlotterMixin):
         if not is_nm:
             ax.set_xlim(*ax.get_xlim()[::-1])
 
-    def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
+    def spec(self,
+             t_list,
+             norm=False,
+             ax=None,
+             n_average=0,
+             upsample=1,
+             **kwargs):
         """
         Plot spectra at given times.
 
@@ -925,6 +949,9 @@ class TimeResSpecPlotter(PlotterMixin):
             For noisy data it may be preferred to average multiple spectra
             together. This function plots the average of `n_average` spectra
             around the specific time-points.
+        upsample : int,
+            If upsample is >1, it will plot an upsampled version of the spectrum
+            using cubic spline interplotation. 
 
         Returns
         -------
@@ -951,19 +978,29 @@ class TimeResSpecPlotter(PlotterMixin):
             else:
                 raise ValueError("n_average must be an Integer >= 0.")
 
+            if upsample > 1:
+                x, dat = self.upsample_spec(dat, factor=upsample)
             if norm:
                 dat = dat / abs(dat).max()
-            li += ax.plot(
-                x, dat, label=ph.time_formatter(ds.t[idx], ph.time_unit), **kwargs
-            )
+            markevery = None if upsample == 1 else upsample + 1
+
+            li += ax.plot(x,
+                          dat,
+                          markevery=markevery,
+                          label=ph.time_formatter(ds.t[idx], ph.time_unit),
+                          **kwargs)
 
         self.lbl_spec(ax)
         if not is_nm:
             ax.set_xlim(x.max(), x.min())
         return li
 
-
-    def trans_integrals(self, *args, symlog:bool=True, norm=False, ax=None, **kwargs) -> typing.List[plt.Line2D]:
+    def trans_integrals(self,
+                        *args,
+                        symlog: bool = True,
+                        norm=False,
+                        ax=None,
+                        **kwargs) -> typing.List[plt.Line2D]:
         """
         Plot the transients of integrated region. The integration will use np.tranpz in
         wavenumber-space.
@@ -1005,8 +1042,10 @@ class TimeResSpecPlotter(PlotterMixin):
             else:
                 dat = dat / dat[ds.t_idx(norm)]
             l.extend(
-                ax.plot(ds.t, dat, label=f"{a: .0f} cm-1 to {b: .0f}", **kwargs)
-                )
+                ax.plot(ds.t,
+                        dat,
+                        label=f"{a: .0f} cm-1 to {b: .0f}",
+                        **kwargs))
 
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0)
@@ -1016,8 +1055,13 @@ class TimeResSpecPlotter(PlotterMixin):
         ax.yaxis.set_tick_params(which="minor", left=True)
         return l
 
-
-    def trans(self, wls, symlog=True, norm=False, ax=None, freq_unit="auto", **kwargs):
+    def trans(self,
+              wls,
+              symlog=True,
+              norm=False,
+              ax=None,
+              freq_unit="auto",
+              **kwargs):
         """
         Plot the nearest transients for given frequencies.
 
@@ -1049,7 +1093,7 @@ class TimeResSpecPlotter(PlotterMixin):
         if ax is None:
             ax = plt.gca()
 
-        tmp = self.freq_unit if freq_unit is "auto" else freq_unit
+        tmp = self.freq_unit if freq_unit == "auto" else freq_unit
         is_nm = tmp == "nm"
         if is_nm:
             ph.vis_mode()
@@ -1058,7 +1102,7 @@ class TimeResSpecPlotter(PlotterMixin):
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
 
-        wl, t, d = ds.wl, ds.t, ds.data
+        t, d = ds.t, ds.data
         l, plotted_vals = [], []
         for i in wls:
             idx = dv.fi(x, i)
@@ -1072,8 +1116,10 @@ class TimeResSpecPlotter(PlotterMixin):
                 dat = dat / dat[dv.fi(t, norm)]
             plotted_vals.append(dat)
             l.extend(
-                ax.plot(t, dat, label="%.1f %s" % (x[idx], ph.freq_unit), **kwargs)
-            )
+                ax.plot(t,
+                        dat,
+                        label="%.1f %s" % (x[idx], ph.freq_unit),
+                        **kwargs))
 
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0)
@@ -1094,9 +1140,10 @@ class TimeResSpecPlotter(PlotterMixin):
             ph.ir_mode()
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
-        fig, axs = plt.subplots(
-            3, 1, figsize=(5, 12), gridspec_kw=dict(height_ratios=(2, 1, 1))
-        )
+        fig, axs = plt.subplots(3,
+                                1,
+                                figsize=(5, 12),
+                                gridspec_kw=dict(height_ratios=(2, 1, 1)))
         self.map(ax=axs[0])
 
         times = np.hstack((0, np.geomspace(0.1, ds.t.max(), 6)))
@@ -1117,7 +1164,7 @@ class TimeResSpecPlotter(PlotterMixin):
             the first n components. If `n` is a list of ints, then every
             number is a SVD-component to be plotted.
         """
-        is_nm = self.freq_unit is "nm"
+        is_nm = self.freq_unit == "nm"
         if is_nm:
             ph.vis_mode()
         else:
@@ -1157,9 +1204,8 @@ class TimeResSpecPlotter(PlotterMixin):
         """
         ds = self.dataset
         if not hasattr(ds, "fit_exp_result_"):
-            raise ValueError(
-                "The PolTRSpec must have successfully fit the " "data first"
-            )
+            raise ValueError("The PolTRSpec must have successfully fit the "
+                             "data first")
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
@@ -1169,7 +1215,9 @@ class TimeResSpecPlotter(PlotterMixin):
             ph.ir_mode()
         f = ds.fit_exp_result_.fitter
         num_exp = f.num_exponentials
-        leg_text = [ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]]
+        leg_text = [
+            ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]
+        ]
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
 
@@ -1186,7 +1234,7 @@ class TimeResSpecPlotter(PlotterMixin):
         import ipywidgets as wid
         from IPython.display import display
 
-        is_nm = self.freq_unit is "nm"
+        is_nm = self.freq_unit == "nm"
         if is_nm:
             ph.vis_mode()
         else:
@@ -1225,10 +1273,11 @@ class TimeResSpecPlotter(PlotterMixin):
         ax1.plot(ds.wavenumbers, result.tn)
         ax1.plot(ds.wavenumbers, result.polynomial(ds.wavenumbers))
 
-        result.correct_ds.map(symlog=True, con_filter=3,
-                              con_step=None)
+        result.correct_ds.map(symlog=True, con_filter=3, con_step=None)
         self.freq_unit = tmp_unit[0]
         result.correct_ds.plot.freq_unit = tmp_unit[1]
+
+    #def spec_upsample(self, *args, ax=None, n_aver):
 
 
 class PolDataSetPlotter(PlotterMixin):
@@ -1247,7 +1296,7 @@ class PolDataSetPlotter(PlotterMixin):
         self.pol_ds = pol_dataset
         if disp_freq_unit is not None:
             self.freq_unit = disp_freq_unit
-            
+
         self.perp_ls = dict(linewidth=1)
         self.para_ls = dict(linewidth=3)
 
@@ -1274,6 +1323,8 @@ class PolDataSetPlotter(PlotterMixin):
             For noisy data it may be prefered to average multiple spectra
             together. This function plots the average of `n_average` spectra
             around the specific time-points.
+        upsample : int 
+            If >1, upsample the spectrum using cubic interpolation.
 
         Returns
         -------
@@ -1282,8 +1333,10 @@ class PolDataSetPlotter(PlotterMixin):
         """
 
         pa, pe = self.pol_ds.para, self.pol_ds.perp
-        l1 = pa.plot.spec(t_list, norm, ax, n_average, **self.para_ls, **kwargs)
-        l2 = pe.plot.spec(t_list, norm, ax, n_average, **self.perp_ls, **kwargs)
+        l1 = pa.plot.spec(t_list, norm, ax, n_average, **self.para_ls,
+                          **kwargs)
+        l2 = pe.plot.spec(t_list, norm, ax, n_average, **self.perp_ls,
+                          **kwargs)
         dv.equal_color(l1, l2)
         self.lbl_spec(ax)
         return l1, l2
@@ -1340,7 +1393,8 @@ class PolDataSetPlotter(PlotterMixin):
         """
         ds = self.pol_ds
         if not hasattr(self.pol_ds, "fit_exp_result_"):
-            raise ValueError("The PolTRSpec must have successfully fit the " "data")
+            raise ValueError("The PolTRSpec must have successfully fit the "
+                             "data")
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
@@ -1351,17 +1405,21 @@ class PolDataSetPlotter(PlotterMixin):
             ph.ir_mode()
         f = ds.fit_exp_result_.fitter
         num_exp = f.num_exponentials
-        leg_text = [ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]]
+        leg_text = [
+            ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]
+        ]
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
         n = ds.para.wavelengths.size
         x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
         start = 0 if plot_first_das else 1
         for i in range(start, num_exp):
-            l1 = ax.plot(x, f.c[:n, -num_exp+i], 
-                         **kwargs, **self.para_ls, label=leg_text[i])
-            l2 = ax.plot(x, f.c[n:, -num_exp+i], 
-                         **kwargs, **self.perp_ls)
+            l1 = ax.plot(x,
+                         f.c[:n, -num_exp + i],
+                         **kwargs,
+                         **self.para_ls,
+                         label=leg_text[i])
+            l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
         ax.legend(title="Decay\nConstants", ncol=2)
@@ -1400,9 +1458,9 @@ class PolDataSetPlotter(PlotterMixin):
             idx = dv.fi(x, i)
             pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
             aniso = (pa - pe) / (2 * pe + pa)
-            l += ax.plot(
-                ds.para.t, aniso, label=ph.time_formatter(ds.t[idx], ph.time_unit)
-            )
+            l += ax.plot(ds.para.t,
+                         aniso,
+                         label=ph.time_formatter(ds.t[idx], ph.time_unit))
         ph.lbl_trans(use_symlog=symlog)
         if symlog:
             ax.set_xscale("symlog")
