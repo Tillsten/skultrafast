@@ -35,3 +35,25 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
         else:
             num_masked = n
     return data
+
+
+def gauss_step(x, amp : float, center : float, sigma : float):
+    """Returns the stepfunction (erf-style) for given arguments.
+    
+    Parameters
+    ----------
+    x : array
+        Independent variable
+    amp : float
+        Amplitude of the step
+    center : float
+        Position of the step    
+    sigma : float
+        Width of the step
+    
+    Returns
+    -------
+    array
+        The step functions
+    """ 
+    return amp*0.5*(1+erf((x-center)/sigma/np.sqrt(2)))
