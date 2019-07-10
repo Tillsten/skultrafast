@@ -1,9 +1,12 @@
 import numpy as np
+import lmfit
 from skultrafast.dataset import TimeResSpec, PlotterMixin
 from skultrafast import plot_helpers as ph
 from skultrafast.utils import sigma_clip, gauss_step
 import matplotlib.pyplot as plt
 from .dv import make_fi
+
+from scipy.ndimage import gaussian_filter1d
 
 
 def _add_rel_errors(data1, err1, data2, err2):
@@ -341,35 +344,44 @@ def get_t0(
     tuple of float, float, lmfit.model.ModelResult, plt.Figure
         Result and presentation of the fit.
     """
-     a = np.load(fname)    
-    if not fname[-11:] == 'messpy1.npz':        
-        data = a['data']        
+    a = np.load(fname)
+    if not fname[-11:] == 'messpy1.npz':
+        data = a['data']
         sig = data[0, :, :, 1, -1].mean(1)
-        t = a['t']/1000.
+        t = a['t'] / 1000.
     else:
-        d = a['data_Remote IR 32x2']        
+        d = a['data_Remote IR 32x2']
         sig = d[-1, :, :, 0, :].mean(0).mean(-1)
         t = a['t']
-    idx = (t>-2) & (t<2)
+    idx = (t > -2) & (t < 2)
     sig = sig[idx]
     dsig = gaussian_filter1d(sig, sigma=1, order=1)
     GaussStep = lmfit.Model(gauss_step)
-    model  = GaussStep + lmfit.models.LinearModel()
-    result = model.fit(data=sig, x=t[idx], amp=np.ptp(sig),
-                       center=t[idx][np.argmax(dsig)], sigma=0.1, c=0.05)
+    model = GaussStep + lmfit.models.LinearModel()
+    result = model.fit(data=sig,
+                       x=t[idx],
+                       amp=np.ptp(sig),
+                       center=t[idx][np.argmax(dsig)],
+                       sigma=0.1,
+                       c=0.05)
     fig = None
     if display_result:
-        display(result.params)
+        import IPython
+        IPython.display(result.params)
     if plot:
-        fig, axs = plt.subplots(2, 1, figsize=(3, 4),)
-        
+        fig, axs = plt.subplots(
+            2,
+            1,
+            figsize=(3, 4),
+        )
+
         axs[0].plot(t[idx], sig)
         tw = axs[0].twinx()
         tw.plot(t[idx], dsig, c='r', label='Nummeric Diff')
         #axs[1].plot(t[idx], dsig, color='red')
-        axs[1].set_xlabel('t')        
+        axs[1].set_xlabel('t')
         plt.sca(axs[1])
         result.plot_fit()
         axs[1].axvline(result.params['center'])
-        
+
     return result.params['center'], result.params['sigma'], result, fig

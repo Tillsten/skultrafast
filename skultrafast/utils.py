@@ -1,5 +1,6 @@
 """Module with various utility functions. Was called dv in older Versions."""
 import numpy as np
+from scipy.special import erf
 
 
 def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
@@ -26,7 +27,7 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
     for i in range(max_iter):
         median = np.ma.median(data, axis, keepdims=1)
         std = np.ma.std(data, axis, keepdims=1)
-        upper, lower = median + sigma*std, median - sigma*std
+        upper, lower = median + sigma * std, median - sigma * std
         data = np.ma.masked_greater(data, upper, copy=False)
         data = np.ma.masked_less(data, lower, copy=False)
         n = data.mask.sum()
@@ -37,7 +38,7 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
     return data
 
 
-def gauss_step(x, amp : float, center : float, sigma : float):
+def gauss_step(x, amp: float, center: float, sigma: float):
     """Returns the stepfunction (erf-style) for given arguments.
     
     Parameters
@@ -55,5 +56,5 @@ def gauss_step(x, amp : float, center : float, sigma : float):
     -------
     array
         The step functions
-    """ 
-    return amp*0.5*(1+erf((x-center)/sigma/np.sqrt(2)))
+    """
+    return amp * 0.5 * (1 + erf((x - center) / sigma / np.sqrt(2)))
