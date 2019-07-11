@@ -319,26 +319,29 @@ class MessPyPlotter(PlotterMixin):
 def get_t0(
         fname: str,
         sigma: float = 1,
+        scan: int = -1,
         display_result: bool = True,
         plot: bool = True,
 ):
     """Determine t0 from a semiconductor messuarement in the IR. For that, it opens
-    the given file, takes the mean of all channels and fits the resulting curve with a 
-    step function. 
+    the given file, takes the mean of all channels and fits the resulting curve with a
+    step function.
 
     Note that the parameter
-    
+
     Parameters
     ----------
     fname : str
         Filename of the messpy file containing the data
     sigma : float, optional
         Used for calculating the displayed nummerical derviate, by default 1.
+    scan: int
+        Which scan to use, by default -1, the last scan.
     display_result : bool, optional
         If true, show the fitting results, by default True
     plot : bool, optional
         If true, plot the result, by default True
-    
+
     Returns
     -------
     tuple of float, float, lmfit.model.ModelResult, plt.Figure
@@ -351,7 +354,7 @@ def get_t0(
         t = a['t'] / 1000.
     else:
         d = a['data_Remote IR 32x2']
-        sig = d[-1, :, :, 0, :].mean(0).mean(-1)
+        sig = d[scan, 0, :, 0, :].mean(-1)
         t = a['t']
     idx = (t > -2) & (t < 2)
     sig = sig[idx]
@@ -363,7 +366,7 @@ def get_t0(
                        amp=np.ptp(sig),
                        center=t[idx][np.argmax(dsig)],
                        sigma=0.1,
-                       c=0.05)
+                       b=sig.min())
     fig = None
     if display_result:
         import IPython.display
