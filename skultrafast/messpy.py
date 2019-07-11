@@ -1,17 +1,120 @@
 import numpy as np
 import lmfit
-from skultrafast.dataset import TimeResSpec, PlotterMixin
+from pathlib import Path
+import os
+import attr
+from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast import plot_helpers as ph
 from skultrafast.utils import sigma_clip, gauss_step
 import matplotlib.pyplot as plt
 from .dv import make_fi
 
 from scipy.ndimage import gaussian_filter1d
-
+from typing import Tuple
 
 def _add_rel_errors(data1, err1, data2, err2):
     #TODO Implement
     pass
+
+
+class MessPy2File:
+
+    def __init__(self, fname: os.PathLike):
+        self.file = np.load(fname)
+
+    def get_meta_info(self):
+        meta = self.file['meta']
+        meta.shape = (1, )
+        samp = meta[0]['children']['Sample']['children']
+        out = {}
+        for i in samp.keys():
+            out[i] = samp[i]['value']
+        return out
+
+    def vis_wls(slope=-1.5, intercept=864.4):
+        return slope * np.arange(390) + intercept
+
+    def process_vis(self, vis_range=(390, 720), max_scans=None):
+        data_file = self.file
+        wls = self.vis_wls()
+        t = data_file['t']
+        d = -data_file['data_Stresing CCD'][:max_scans, ...]
+
+        if 'rot' in data_file:
+            rot = data_file['rot'][:max_scans]
+            para_idx = (np.int64(np.round(rot)) == 45)
+        else:
+            n_ir_cwl = data_file['wl_Remote IR 32x2'].shape[0]
+            para_idx = np.repeat(np.array([False, True], dtype='bool'),
+                                 n_ir_cwl)
+
+        dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=2.3)
+        dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=2.3)
+        dp = dpm.mean(0)
+        dps = dpm.std(0)
+        ds = dsm.mean(0)
+        dss = dsm.std(0)
+
+        valid = abs(dps / dp) < 1
+
+        ds -= ds[:, :10, ...].mean(1, keepdims=True)
+        dp -= dp[:, :10, ...].mean(1, keepdims=True)
+
+        para = TimeResSpec(wls,
+                           t,
+                           dp[0, :, 0, ...],
+                           freq_unit='nm',
+                           disp_freq_unit='nm')
+        perp = TimeResSpec(wls,
+                           t,
+                           ds[0, :, 0, ...],
+                           freq_unit='nm',
+                           disp_freq_unit='nm')
+        pol = PolTRSpec(para, perp)
+
+        pol = pol.cut_freqs([vis_range], invert_sel=True)
+        return pol.para, pol.perp, pol
+
+    def process_ir(self, t0=0, max_scans=None):
+        data_file = self.file
+        t = data_file['t'] - t0
+        wli = data_file['wl_Remote IR 32x2']
+        wli = -(14.0 * (np.arange(32) - 17)) + wli[:, 16, None]
+        wli = 1e7 / wli
+        d = data_file['data_Remote IR 32x2'][:max_scans]
+        print(d.shape)
+
+        dp = sigma_clip(d[1::2, ...], axis=0, sigma=2.4).mean(0)
+        ds = sigma_clip(d[0::2, ...], axis=0, sigma=2.4).mean(0)
+        ds -= ds[:, :10, ...].mean(1, keepdims=True)
+        dp -= dp[:, :10, ...].mean(1, keepdims=True)
+
+        para = TimeResSpec(wli[0],
+                           t,
+                           dp[0, :, 0, ...],
+                           freq_unit='cm',
+                           disp_freq_unit='cm')
+        perp = TimeResSpec(wli[0],
+                           t,
+                           ds[0, :, 0, ...],
+                           freq_unit='cm',
+                           disp_freq_unit='cm')
+
+        for i in range(1, wli.shape[0]):
+            para = para.concat_datasets(
+                TimeResSpec(wli[i],
+                            t,
+                            dp[i, :, 0, ...],
+                            freq_unit='cm',
+                            disp_freq_unit='cm'))
+            perp = perp.concat_datasets(
+                TimeResSpec(wli[i],
+                            t,
+                            ds[i, :, 0, ...],
+                            freq_unit='cm',
+                            disp_freq_unit='cm'))
+        both = PolTRSpec(para, perp)
+        return both
 
 
 class MessPyFile:
