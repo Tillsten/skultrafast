@@ -1,18 +1,20 @@
 from collections import namedtuple
-from enum import auto
+import attr
 
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.core.multiarray import ndarray
+
 from scipy.interpolate import interp1d
 
 import skultrafast.dv as dv
 from skultrafast.utils import sigma_clip
 import skultrafast.plot_helpers as ph
-from skultrafast import zero_finding, fitter
+from skultrafast import zero_finding, fitter, lifetimemap
 from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter, svd_filter
+
+ndarray = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
 EstDispResult.__doc__ = """
@@ -29,6 +31,14 @@ polynomial : function
 """
 
 FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
+
+
+@attr.s
+class LDMResult:
+    skmodel: object = attr.ib()
+    coefs: ndarray = attr.ib()
+    fit: ndarray = attr.ib()
+    alpha: ndarray = attr.ib()
 
 
 class TimeResSpec:
@@ -475,6 +485,8 @@ class TimeResSpec:
         )
         if self.auto_plot:
             self.plot.plot_disp_result(result)
+
+        self.disp_result_ = result
         return result
 
     def interpolate_disp(self, polyfunc) -> "TimeResSpec":
@@ -570,17 +582,36 @@ class TimeResSpec:
             lmfit.fit_report(result)
         return result_tuple
 
-    def lft_density_map(self, taus, alpha=1e-4):
+    def lifetime_density_map(self, taus=None, alpha=1e-4, cv=True):
         """Calculates the LDM from a dataset by regularized regression.
 
         Parameters
         ----------
-        taus : array
-            List with candiate decays.
+        taus : array or None
+            List with potential decays for building the basis. If `None`,
+            use automatic determination.
         alpha : float
             The regularization factor.
+        cv : bool
+            If to apply cross-validation, by default True.
         """
-        pass
+        if taus is None:
+            dt = self.t[self.t_idx(0)] - self.t[self.t_idx(0) - 1]
+            max_t = self.t.max()
+            start = np.floor(np.log10(dt))
+            end = np.ceil(np.log10(max_t))
+            taus = np.geomspace(start, end, 5 * (end - start))
+
+        result = lifetimemap.start_ltm(self,
+                                       taus,
+                                       use_cv=False,
+                                       add_const=False,
+                                       alpha=alpha,
+                                       add_coh=False,
+                                       max_iter=10000,
+                                       )
+        result = LDMResult(*result)
+        return result
 
     def concat_datasets(self, other_ds):
         """
@@ -725,7 +756,7 @@ class PolTRSpec:
         Parameters
         ----------
         fname : str
-            Filename (can include path). This functions adds `_para.txt` and 
+            Filename (can include path). This functions adds `_para.txt` and
             '_perp.txt' for the corresponding dataset to the fname.
         freq_unit : 'nm' or 'cm' (default 'nm')
             Which frequency unit is used.
@@ -866,7 +897,7 @@ class TimeResSpecPlotter(PlotterMixin):
         """
         if ax is None:
             ax = plt.gca()
-        is_nm = self.freq_unit is "nm"
+        is_nm = self.freq_unit == "nm"
         if is_nm:
             ph.vis_mode()
         else:
@@ -927,7 +958,7 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(*ax.get_xlim()[::-1])
 
     def spec(self,
-             t_list,
+             *args,
              norm=False,
              ax=None,
              n_average=0,
@@ -938,7 +969,7 @@ class TimeResSpecPlotter(PlotterMixin):
 
         Parameters
         ----------
-        t_list : list or ndarray
+        *args : list or ndarray
             List of the times where the spectra are plotted.
         norm : bool
             If true, each spectral will be normalized.
@@ -951,14 +982,15 @@ class TimeResSpecPlotter(PlotterMixin):
             around the specific time-points.
         upsample : int,
             If upsample is >1, it will plot an upsampled version of the spectrum
-            using cubic spline interplotation. 
+            using cubic spline interplotation.
 
         Returns
         -------
         list of `Lines2D`
             List containing the Line2D objects belonging to the spectra.
         """
-
+        if len(args) == 1 and isinstance(args[0], list):
+            args = args[0]
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
@@ -969,7 +1001,7 @@ class TimeResSpecPlotter(PlotterMixin):
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
         li = []
-        for i in t_list:
+        for i in args:
             idx = dv.fi(ds.t, i)
             if n_average > 0:
                 dat = uniform_filter(ds, (2 * n_average + 1, 1)).data[idx, :]
@@ -1323,7 +1355,7 @@ class PolDataSetPlotter(PlotterMixin):
             For noisy data it may be prefered to average multiple spectra
             together. This function plots the average of `n_average` spectra
             around the specific time-points.
-        upsample : int 
+        upsample : int
             If >1, upsample the spectrum using cubic interpolation.
 
         Returns
@@ -1415,11 +1447,11 @@ class PolDataSetPlotter(PlotterMixin):
         start = 0 if plot_first_das else 1
         for i in range(start, num_exp):
             l1 = ax.plot(x,
-                         f.c[:n, -num_exp + i],
+                         f.c[:n, num_exp + i],
                          **kwargs,
                          **self.para_ls,
                          label=leg_text[i])
-            l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
+            l2 = ax.plot(x, f.c[n:, num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
         ax.legend(title="Decay\nConstants", ncol=2)
