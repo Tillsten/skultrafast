@@ -366,8 +366,8 @@ def get_t0(
                        c=0.05)
     fig = None
     if display_result:
-        import IPython
-        IPython.display(result.params)
+        import IPython.display
+        IPython.display.display(result.params)
     if plot:
         fig, axs = plt.subplots(
             2,
