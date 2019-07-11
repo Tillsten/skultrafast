@@ -3,6 +3,7 @@ from skultrafast import dv, plot_helpers
 import matplotlib.pyplot as plt
 import lmfit
 
+
 class SingleSpec:
     def __init__(self, frequency, signal, unit_freq='nm', unit_signal='OD'):
         """
@@ -20,7 +21,7 @@ class SingleSpec:
             Unit type of the signal.
         """
 
-        assert(frequency.shape[0] == signal.shape[0])
+        assert (frequency.shape[0] == signal.shape[0])
         idx = np.argsort(frequency)
         self.x = frequency[idx]
         self.y = signal[idx, ...]
@@ -29,7 +30,7 @@ class SingleSpec:
         self.back = np.zeros_like(self.x)
         self.fi = dv.make_fi(self.x)
 
-    def subtract_const(self, region : tuple):
+    def subtract_const(self, region: tuple):
         """
         Subtracts a constant background. The background is calculated by
         taking the mean signal in the designated region.
@@ -70,7 +71,7 @@ class SingleSpec:
 
 
 class SingleSpecPlotter:
-    def __init__(self, single_spec : SingleSpec):
+    def __init__(self, single_spec: SingleSpec):
         self.ds = single_spec
 
     def spec(self, remove_back=True, ax=None):
@@ -78,8 +79,7 @@ class SingleSpecPlotter:
             ax = plt.gca()
         ds = self.ds
 
-        ax.plot(ds.x, ds.y-ds.back)
+        ax.plot(ds.x, ds.y - ds.back)
         ax.set_xlabel(ds.unit_freq)
         ax.set_ylabel(ds.unit_signal)
         ax.minorticks_on()
-
