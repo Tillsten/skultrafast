@@ -33,7 +33,7 @@ polynomial : function
 FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
 
 
-@attr.s
+@attr.s(cmp=False)
 class LDMResult:
     skmodel: object = attr.ib()
     coefs: ndarray = attr.ib()
@@ -602,14 +602,15 @@ class TimeResSpec:
             end = np.ceil(np.log10(max_t))
             taus = np.geomspace(start, end, 5 * (end - start))
 
-        result = lifetimemap.start_ltm(self,
-                                       taus,
-                                       use_cv=False,
-                                       add_const=False,
-                                       alpha=alpha,
-                                       add_coh=False,
-                                       max_iter=10000,
-                                       )
+        result = lifetimemap.start_ltm(
+            self,
+            taus,
+            use_cv=False,
+            add_const=False,
+            alpha=alpha,
+            add_coh=False,
+            max_iter=10000,
+        )
         result = LDMResult(*result)
         return result
 
@@ -1088,7 +1089,7 @@ class TimeResSpecPlotter(PlotterMixin):
         return l
 
     def trans(self,
-              wls,
+              *args,
               symlog=True,
               norm=False,
               ax=None,
@@ -1099,7 +1100,7 @@ class TimeResSpecPlotter(PlotterMixin):
 
         Parameters
         ----------
-        wls : list or ndarray
+        *args : list or ndarray
             Spectral positions, should be given in the same unit as
             `self.freq_unit`.
         symlog : bool
@@ -1122,6 +1123,10 @@ class TimeResSpecPlotter(PlotterMixin):
          list of Line2D
             List containing the plotted lines.
         """
+
+        if len(args) == 1 and isinstance(args[0], list):
+            args = args[0]
+
         if ax is None:
             ax = plt.gca()
 
@@ -1136,7 +1141,7 @@ class TimeResSpecPlotter(PlotterMixin):
 
         t, d = ds.t, ds.data
         l, plotted_vals = [], []
-        for i in wls:
+        for i in args:
             idx = dv.fi(x, i)
 
             dat = d[:, idx]
@@ -1165,7 +1170,7 @@ class TimeResSpecPlotter(PlotterMixin):
         """
         Plots an overview figure.
         """
-        is_nm = self.freq_unit is "nm"
+        is_nm = self.freq_unit == "nm"
         if is_nm:
             ph.vis_mode()
         else:
@@ -1338,13 +1343,13 @@ class PolDataSetPlotter(PlotterMixin):
     def _get_wn(self):
         return self.pol_ds.para.wavenumbers
 
-    def spec(self, t_list, norm=False, ax=None, n_average=0, **kwargs):
+    def spec(self, *times, norm=False, ax=None, n_average=0, **kwargs):
         """
         Plot spectra at given times.
 
         Parameters
         ----------
-        t_list : list or ndarray
+        *times : list or ndarray
             List of the times where the spectra are plotted.
         norm : bool
             If true, each spectral will be normalized.
@@ -1365,15 +1370,23 @@ class PolDataSetPlotter(PlotterMixin):
         """
 
         pa, pe = self.pol_ds.para, self.pol_ds.perp
-        l1 = pa.plot.spec(t_list, norm, ax, n_average, **self.para_ls,
+        l1 = pa.plot.spec(*times,
+                          norm=norm,
+                          ax=ax,
+                          n_average=n_average,
+                          **self.para_ls,
                           **kwargs)
-        l2 = pe.plot.spec(t_list, norm, ax, n_average, **self.perp_ls,
+        l2 = pe.plot.spec(*times,
+                          norm=norm,
+                          ax=ax,
+                          n_average=n_average,
+                          **self.perp_ls,
                           **kwargs)
         dv.equal_color(l1, l2)
         self.lbl_spec(ax)
         return l1, l2
 
-    def trans(self, wls, symlog=True, norm=False, ax=None, **kwargs):
+    def trans(self, *args, symlog=True, norm=False, ax=None, **kwargs):
         """
         Plot the nearest transients for given frequencies.
 
@@ -1399,9 +1412,22 @@ class PolDataSetPlotter(PlotterMixin):
          list of Line2D
             Tuple of lists containing the plotted lines.
         """
+        if len(args) == 1 and isinstance(args[0], list):
+            args = args[0]
         pa, pe = self.pol_ds.para, self.pol_ds.perp
-        l1 = pa.plot.trans(wls, symlog, norm, ax, **kwargs, **self.para_ls)
-        l2 = pe.plot.trans(wls, symlog, norm, ax, **kwargs, **self.perp_ls)
+
+        l1 = pa.plot.trans(*args,
+                           symlog=symlog,
+                           norm=norm,
+                           ax=ax,
+                           **kwargs,
+                           **self.para_ls)
+        l2 = pe.plot.trans(*args,
+                           symlog=symlog,
+                           norm=norm,
+                           ax=ax,
+                           **kwargs,
+                           **self.perp_ls)
         dv.equal_color(l1, l2)
         return l1, l2
 
