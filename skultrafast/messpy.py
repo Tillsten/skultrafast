@@ -12,13 +12,13 @@ from .dv import make_fi
 from scipy.ndimage import gaussian_filter1d
 from typing import Tuple
 
+
 def _add_rel_errors(data1, err1, data2, err2):
     #TODO Implement
     pass
 
 
 class MessPy2File:
-
     def __init__(self, fname: os.PathLike):
         self.file = np.load(fname)
 
@@ -31,31 +31,33 @@ class MessPy2File:
             out[i] = samp[i]['value']
         return out
 
-    def vis_wls(slope=-1.5, intercept=864.4):
+    def vis_wls(self, slope=-1.5, intercept=864.4):
         return slope * np.arange(390) + intercept
 
-    def process_vis(self, vis_range=(390, 720), max_scans=None):
+    def process_vis(self,
+                    vis_range=(390, 720),
+                    min_scan=None,
+                    max_scan=None,
+                    sigma=2.3):
         data_file = self.file
         wls = self.vis_wls()
         t = data_file['t']
-        d = -data_file['data_Stresing CCD'][:max_scans, ...]
+        d = -data_file['data_Stresing CCD'][min_scan:max_scan, ...]
 
         if 'rot' in data_file:
-            rot = data_file['rot'][:max_scans]
+            rot = data_file['rot'][min_scan:max_scan]
             para_idx = (np.int64(np.round(rot)) == 45)
         else:
             n_ir_cwl = data_file['wl_Remote IR 32x2'].shape[0]
             para_idx = np.repeat(np.array([False, True], dtype='bool'),
                                  n_ir_cwl)
 
-        dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=2.3)
-        dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=2.3)
+        dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=sigma)
+        dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=sigma)
         dp = dpm.mean(0)
         dps = dpm.std(0)
         ds = dsm.mean(0)
         dss = dsm.std(0)
-
-        valid = abs(dps / dp) < 1
 
         ds -= ds[:, :10, ...].mean(1, keepdims=True)
         dp -= dp[:, :10, ...].mean(1, keepdims=True)
