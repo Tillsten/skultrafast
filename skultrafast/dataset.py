@@ -154,6 +154,7 @@ class TimeResSpec:
                  freq_unit="nm",
                  time_div=1.0,
                  transpose=False,
+                 disp_freq_unit=None,
                  loadtxt_kws=None):
         """
         Directly create a dataset from a text file.
@@ -172,6 +173,8 @@ class TimeResSpec:
             Use `1`, the default, to not change the time values.
         transpose : bool
             Transposes the loaded array.
+        disp_freq_unit : Optional[str]
+            See  class documentation.
         loadtxt_kws : dict
             Dict containing keyword arguments to `np.loadtxt`.
         """
@@ -183,7 +186,11 @@ class TimeResSpec:
         t = tmp[1:, 0] / time_div
         freq = tmp[0, 1:]
         data = tmp[1:, 1:]
-        return cls(freq, t, data, freq_unit=freq_unit)
+        return cls(freq,
+                   t,
+                   data,
+                   freq_unit=freq_unit,
+                   disp_freq_unit=disp_freq_unit)
 
     def save_txt(self, fname, freq_unit="wl"):
         """
@@ -517,9 +524,9 @@ class TimeResSpec:
             self,
             x0,
             fix_sigma=True,
-            fix_t0=False,
+            fix_t0=True,
             fix_last_decay=True,
-            model_coh=True,
+            model_coh=False,
             lower_bound=0.1,
             verbose=True,
             use_error=False,
@@ -686,10 +693,10 @@ class PolTRSpec:
             self,
             x0,
             fix_sigma=True,
-            fix_t0=False,
+            fix_t0=True,
             fix_last_decay=True,
             from_t=None,
-            model_coh=True,
+            model_coh=False,
             lower_bound=0.1,
     ):
         """
@@ -1473,11 +1480,11 @@ class PolDataSetPlotter(PlotterMixin):
         start = 0 if plot_first_das else 1
         for i in range(start, num_exp):
             l1 = ax.plot(x,
-                         f.c[:n, num_exp + i],
+                         f.c[:n, -num_exp + i],
                          **kwargs,
                          **self.para_ls,
                          label=leg_text[i])
-            l2 = ax.plot(x, f.c[n:, num_exp + i], **kwargs, **self.perp_ls)
+            l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
         ax.legend(title="Decay\nConstants", ncol=2)
