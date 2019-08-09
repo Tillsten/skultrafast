@@ -403,7 +403,7 @@ class MessPyPlotter(PlotterMixin):
                 c = colors(i / n_scans)
                 for j in range(d.shape[0]):
 
-                    ax.plot(self.ds.wl[:, j],
+                    ax.plot(self.ds.wavenumbers[:, j],
                             d[j, sl, :, channel, i].mean(0),
                             label='%d' % i,
                             c=c)
@@ -411,7 +411,7 @@ class MessPyPlotter(PlotterMixin):
             for i in range(0, n_scans, 2):
                 c = colors(2 * i / n_scans)
                 for j in range(d.shape[0]):
-                    x = self.ds.wl[:, j]
+                    x = self.ds.wavenumbers[:, j]
                     y = d[j, sl, :, channel, i].mean(0)
                     ax.plot(x, y, label='%d' % i, c=c)
                     if i + 1 < n_scans:
