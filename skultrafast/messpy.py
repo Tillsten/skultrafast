@@ -35,10 +35,12 @@ class MessPy2File:
         return slope * np.arange(390) + intercept
 
     def process_vis(self,
-                    vis_range=(390, 720),
-                    min_scan=None,
-                    max_scan=None,
-                    sigma=2.3):
+                    vis_range = (390, 720),
+                    min_scan = None,
+                    max_scan = None,
+                    sigma = 2.3,
+                    BG_points = 10,
+                    invert_data = False):
         data_file = self.file
         wls = self.vis_wls()
         t = data_file['t']
@@ -51,16 +53,18 @@ class MessPy2File:
             n_ir_cwl = data_file['wl_Remote IR 32x2'].shape[0]
             para_idx = np.repeat(np.array([False, True], dtype='bool'),
                                  n_ir_cwl)
-
+        if invert_data:
+            d *= -1
         dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=sigma)
         dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=sigma)
         dp = dpm.mean(0)
-        dps = dpm.std(0)
         ds = dsm.mean(0)
-        dss = dsm.std(0)
-
-        ds -= ds[:, :10, ...].mean(1, keepdims=True)
-        dp -= dp[:, :10, ...].mean(1, keepdims=True)
+        #dps and dss are not yet used
+        #dps = dpm.std(0)
+        #dss = dsm.std(0)
+        if BG_points:
+            ds -= ds[:, :BG_points, ...].mean(1, keepdims=True)
+            dp -= dp[:, :BG_points, ...].mean(1, keepdims=True)
 
         para = TimeResSpec(wls,
                            t,
@@ -77,7 +81,7 @@ class MessPy2File:
         pol = pol.cut_freqs([vis_range], invert_sel=True)
         return pol.para, pol.perp, pol
 
-    def process_ir(self, t0=0, max_scans=None):
+    def process_ir(self, t0=0, max_scans=None, invert_data= False):
         data_file = self.file
         t = data_file['t'] - t0
         wli = data_file['wl_Remote IR 32x2']
@@ -85,6 +89,8 @@ class MessPy2File:
         wli = 1e7 / wli
         d = data_file['data_Remote IR 32x2'][:max_scans]
         print(d.shape)
+        if invert_data:
+            d *= -1
 
         dp = sigma_clip(d[1::2, ...], axis=0, sigma=2.4).mean(0)
         ds = sigma_clip(d[0::2, ...], axis=0, sigma=2.4).mean(0)
