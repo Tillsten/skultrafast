@@ -137,7 +137,7 @@ class TimeResSpec:
         """For compatibility with dv.tup"""
         return iter((self.wavelengths, self.t, self.data))
 
-    def copy(self):
+    def copy(self) -> "TimeResSpec":
         """Returns a copy of the TimeResSpec."""
         return TimeResSpec(
             self.wavelengths,
@@ -648,6 +648,40 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
+    def merge_nearby_channels(self, distance: float = 8) -> "TimeResSpec":
+        """Merges sequetential channels together if their distance
+        is smaller than given.
+
+        Parameters
+        ----------
+        distance : float, optional
+            The minimal distance allowed between two channels. If smaller,
+            they will be merged together, by default 8.
+
+        Returns
+        -------
+        TimeResSpec
+            The merged dataset.
+        """
+        skiplist = []
+        nwl = self.wavelengths.copy()
+        nspec = self.data.copy()
+        for i in range(nwl.size - 1):
+            if i in skiplist:
+                continue
+            if abs(nwl[i + 1] - nwl[i]) < distance:
+                nspec[:, i] = np.mean(nspec[:, i:i + 2], axis=1)
+                nwl[i] = np.mean(nwl[i:i + 2])
+                skiplist.append(i + 1)
+
+        nwl = np.delete(nwl, skiplist)
+        nspec = np.delete(nspec, skiplist, axis=1)
+        new_ds = self.copy()
+        new_ds.wavelengths = nwl
+        new_ds.wavenumbers = 1e7 / nwl
+        new_ds.data = nspec
+        return new_ds
+
 
 class PolTRSpec:
     def __init__(self, para: TimeResSpec, perp: TimeResSpec):
@@ -678,6 +712,7 @@ class PolTRSpec:
         self.plot = PolDataSetPlotter(self, self.disp_freq_unit)
 
         trs = TimeResSpec
+        self.copy = delgator(self, trs.copy)
         self.bin_times = delgator(self, trs.bin_times)
         self.bin_freqs = delgator(self, trs.bin_freqs)
         self.cut_times = delgator(self, trs.cut_times)
@@ -685,9 +720,11 @@ class PolTRSpec:
         self.mask_freqs = delgator(self, trs.mask_freqs)
         self.mask_times = delgator(self, trs.mask_times)
         self.subtract_background = delgator(self, trs.subtract_background)
+        self.merge_nearby_channels = delgator(self, trs.merge_nearby_channels)
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
+
 
     def fit_exp(
             self,
