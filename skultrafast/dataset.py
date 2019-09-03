@@ -1,6 +1,5 @@
 from collections import namedtuple
 import attr
-
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +14,7 @@ from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter, svd_filter
 
 ndarray = np.ndarray
+from typing import Optional
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
 EstDispResult.__doc__ = """
@@ -978,6 +978,7 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_ylim(-0.5)
         plt.colorbar(mesh, ax=ax)
 
+        con = None
         if plot_con:
             if con_step is None:
                 levels = 20
@@ -998,7 +999,7 @@ class TimeResSpecPlotter(PlotterMixin):
                     data = svd_filter(ds, con_filter).data
             else:
                 data = ds.data
-            ax.contour(
+            con = ax.contour(
                 x,
                 ds.t,
                 data,
@@ -1010,6 +1011,7 @@ class TimeResSpecPlotter(PlotterMixin):
         ph.lbl_map(ax, symlog)
         if not is_nm:
             ax.set_xlim(*ax.get_xlim()[::-1])
+        return mesh, con
 
     def spec(self,
              *args,
