@@ -102,7 +102,7 @@ def save_txt_das(name, fitter):
     Saves the das of a fitter-obj in name.txt
     """
     f = fitter
-    spec = f.c[:, :-4] if f.model_coh else f.c
+    spec = f.c[:, :-3] if f.model_coh else f.c
     arr = np.column_stack((f.wl, spec))
     offset = f.model_disp+1
     taus = np.hstack((0, f.last_para[offset:]))
