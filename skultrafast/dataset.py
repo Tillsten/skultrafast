@@ -684,7 +684,10 @@ class TimeResSpec:
 
 
 class PolTRSpec:
-    def __init__(self, para: TimeResSpec, perp: TimeResSpec):
+    def __init__(self,
+                 para: TimeResSpec,
+                 perp: TimeResSpec,
+                 iso: Optional[TimeResSpec] = None):
         """
         Class for working with a polazation resolved datasets. Assumes the same
         frequency and time axis for both polarisations.
@@ -695,6 +698,8 @@ class PolTRSpec:
             The dataset with parallel pump/probe pol.
         perp : TimeResSpec
             The TimeResSpec with perpendicular pump/probe
+        iso : Optional[TimeResSpec]
+            Iso dataset, if none it will be calculated from para and perp.
 
         Attributes
         ----------
@@ -705,6 +710,11 @@ class PolTRSpec:
         assert para.data.shape == perp.data.shape
         self.para = para
         self.perp = perp
+        if iso is None:
+            self.iso = para.copy()
+            self.iso.data = (2 * perp.data + para.data) / 3
+        else:
+            self.iso = iso
         self.wavenumbers = para.wavenumbers
         self.wavelengths = para.wavelengths
         self.t = para.t
@@ -724,7 +734,6 @@ class PolTRSpec:
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
-
 
     def fit_exp(
             self,
@@ -1358,8 +1367,6 @@ class TimeResSpecPlotter(PlotterMixin):
         self.freq_unit = tmp_unit[0]
         result.correct_ds.plot.freq_unit = tmp_unit[1]
 
-    #def spec_upsample(self, *args, ax=None, n_aver):
-
 
 class PolDataSetPlotter(PlotterMixin):
     def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
@@ -1459,7 +1466,6 @@ class PolDataSetPlotter(PlotterMixin):
         if len(args) == 1 and isinstance(args[0], list):
             args = args[0]
         pa, pe = self.pol_ds.para, self.pol_ds.perp
-
         l1 = pa.plot.trans(*args,
                            symlog=symlog,
                            norm=norm,
@@ -1473,6 +1479,7 @@ class PolDataSetPlotter(PlotterMixin):
                            **kwargs,
                            **self.perp_ls)
         dv.equal_color(l1, l2)
+        ax.legend(l1, [i.get_label() for i in l1])
         return l1, l2
 
     def das(self, ax=None, plot_first_das=True, **kwargs):
@@ -1500,7 +1507,7 @@ class PolDataSetPlotter(PlotterMixin):
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
-        print(is_nm, self.freq_unit)
+
         if is_nm:
             ph.vis_mode()
         else:
@@ -1524,7 +1531,9 @@ class PolDataSetPlotter(PlotterMixin):
             l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
-        ax.legend(title="Decay\nConstants", ncol=2)
+        ax.legend(l1, [i.get_labels() for i in l1],
+                  title="Decay\nConstants",
+                  ncol=2)
         return l1, l2
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
