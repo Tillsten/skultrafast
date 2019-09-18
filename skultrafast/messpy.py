@@ -274,6 +274,8 @@ class MessPyFile:
 
     def recalculate_wavelengths(self, dispersion, center_ch=None, offset=0):
         """Recalculates the wavelengths, assuming linear dispersion.
+        Currently assumes that the wavelength set by spectrometer is stored
+        in channel 16
 
         Parameters
         ----------
@@ -286,8 +288,10 @@ class MessPyFile:
         if center_ch is None:
             center_ch = n // 2
 
-        center_wls = self.initial_wl[center_ch, :]
-        new_wl = np.arange(-n // 2, n // 2) * dispersion
+        # Here we assume that the set wavelength of the spectrometer
+        # is written in channel 16
+        center_wls = self.initial_wl[16, :]
+        new_wl = (np.arange(-n // 2, n // 2)+(center_ch-16)) * dispersion
         self.wl = np.add.outer(new_wl, center_wls) + offset
 
     def subtract_background(self, n=10):
@@ -412,17 +416,16 @@ class MessPyPlotter(PlotterMixin):
             for i in range(0, n_scans, every_nth):
                 c = colors(i * every_nth / n_scans)
                 for j in range(d.shape[0]):
-                    ax.plot(
-                        self.ds.wl[:, j],
-                        d[j, sl, :, channel, i].mean(0),
-                        label="%d" % i,
-                        c=c,
-                    )
+
+                    ax.plot(self.ds.wavenumbers[:, j],
+                            d[j, sl, :, channel, i].mean(0),
+                            label='%d' % i,
+                            c=c)
         else:
             for i in range(0, n_scans, 2 * every_nth):
                 c = colors(2 * every_nth * i / n_scans)
                 for j in range(d.shape[0]):
-                    x = self.ds.wl[:, j]
+                    x = self.ds.wavenumbers[:, j]
                     y = d[j, sl, :, channel, i].mean(0)
                     ax.plot(x, y, label="%d" % i, c=c)
                     if i + 1 < n_scans:
@@ -466,7 +469,7 @@ def get_t0(
     a = np.load(fname)
     if not fname[-11:] == 'messpy1.npz':
         data = a['data']
-        sig = data[0, :, :, 1, -1].mean(1)
+        sig = data[0, :, :, 1, scan].mean(1)
         t = a['t'] / 1000.
     else:
         d = a['data_Remote IR 32x2']
@@ -491,7 +494,7 @@ def get_t0(
         fig, axs = plt.subplots(
             2,
             1,
-            figsize=(3, 4),
+            figsize=(5, 7),
         )
 
         axs[0].plot(t[idx], sig)
