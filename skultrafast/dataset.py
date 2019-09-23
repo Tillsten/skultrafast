@@ -1,6 +1,5 @@
 from collections import namedtuple
 import attr
-
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +14,7 @@ from skultrafast.data_io import save_txt
 from skultrafast.filter import uniform_filter, svd_filter
 
 ndarray = np.ndarray
+from typing import Optional
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
 EstDispResult.__doc__ = """
@@ -137,7 +137,7 @@ class TimeResSpec:
         """For compatibility with dv.tup"""
         return iter((self.wavelengths, self.t, self.data))
 
-    def copy(self):
+    def copy(self) -> "TimeResSpec":
         """Returns a copy of the TimeResSpec."""
         return TimeResSpec(
             self.wavelengths,
@@ -648,9 +648,46 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
+    def merge_nearby_channels(self, distance: float = 8) -> "TimeResSpec":
+        """Merges sequetential channels together if their distance
+        is smaller than given.
+
+        Parameters
+        ----------
+        distance : float, optional
+            The minimal distance allowed between two channels. If smaller,
+            they will be merged together, by default 8.
+
+        Returns
+        -------
+        TimeResSpec
+            The merged dataset.
+        """
+        skiplist = []
+        nwl = self.wavelengths.copy()
+        nspec = self.data.copy()
+        for i in range(nwl.size - 1):
+            if i in skiplist:
+                continue
+            if abs(nwl[i + 1] - nwl[i]) < distance:
+                nspec[:, i] = np.mean(nspec[:, i:i + 2], axis=1)
+                nwl[i] = np.mean(nwl[i:i + 2])
+                skiplist.append(i + 1)
+
+        nwl = np.delete(nwl, skiplist)
+        nspec = np.delete(nspec, skiplist, axis=1)
+        new_ds = self.copy()
+        new_ds.wavelengths = nwl
+        new_ds.wavenumbers = 1e7 / nwl
+        new_ds.data = nspec
+        return new_ds
+
 
 class PolTRSpec:
-    def __init__(self, para: TimeResSpec, perp: TimeResSpec):
+    def __init__(self,
+                 para: TimeResSpec,
+                 perp: TimeResSpec,
+                 iso: Optional[TimeResSpec] = None):
         """
         Class for working with a polazation resolved datasets. Assumes the same
         frequency and time axis for both polarisations.
@@ -661,6 +698,8 @@ class PolTRSpec:
             The dataset with parallel pump/probe pol.
         perp : TimeResSpec
             The TimeResSpec with perpendicular pump/probe
+        iso : Optional[TimeResSpec]
+            Iso dataset, if none it will be calculated from para and perp.
 
         Attributes
         ----------
@@ -671,6 +710,11 @@ class PolTRSpec:
         assert para.data.shape == perp.data.shape
         self.para = para
         self.perp = perp
+        if iso is None:
+            self.iso = para.copy()
+            self.iso.data = (2 * perp.data + para.data) / 3
+        else:
+            self.iso = iso
         self.wavenumbers = para.wavenumbers
         self.wavelengths = para.wavelengths
         self.t = para.t
@@ -678,6 +722,7 @@ class PolTRSpec:
         self.plot = PolDataSetPlotter(self, self.disp_freq_unit)
 
         trs = TimeResSpec
+        self.copy = delgator(self, trs.copy)
         self.bin_times = delgator(self, trs.bin_times)
         self.bin_freqs = delgator(self, trs.bin_freqs)
         self.cut_times = delgator(self, trs.cut_times)
@@ -685,6 +730,7 @@ class PolTRSpec:
         self.mask_freqs = delgator(self, trs.mask_freqs)
         self.mask_times = delgator(self, trs.mask_times)
         self.subtract_background = delgator(self, trs.subtract_background)
+        self.merge_nearby_channels = delgator(self, trs.merge_nearby_channels)
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
@@ -932,6 +978,7 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_ylim(-0.5)
         plt.colorbar(mesh, ax=ax)
 
+        con = None
         if plot_con:
             if con_step is None:
                 levels = 20
@@ -952,7 +999,7 @@ class TimeResSpecPlotter(PlotterMixin):
                     data = svd_filter(ds, con_filter).data
             else:
                 data = ds.data
-            ax.contour(
+            con = ax.contour(
                 x,
                 ds.t,
                 data,
@@ -964,6 +1011,7 @@ class TimeResSpecPlotter(PlotterMixin):
         ph.lbl_map(ax, symlog)
         if not is_nm:
             ax.set_xlim(*ax.get_xlim()[::-1])
+        return mesh, con
 
     def spec(self,
              *args,
@@ -1321,8 +1369,6 @@ class TimeResSpecPlotter(PlotterMixin):
         self.freq_unit = tmp_unit[0]
         result.correct_ds.plot.freq_unit = tmp_unit[1]
 
-    #def spec_upsample(self, *args, ax=None, n_aver):
-
 
 class PolDataSetPlotter(PlotterMixin):
     def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
@@ -1422,7 +1468,6 @@ class PolDataSetPlotter(PlotterMixin):
         if len(args) == 1 and isinstance(args[0], list):
             args = args[0]
         pa, pe = self.pol_ds.para, self.pol_ds.perp
-
         l1 = pa.plot.trans(*args,
                            symlog=symlog,
                            norm=norm,
@@ -1436,6 +1481,7 @@ class PolDataSetPlotter(PlotterMixin):
                            **kwargs,
                            **self.perp_ls)
         dv.equal_color(l1, l2)
+        ax.legend(l1, [i.get_label() for i in l1])
         return l1, l2
 
     def das(self, ax=None, plot_first_das=True, **kwargs):
@@ -1463,7 +1509,7 @@ class PolDataSetPlotter(PlotterMixin):
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
-        print(is_nm, self.freq_unit)
+
         if is_nm:
             ph.vis_mode()
         else:
@@ -1487,7 +1533,9 @@ class PolDataSetPlotter(PlotterMixin):
             l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
-        ax.legend(title="Decay\nConstants", ncol=2)
+        ax.legend(l1, [i.get_labels() for i in l1],
+                  title="Decay\nConstants",
+                  ncol=2)
         return l1, l2
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):

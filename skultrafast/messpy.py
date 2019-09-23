@@ -13,8 +13,9 @@ from scipy.ndimage import gaussian_filter1d
 from typing import Tuple
 
 
+
 def _add_rel_errors(data1, err1, data2, err2):
-    #TODO Implement
+    # TODO Implement
     pass
 
 
@@ -126,12 +127,14 @@ class MessPy2File:
 
 
 class MessPyFile:
-    def __init__(self,
-                 fname,
-                 invert_data=False,
-                 is_pol_resolved=False,
-                 pol_first_scan='unknown',
-                 valid_channel=None):
+    def __init__(
+        self,
+        fname,
+        invert_data=False,
+        is_pol_resolved=False,
+        pol_first_scan="unknown",
+        valid_channel=None,
+    ):
         """Class for working with data files from MessPy.
 
         Parameters
@@ -153,10 +156,10 @@ class MessPyFile:
         """
 
         with np.load(fname) as f:
-            self.wl = f['wl']
+            self.wl = f["wl"]
             self.initial_wl = self.wl.copy()
-            self.t = f['t'] / 1000.
-            self.data = f['data']
+            self.t = f["t"] / 1000.0
+            self.data = f["data"]
             if invert_data:
                 self.data *= -1
 
@@ -171,7 +174,7 @@ class MessPyFile:
         self.plot = MessPyPlotter(self)
         self.t_idx = make_fi(self.t)
 
-    def average_scans(self, sigma=3, max_scan=None, disp_freq_unit=None):
+    def average_scans(self, sigma=3, min_scan=0, max_scan=None, disp_freq_unit=None):
         """
         Calculate the average of the scans. Uses sigma clipping, which
         also filters nans. For polarization resolved measurements, the
@@ -181,6 +184,8 @@ class MessPyFile:
         ----------
         sigma : float
             sigma used for sigma clipping.
+        min_scan : int or None
+            All scans before min_scan are ignored.
         max_scan : int or None
             If `None`, use all scan, else just use the scans up to max_scan.
         disp_freq_unit : 'nm', 'cm' or None
@@ -197,11 +202,11 @@ class MessPyFile:
         if max_scan is None:
             sub_data = self.data
         else:
-            sub_data = self.data[..., :max_scan]
+            sub_data = self.data[..., min_scan:max_scan]
         num_wls = self.data.shape[0]
         t = self.t
         if disp_freq_unit is None:
-            disp_freq_unit = 'nm' if self.wl.shape[0] > 32 else 'cm'
+            disp_freq_unit = "nm" if self.wl.shape[0] > 32 else "cm"
         kwargs = dict(disp_freq_unit=disp_freq_unit)
 
         if not self.is_pol_resolved:
@@ -219,28 +224,30 @@ class MessPyFile:
 
                 if num_wls > 1:
                     for i in range(num_wls):
-                        ds = TimeResSpec(self.wl[:, i], t, mean[i, ..., :],
-                                         err[i, ...], **kwargs)
+                        ds = TimeResSpec(
+                            self.wl[:, i], t, mean[i, ..., :], err[i, ...], **kwargs
+                        )
                         out[self.pol_first_scan + str(i)] = ds
                 else:
-                    out = TimeResSpec(self.wl[:, 0], t, mean[0, ...],
-                                      err[0, ...], **kwargs)
+                    out = TimeResSpec(
+                        self.wl[:, 0], t, mean[0, ...], err[0, ...], **kwargs
+                    )
                 return out
             else:
-                raise NotImplementedError('TODO')
+                raise NotImplementedError("TODO")
 
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
-            assert (self.pol_first_scan in ['para', 'perp'])
-            data1 = sigma_clip(sub_data[..., self.valid_channel, ::2],
-                               sigma=sigma,
-                               axis=-1)
+            assert self.pol_first_scan in ["para", "perp"]
+            data1 = sigma_clip(
+                sub_data[..., self.valid_channel, ::2], sigma=sigma, axis=-1
+            )
             mean1 = data1.mean(-1)
             std1 = np.ma.std(-1)
             err1 = std1 / np.sqrt(np.ma.count(data1, -1))
 
-            data2 = sigma_clip(sub_data[..., self.valid_channel, 1::2],
-                               sigma=sigma,
-                               axis=-1)
+            data2 = sigma_clip(
+                sub_data[..., self.valid_channel, 1::2], sigma=sigma, axis=-1
+            )
             mean2 = data2.mean(-1)
             std2 = data2.std(-1)
 
@@ -249,12 +256,12 @@ class MessPyFile:
             out = {}
             for i in range(num_wls):
                 wl, t = self.wl[:, i], self.t
-                if self.pol_first_scan == 'para':
+                if self.pol_first_scan == "para":
                     para = mean1[i, ...]
                     para_err = err1[i, ...]
                     perp = mean2[i, ...]
                     perp_err = err2[i, ...]
-                elif self.pol_first_scan == 'perp':
+                elif self.pol_first_scan == "perp":
                     para = mean2[i, ...]
                     para_err = err2[i, ...]
                     perp = mean1[i, ...]
@@ -262,10 +269,10 @@ class MessPyFile:
 
                 para_ds = TimeResSpec(wl, t, para, para_err, **kwargs)
                 perp_ds = TimeResSpec(wl, t, perp, perp_err, **kwargs)
-                out['para' + str(i)] = para_ds
-                out['perp' + str(i)] = perp_ds
+                out["para" + str(i)] = para_ds
+                out["perp" + str(i)] = perp_ds
                 iso = 1 / 3 * para + 2 / 3 * perp
-                out['iso' + str(i)] = TimeResSpec(wl, t, iso, **kwargs)
+                out["iso" + str(i)] = TimeResSpec(wl, t, iso, **kwargs)
             self.av_scans_ = out
             return out
         else:
@@ -273,6 +280,8 @@ class MessPyFile:
 
     def recalculate_wavelengths(self, dispersion, center_ch=None, offset=0):
         """Recalculates the wavelengths, assuming linear dispersion.
+        Currently assumes that the wavelength set by spectrometer is stored
+        in channel 16
 
         Parameters
         ----------
@@ -285,8 +294,10 @@ class MessPyFile:
         if center_ch is None:
             center_ch = n // 2
 
-        center_wls = self.initial_wl[center_ch, :]
-        new_wl = np.arange(-n // 2, n // 2) * dispersion
+        # Here we assume that the set wavelength of the spectrometer
+        # is written in channel 16
+        center_wls = self.initial_wl[16, :]
+        new_wl = (np.arange(-n // 2, n // 2)+(center_ch-16)) * dispersion
         self.wl = np.add.outer(new_wl, center_wls) + offset
 
     def subtract_background(self, n=10):
@@ -298,7 +309,7 @@ class MessPyFile:
         if not hasattr(self, "av_scans_"):
             self.average_scans()
         out = []
-        for pol in ['para', 'perp', 'iso']:
+        for pol in ["para", "perp", "iso"]:
             tmp = self.av_scans_[pol + "0"]
             for i in range(1, self.wl.shape[1]):
                 tmp = tmp.concat_datasets(self.av_scans_[pol + str(i)])
@@ -342,17 +353,15 @@ class MessPyPlotter(PlotterMixin):
         """
         n = self.ds.num_cwl
         ds = self.ds
-        fig, axs = plt.subplots(1,
-                                n,
-                                figsize=(n * 2.5 + .5, 2.5),
-                                sharex=True,
-                                sharey=True)
+        fig, axs = plt.subplots(
+            1, n, figsize=(n * 2.5 + 0.5, 2.5), sharex=True, sharey=True
+        )
 
-        if not hasattr(ds, 'av_scans_'):
+        if not hasattr(ds, "av_scans_"):
             return
         for i in range(n):
-            d = ds.av_scans_['para' + str(i)].data
-            axs[i].imshow(d, aspect='auto')
+            d = ds.av_scans_["para" + str(i)].data
+            axs[i].imshow(d, aspect="auto")
             axs[i].set_ylim(0, 50)
 
     def compare_spec(self, t_region=(0, 4), every_nth=1, ax=None):
@@ -377,24 +386,29 @@ class MessPyPlotter(PlotterMixin):
         n = self.ds.num_cwl
         ds = self.ds
         t = self.ds.t
-        if not hasattr(ds, 'av_scans_'):
+        if not hasattr(ds, "av_scans_"):
             self.ds.average_scans()
         for i in range(0, n, every_nth):
-            c = 'C%d' % i
+            c = "C%d" % i
             sl = (t_region[0] < t) & (t < t_region[1])
-            if 'para' + str(i) in ds.av_scans_:
-                d = ds.av_scans_['para' + str(i)]
+            if "para" + str(i) in ds.av_scans_:
+                d = ds.av_scans_["para" + str(i)]
                 ax.plot(d.wavelengths, d.data[sl, :].mean(0), c=c, lw=2)
-            if 'perp' + str(i) in ds.av_scans_:
-                d = ds.av_scans_['perp' + str(i)]
+            if "perp" + str(i) in ds.av_scans_:
+                d = ds.av_scans_["perp" + str(i)]
                 ax.plot(d.wavelengths, d.data[sl, :].mean(0), c=c, lw=1)
-            if 'iso' + str(i) in ds.av_scans_:
-                d = ds.av_scans_['perp' + str(i)]
+            if "iso" + str(i) in ds.av_scans_:
+                d = ds.av_scans_["perp" + str(i)]
                 ax.plot(d.wavelengths, d.data[sl, :].mean(0), c=c, lw=1)
         ph.lbl_spec(ax)
 
-    def compare_scans(self, t_region=(0, 4), channel=None, cmap='jet',
-                      ax=None):
+    def compare_scans(
+        self, t_region=(0, 4), channel=None, cmap="jet",
+                      ax=None, every_nth=1
+    ):
+        """
+        Plots the spectrum averaged over `t_region` for `every_nth` scan.
+        """
         if ax is None:
             ax = plt.gca()
         if channel is None:
@@ -405,8 +419,8 @@ class MessPyPlotter(PlotterMixin):
         sl = (t_region[0] < t) & (t < t_region[1])
         colors = plt.cm.get_cmap(cmap)
         if not self.ds.is_pol_resolved:
-            for i in range(n_scans):
-                c = colors(i / n_scans)
+            for i in range(0, n_scans, every_nth):
+                c = colors(i * every_nth / n_scans)
                 for j in range(d.shape[0]):
 
                     ax.plot(self.ds.wavenumbers[:, j],
@@ -414,15 +428,15 @@ class MessPyPlotter(PlotterMixin):
                             label='%d' % i,
                             c=c)
         else:
-            for i in range(0, n_scans, 2):
-                c = colors(2 * i / n_scans)
+            for i in range(0, n_scans, 2 * every_nth):
+                c = colors(2 * every_nth * i / n_scans)
                 for j in range(d.shape[0]):
                     x = self.ds.wavenumbers[:, j]
                     y = d[j, sl, :, channel, i].mean(0)
-                    ax.plot(x, y, label='%d' % i, c=c)
+                    ax.plot(x, y, label="%d" % i, c=c)
                     if i + 1 < n_scans:
                         y = d[j, sl, :, channel, i + 1].mean(0)
-                        ax.plot(x, y, label='%d' % (i + 1), c=c)
+                        ax.plot(x, y, label="%d" % (i + 1), c=c)
 
         ph.lbl_spec(ax)
 
@@ -461,7 +475,7 @@ def get_t0(
     a = np.load(fname)
     if not fname[-11:] == 'messpy1.npz':
         data = a['data']
-        sig = data[0, :, :, 1, -1].mean(1)
+        sig = data[0, :, :, 1, scan].mean(1)
         t = a['t'] / 1000.
     else:
         d = a['data_Remote IR 32x2']
@@ -486,7 +500,7 @@ def get_t0(
         fig, axs = plt.subplots(
             2,
             1,
-            figsize=(3, 4),
+            figsize=(5, 7),
         )
 
         axs[0].plot(t[idx], sig)
