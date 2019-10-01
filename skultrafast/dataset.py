@@ -1467,6 +1467,8 @@ class PolDataSetPlotter(PlotterMixin):
         """
         if len(args) == 1 and isinstance(args[0], list):
             args = args[0]
+        if ax is None:
+            ax = plt.gca()
         pa, pe = self.pol_ds.para, self.pol_ds.perp
         l1 = pa.plot.trans(*args,
                            symlog=symlog,
@@ -1533,8 +1535,7 @@ class PolDataSetPlotter(PlotterMixin):
             l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
-        ax.legend(l1, [i.get_labels() for i in l1],
-                  title="Decay\nConstants",
+        ax.legend(title="Decay\nConstants",
                   ncol=2)
         return l1, l2
 

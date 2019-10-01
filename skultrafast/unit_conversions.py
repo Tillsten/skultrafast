@@ -74,7 +74,7 @@ def dichro2angle(d):
 
 @make_doc
 def angle2dichro(deg):
-    x = np.deg2rad(x)
+    x = np.deg2rad(deg)
     return (1 + 2 * np.cos(x)**2) / (2 - np.cos(x)**2)
 
 
