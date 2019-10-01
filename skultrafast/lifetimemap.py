@@ -63,8 +63,9 @@ def start_ltm(tup,
         mod = lm.ElasticNet(**kwargs, l1_ratio=0.98)
 
     else:
-        mod = lm.ElasticNetCV(**kwargs)
-    mod.fit_intercept = 1
+        mod = lm.ElasticNetCV(**kwargs, l1_ratio=0.98)
+
+    mod.fit_intercept = not add_const
     mod.warm_start = 1
 
     coefs = np.empty((X.shape[1], tup.data.shape[1]))

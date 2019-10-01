@@ -589,7 +589,7 @@ class TimeResSpec:
             lmfit.fit_report(result)
         return result_tuple
 
-    def lifetime_density_map(self, taus=None, alpha=1e-4, cv=True):
+    def lifetime_density_map(self, taus=None, alpha=1e-4, cv=True, maxiter=30000, **kwargs):
         """Calculates the LDM from a dataset by regularized regression.
 
         Parameters
@@ -612,11 +612,12 @@ class TimeResSpec:
         result = lifetimemap.start_ltm(
             self,
             taus,
-            use_cv=False,
+            use_cv=cv,
             add_const=False,
             alpha=alpha,
             add_coh=False,
-            max_iter=10000,
+            max_iter=30000,
+            **kwargs
         )
         result = LDMResult(*result)
         return result
