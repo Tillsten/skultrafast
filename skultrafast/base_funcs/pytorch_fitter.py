@@ -1,10 +1,9 @@
-import torch
-import attr
+import torch, attr, math
 import numpy as np
 from skultrafast.dataset import TimeResSpec
-import math
 from scipy.optimize import least_squares
 
+from typing import Optional, Callable, Enu
 exp_half = math.exp(1 / 2.)
 
 
@@ -40,7 +39,7 @@ class FitterTorch:
     dataset: TimeResSpec = attr.ib()
     zero_func: callable = attr.ib(lambda x: np.zeros_like(x))
     done_eval: bool = attr.ib(False)
-    use_cuda: bool = attr.ib(True)
+    use_cuda: Optional[bool] = attr.ib(None)
     disp_poly_deg: int = attr.ib(2)
     model_coh: bool = attr.ib(0)
 
@@ -108,7 +107,7 @@ class FitterTorch:
                   fix_disp=False):
         ds = self.dataset
         time_zeros = self.zero_func(ds.wavenumbers)
-        disp_guess = np.polyfit(ds.wavenumbers, time_zeros)
+        disp_guess = np.polyfit(ds.wavenumbers, time_zeros, self.disp_poly_deg)
         x0 = np.hstack((disp_guess, w, taus))
         idx = np.ones_like(x0, dtype='bool')
         if fix_last_tau:
