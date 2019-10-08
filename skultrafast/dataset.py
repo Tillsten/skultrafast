@@ -1,6 +1,7 @@
 from collections import namedtuple
 import attr
 import lmfit
+from uncertainties import unumpy as u
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -640,11 +641,16 @@ class TimeResSpec:
 
         all_wls = np.hstack((self.wavelengths, other_ds.wavelengths))
         all_data = np.hstack((self.data, other_ds.data))
+        if not (self.err is None or other_ds.err is None):
+            all_err = np.hstack((self.err, other_ds.err))
+        else:
+            all_err = None
 
         return TimeResSpec(
             all_wls,
             self.t,
             all_data,
+            err=all_err,
             freq_unit="nm",
             disp_freq_unit=self.disp_freq_unit,
         )
@@ -667,16 +673,23 @@ class TimeResSpec:
         skiplist = []
         nwl = self.wavelengths.copy()
         nspec = self.data.copy()
+        nerr = self.err.copy() if self.err is not None else None
         for i in range(nwl.size - 1):
             if i in skiplist:
                 continue
             if abs(nwl[i + 1] - nwl[i]) < distance:
-                nspec[:, i] = np.mean(nspec[:, i:i + 2], axis=1)
+                if self.err is not None:
+                    nspec1 = u.uarray(nspec[:, i], nerr[:, i])
+                    nspec2 = u.uarray(nspec[:, i+1], nerr[:, i+1])
+                    nspec[:, i] = u.nominal_values(nspec1 + nspec2)
+                    nerr[:, i] = u.std_devs(nspec1 + nspec2)
+
                 nwl[i] = np.mean(nwl[i:i + 2])
                 skiplist.append(i + 1)
 
         nwl = np.delete(nwl, skiplist)
         nspec = np.delete(nspec, skiplist, axis=1)
+        nerr = np.delete(nspec, skiplist, axis=1)
         new_ds = self.copy()
         new_ds.wavelengths = nwl
         new_ds.wavenumbers = 1e7 / nwl
