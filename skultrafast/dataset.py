@@ -5,7 +5,8 @@ from uncertainties import unumpy as u
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, UnivariateSpline
+
 
 import skultrafast.dv as dv
 from skultrafast.utils import sigma_clip
@@ -122,6 +123,8 @@ class TimeResSpec:
         self.wavelengths = self.wavelengths[idx]
         self.wavenumbers = self.wavenumbers[idx]
         self.data = self.data[:, idx]
+        if err is not None:
+            self.err = self.err[:, idx]
         self.auto_plot = auto_plot
         self.plot = TimeResSpecPlotter(self)
         self.t_idx = dv.make_fi(self.t)
@@ -248,6 +251,22 @@ class TimeResSpec:
             "nm",
             disp_freq_unit=self.disp_freq_unit,
         )
+
+    def mask_freq_idx(self, idx):
+        """Masks given freq idx array
+
+        Parameters
+        ----------
+        idx : array
+            Boolean array, same shape as the freqs. Where it is
+            `True`, the freqs will be masked.
+        """
+        if self.err is not None:
+            self.err = np.ma.MaskedArray(self.err)
+            self.err[:, idx] = np.ma.masked
+        self.data = np.ma.MaskedArray(self.data)
+        self.data[:, idx] = np.ma.masked
+
 
     def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
         """
@@ -674,23 +693,30 @@ class TimeResSpec:
         nwl = self.wavelengths.copy()
         nspec = self.data.copy()
         nerr = self.err.copy() if self.err is not None else None
+        weights = 1/self.err.copy()**2 if self.err is not None else None
+
+
         for i in range(nwl.size - 1):
             if i in skiplist:
                 continue
             if abs(nwl[i + 1] - nwl[i]) < distance:
                 if self.err is not None:
-                    nspec1 = u.uarray(nspec[:, i], nerr[:, i])
-                    nspec2 = u.uarray(nspec[:, i+1], nerr[:, i+1])
-                    nspec[:, i] = u.nominal_values(nspec1 + nspec2)
-                    nerr[:, i] = u.std_devs(nspec1 + nspec2)
+                    w = weights[:, i:i+2] if self.err is not None else None
+                    mean = np.average(nspec[:, i:i+2], 1, weights=w)
+                    err = np.sqrt(np.average((nspec[:, i:i+2]-mean[:, None])**2, 1,  weights=w))
+                    nspec[:, i] = mean
+                    if nerr is not None:
+                        nerr[:, i] = err
 
                 nwl[i] = np.mean(nwl[i:i + 2])
                 skiplist.append(i + 1)
 
         nwl = np.delete(nwl, skiplist)
         nspec = np.delete(nspec, skiplist, axis=1)
-        nerr = np.delete(nspec, skiplist, axis=1)
+        nerr = np.delete(nerr, skiplist, axis=1)
         new_ds = self.copy()
+        if self.err is not None:
+            new_ds.err = nerr
         new_ds.wavelengths = nwl
         new_ds.wavenumbers = 1e7 / nwl
         new_ds.data = nspec
@@ -890,12 +916,20 @@ class PlotterMixin:
 
         x = self.x
         assert (y.shape[0] == x.size)
+
         inter = interp1d(x, y, kind=kind, assume_sorted=False)
         fac = factor + 1
         diff = np.diff(x) / (fac)
         new_points = x[:-1, None] + np.arange(1, fac)[None, :] * diff[:, None]
         xn = np.sort(np.concatenate((x, new_points.ravel())))
         return xn, inter(xn)
+
+    def univariate_spline(self, y):
+        if self.dataset.err is not None:
+            w = 1 / self.dataset.err
+
+        UnivariateSpline(x=self.x, y=y, w=w)
+
 
 
 class TimeResSpecPlotter(PlotterMixin):
@@ -1072,14 +1106,24 @@ class TimeResSpecPlotter(PlotterMixin):
         x = ds.wavelengths if is_nm else ds.wavenumbers
         li = []
         for i in args:
-            idx = dv.fi(ds.t, i)
-            if n_average > 0:
-                dat = uniform_filter(ds, (2 * n_average + 1, 1)).data[idx, :]
-            elif n_average == 0:
-                dat = ds.data[idx, :]
+            if isinstance(i, tuple):
+                if ds.err is not None:
+                    weights = 1/ds.err[ds.t_idx(i[0]):ds.t_idx(i[1]), :]**2
+                else:
+                    weights = None
+                dat = np.average(ds.data[ds.t_idx(i[0]):ds.t_idx(i[1]), :],
+                         weights=weights, axis=0)
+                #dat = ds.data[ds.t_idx(i[0]):ds.t_idx(i[1]), :]
+                label = '%.1f ps to %.1f ps'%(i[0], i[1])
             else:
-                raise ValueError("n_average must be an Integer >= 0.")
-
+                idx = dv.fi(ds.t, i)
+                if n_average > 0:
+                    dat = uniform_filter(ds, (2 * n_average + 1, 1)).data[idx, :]
+                elif n_average == 0:
+                    dat = ds.data[idx, :]
+                else:
+                    raise ValueError("n_average must be an Integer >= 0.")
+                label = ph.time_formatter(ds.t[idx], ph.time_unit)
             if upsample > 1:
                 x, dat = self.upsample_spec(dat, factor=upsample)
             if norm:
@@ -1089,7 +1133,7 @@ class TimeResSpecPlotter(PlotterMixin):
             li += ax.plot(x,
                           dat,
                           markevery=markevery,
-                          label=ph.time_formatter(ds.t[idx], ph.time_unit),
+                          label=label,
                           **kwargs)
 
         self.lbl_spec(ax)
