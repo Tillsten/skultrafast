@@ -237,15 +237,14 @@ class MessPyFile:
                 sub_data[..., self.valid_channel, ::2], sigma=sigma, axis=-1
             )
             mean1 = data1.mean(-1)
-            std1 = np.ma.std(-1)
+            std1 = data1.std(-1, ddof=1)
             err1 = std1 / np.sqrt(np.ma.count(data1, -1))
 
             data2 = sigma_clip(
                 sub_data[..., self.valid_channel, 1::2], sigma=sigma, axis=-1
             )
             mean2 = data2.mean(-1)
-            std2 = data2.std(-1)
-
+            std2 = data2.std(-1, ddof=1)
             err2 = std2 / np.sqrt(np.ma.count(data2, -1))
 
             out = {}
