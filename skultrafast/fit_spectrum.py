@@ -75,18 +75,18 @@ def fit_spectrum(x, y, start_peaks_list,
         paras.add('x0_'+ si, x0), print(x0)
         paras.add('width_'+ si, w, min=0, max=wmax)
     p = paras
-
+    print(p)
     x0 = np.array([i.value for i in p.values()])
     up_bounds = np.array([i.max for i in p.values()])
     min_bounds = np.array([i.min for i in p.values()])
 
     def residuals(p, x, y, peak_func):
-        #fit = np.array([i.value for i in p.values()]).reshape((3+n, -1), order='f')
-        fit = p.reshape((3+n, -1), order='f')
+        fit = np.array([i.value for i in p.values()]).reshape((3+n, -1), order='f')
+        #fit = p.reshape((3+n, -1), order='f')
         base_peak = peak_func(x, np.ones_like(fit[0, :]), *fit[[-2, -1], :])
 
-        dichro = skultrafast.unit_conversions.angle_to_dichro(np.deg2rad(fit[-3, :]))
-
+        dichro = skultrafast.unit_conversions.angle2dichro(fit[-3, :])
+        #print(*fit[[-2, -1], :])
         resi = []
         for i in range(n):
 
@@ -107,14 +107,15 @@ def fit_spectrum(x, y, start_peaks_list,
 
 
     print(x.shape)
-    #mini = lmfit.Minimizer(residuals, paras, fcn_args=(x,y,peak_func))
-    #result = mini.leastsq()
+    mini = lmfit.Minimizer(residuals, paras, fcn_args=(x,y,peak_func))
+    result = mini.leastsq()
     #result = mini.scalar_minimize('BFGS')
-    result = opt.least_squares(residuals, x0, bounds=(min_bounds, up_bounds),
-                               args=(x, y, peak_func), jac='3-point')
-    for k, i in enumerate(paras):
-        paras[i].value = result.x[k]
-    return result, residuals#, (up_bounds,  min_bounds)
+    #result = opt.least_squares(residuals, x0, bounds=(min_bounds, up_bounds),
+    #                           args=(x, y, peak_func), jac='3-point')
+    #for k, i in enumerate(paras):
+    #    paras[i].value = result.x[k]
+    return result, residuals, mini # (up_bounds,  min_bounds)
+
 
 
 import astropy.stats as st
