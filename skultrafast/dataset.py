@@ -1429,6 +1429,11 @@ class TimeResSpecPlotter(PlotterMixin):
 
 
 class PolDataSetPlotter(PlotterMixin):
+
+    perp_ls = dict(marker='s', markersize=3, linewidth=1)
+    para_ls = dict(marker='o', markersize=3,
+                   markerfacecolor='w', linewidth=1)
+
     def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
         """
         Plotting commands for a PolDataSet
@@ -1445,8 +1450,8 @@ class PolDataSetPlotter(PlotterMixin):
         if disp_freq_unit is not None:
             self.freq_unit = disp_freq_unit
 
-        self.perp_ls = dict(linewidth=1)
-        self.para_ls = dict(linewidth=3)
+        self.perp_ls = PolDataSetPlotter.perp_ls.copy()
+        self.para_ls = PolDataSetPlotter.para_ls.copy()
 
     def _get_wl(self):
         return self.pol_ds.para.wavelengths
