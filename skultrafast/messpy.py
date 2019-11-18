@@ -441,7 +441,8 @@ def get_t0(fname: str,
            scan: Union[int, slice] = -1,
            display_result: bool = True,
            plot: bool = True,
-           t_range: Tuple[float, float] = (-2, 2)):
+           t_range: Tuple[float, float] = (-2, 2),
+           invert: bool = False):
     """Determine t0 from a semiconductor messuarement in the IR. For that, it opens
     the given file, takes the mean of all channels and fits the resulting curve with
     a step function.
@@ -463,6 +464,8 @@ def get_t0(fname: str,
         If true, plot the result, by default True
     t_range : (float, flot)
         The range which is used to fit the data.
+    invert : bool
+        If true, invert data.
     Returns
     -------
     tuple of float, float, lmfit.model.ModelResult, plt.Figure
@@ -472,10 +475,10 @@ def get_t0(fname: str,
     if not fname[-11:] == 'messpy1.npz':
         data = a['data']
         if isinstance(scan, slice):
-            sig = np.nanmean(data[..., scan], axis=-1)
+            sig = np.nanmean(data[0, ..., scan], axis=-1)
         else:
-            sig = data[..., scan]
-        sig = np.nanmean(data[0, :, :, 1], axis=1)
+            sig = data[0, ..., scan]
+        sig = np.nanmean(sig[:, :, 1], axis=1)
         t = a['t'] / 1000.
     else:
         data = a['data_Remote IR 32x2']
@@ -483,10 +486,13 @@ def get_t0(fname: str,
             sig = np.nanmean(data[scan, ...], axis=0)
         else:
             sig = data[scan, ...]
-        sig = np.nanmean(data[0, :, 0, :], axis=-1)
+        sig = np.nanmean(sig[0, :, 1, :], axis=-1)
         t = a['t']
+    if invert:
+        sig = -sig
+
     idx = (t > t_range[0]) & (t < t_range[1])
-    sig = sig[idx]
+    sig = sig.squeeze()[idx]
     from scipy.signal import savgol_filter
     #dsig = savgol_filter(sig, 11, 2, 1)
     dsig = gaussian_filter1d(sig, sigma=1, order=1)
@@ -501,7 +507,8 @@ def get_t0(fname: str,
                        amp=np.ptp(sig),
                        center=t[idx][np.argmax(abs(dsig))],
                        sigma=0.1,
-                       b=sig.min())
+                       b=sig.min(),
+                       m=0)
     fig = None
     if display_result:
         import IPython.display
