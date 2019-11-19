@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from .dv import make_fi
 
 from scipy.ndimage import gaussian_filter1d
-from typing import Tuple
+from typing import Tuple, Union
 
 
 
@@ -157,6 +157,7 @@ class MessPyFile:
             if invert_data:
                 self.data *= -1
 
+        self.wavenumbers = 1e7/self.wl
         self.pol_first_scan = pol_first_scan
         self.is_pol_resolved = is_pol_resolved
         if valid_channel is not None:
@@ -236,15 +237,14 @@ class MessPyFile:
                 sub_data[..., self.valid_channel, ::2], sigma=sigma, axis=-1
             )
             mean1 = data1.mean(-1)
-            std1 = np.ma.std(-1)
+            std1 = data1.std(-1, ddof=1)
             err1 = std1 / np.sqrt(np.ma.count(data1, -1))
 
             data2 = sigma_clip(
                 sub_data[..., self.valid_channel, 1::2], sigma=sigma, axis=-1
             )
             mean2 = data2.mean(-1)
-            std2 = data2.std(-1)
-
+            std2 = data2.std(-1, ddof=1)
             err2 = std2 / np.sqrt(np.ma.count(data2, -1))
 
             out = {}
@@ -291,8 +291,9 @@ class MessPyFile:
         # Here we assume that the set wavelength of the spectrometer
         # is written in channel 16
         center_wls = self.initial_wl[16, :]
-        new_wl = (np.arange(-n // 2, n // 2)+(center_ch-16)) * dispersion
+        new_wl = (np.arange(-n // 2, n // 2) + (center_ch - 16)) * dispersion
         self.wl = np.add.outer(new_wl, center_wls) + offset
+        self.wavenumbers = 1e7/self.wl
 
     def subtract_background(self, n=10):
         """Substracts the the first n-points of the data"""
@@ -435,16 +436,16 @@ class MessPyPlotter(PlotterMixin):
         ph.lbl_spec(ax)
 
 
-def get_t0(
-        fname: str,
-        sigma: float = 1,
-        scan: int = -1,
-        display_result: bool = True,
-        plot: bool = True,
-):
+def get_t0(fname: str,
+           sigma: float = 1,
+           scan: Union[int, slice] = -1,
+           display_result: bool = True,
+           plot: bool = True,
+           t_range: Tuple[float, float] = (-2, 2),
+           invert: bool = False):
     """Determine t0 from a semiconductor messuarement in the IR. For that, it opens
-    the given file, takes the mean of all channels and fits the resulting curve with a
-    step function.
+    the given file, takes the mean of all channels and fits the resulting curve with
+    a step function.
 
     Note that the parameter
 
@@ -454,13 +455,17 @@ def get_t0(
         Filename of the messpy file containing the data
     sigma : float, optional
         Used for calculating the displayed nummerical derviate, by default 1.
-    scan: int
-        Which scan to use, by default -1, the last scan.
+    scan: int or slice
+        Which scan to use, by default -1, the last scan. If given a slice,
+        it takes the mean of the scan slice.
     display_result : bool, optional
         If true, show the fitting results, by default True
     plot : bool, optional
         If true, plot the result, by default True
-
+    t_range : (float, flot)
+        The range which is used to fit the data.
+    invert : bool
+        If true, invert data.
     Returns
     -------
     tuple of float, float, lmfit.model.ModelResult, plt.Figure
@@ -469,23 +474,41 @@ def get_t0(
     a = np.load(fname)
     if not fname[-11:] == 'messpy1.npz':
         data = a['data']
-        sig = data[0, :, :, 1, scan].mean(1)
+        if isinstance(scan, slice):
+            sig = np.nanmean(data[0, ..., scan], axis=-1)
+        else:
+            sig = data[0, ..., scan]
+        sig = np.nanmean(sig[:, :, 1], axis=1)
         t = a['t'] / 1000.
     else:
-        d = a['data_Remote IR 32x2']
-        sig = d[scan, 0, :, 0, :].mean(-1)
+        data = a['data_Remote IR 32x2']
+        if isinstance(scan, slice):
+            sig = np.nanmean(data[scan, ...], axis=0)
+        else:
+            sig = data[scan, ...]
+        sig = np.nanmean(sig[0, :, 1, :], axis=-1)
         t = a['t']
-    idx = (t > -2) & (t < 2)
-    sig = sig[idx]
+    if invert:
+        sig = -sig
+
+    idx = (t > t_range[0]) & (t < t_range[1])
+    sig = sig.squeeze()[idx]
+    from scipy.signal import savgol_filter
+    #dsig = savgol_filter(sig, 11, 2, 1)
     dsig = gaussian_filter1d(sig, sigma=1, order=1)
+
+
     GaussStep = lmfit.Model(gauss_step)
     model = GaussStep + lmfit.models.LinearModel()
+    max_diff = np.argmax(abs(dsig))
+
     result = model.fit(data=sig,
                        x=t[idx],
                        amp=np.ptp(sig),
-                       center=t[idx][np.argmax(dsig)],
+                       center=t[idx][np.argmax(abs(dsig))],
                        sigma=0.1,
-                       b=sig.min())
+                       b=sig.min(),
+                       m=0)
     fig = None
     if display_result:
         import IPython.display

@@ -679,7 +679,7 @@ def symticks(ax, linthresh=1, linstep=0.2, axis='x'):
 
     major_pos = 10**np.arange(major+1)
     minor_pos = [np.arange(2,10)*10**i for i in range(major)]
-    rest = np.arange(np.floor(m / 10**major))*10**major
+    rest = np.arange(np.ceil(m / 10**major))*10**major
     minor_pos = np.array(minor_pos).flat
 
     axis.set_ticks(np.hstack((-lin_pos, lin_pos[lin_pos>k], minor_pos, rest)), minor=True)

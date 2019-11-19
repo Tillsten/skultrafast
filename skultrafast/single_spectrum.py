@@ -66,8 +66,13 @@ class SingleSpec:
         new_x, new_y = self.x[i1:i2], self.y[i1:i2, ...]
         return SingleSpec(new_x, new_y, self.unit_freq, self.unit_signal)
 
-    def fit_single_gauss(self, start_params=None):
-        model = lmfit.models.GaussianModel(x=self.x)
+    def fit_single_gauss(self, start_params=None, back_deg=2,
+                         peak_region=None):
+        peak = lmfit.models.GaussianModel(x=self.x)
+        back = lmfit.models.PolynomialModel(degree=back_deg)
+        model = peak + back
+
+
 
 
 class SingleSpecPlotter:
