@@ -1255,6 +1255,7 @@ class TimeResSpecPlotter(PlotterMixin):
         t, d = ds.t, ds.data
         l, plotted_vals = [], []
         for i in args:
+
             idx = dv.fi(x, i)
 
             dat = d[:, idx]
@@ -1371,7 +1372,6 @@ class TimeResSpecPlotter(PlotterMixin):
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
 
-        x = ds.wavelengths if is_nm else ds.wavenumbers
         l1 = ax.plot(self.x, f.c[:, :num_exp], **kwargs)
         ax.legend(l1, leg_text, title="Decay\nConstants")
         ph.lbl_spec(ax)
@@ -1430,9 +1430,9 @@ class TimeResSpecPlotter(PlotterMixin):
 
 class PolDataSetPlotter(PlotterMixin):
 
-    perp_ls = dict(marker='s', markersize=3, linewidth=1)
+    perp_ls = dict(marker='s', markersize=3, linewidth=1, markerfacecolor='w')
     para_ls = dict(marker='o', markersize=3,
-                   markerfacecolor='w', linewidth=1)
+                    linewidth=1)
 
     def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
         """
