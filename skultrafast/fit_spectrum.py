@@ -6,8 +6,7 @@ Module to fit the whole spektrum by peak functions.
 from __future__ import print_function
 import scipy.optimize as opt
 from scipy.special import wofz
-
-import skultrafast.unit_conversions
+from . import unit_conversions
 from . import dv
 import numpy as np
 import lmfit
