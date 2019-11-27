@@ -169,7 +169,7 @@ class MessPyFile:
         self.plot = MessPyPlotter(self)
         self.t_idx = make_fi(self.t)
 
-    def average_scans(self, sigma=3, min_scan=0, max_scan=None, disp_freq_unit=None):
+    def average_scans(self, sigma=3, max_iter=3, min_scan=0, max_scan=None, disp_freq_unit=None):
         """
         Calculate the average of the scans. Uses sigma clipping, which
         also filters nans. For polarization resolved measurements, the
@@ -179,6 +179,8 @@ class MessPyFile:
         ----------
         sigma : float
             sigma used for sigma clipping.
+        max_iter: int
+            Maximum iterations in sigma clipping.
         min_scan : int or None
             All scans before min_scan are ignored.
         max_scan : int or None
@@ -205,7 +207,7 @@ class MessPyFile:
         kwargs = dict(disp_freq_unit=disp_freq_unit)
 
         if not self.is_pol_resolved:
-            data = sigma_clip(sub_data, sigma=sigma, axis=-1)
+            data = sigma_clip(sub_data, sigma=sigma, max_iter=max_iter, axis=-1)
             mean = data.mean(-1)
             std = data.std(-1)
             err = std / np.sqrt((~data.mask).sum(-1))
@@ -234,14 +236,14 @@ class MessPyFile:
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
             assert self.pol_first_scan in ["para", "perp"]
             data1 = sigma_clip(
-                sub_data[..., self.valid_channel, ::2], sigma=sigma, axis=-1
+                sub_data[..., self.valid_channel, ::2], sigma=sigma,  max_iter=max_iter, axis=-1
             )
             mean1 = data1.mean(-1)
             std1 = data1.std(-1, ddof=1)
             err1 = std1 / np.sqrt(np.ma.count(data1, -1))
 
             data2 = sigma_clip(
-                sub_data[..., self.valid_channel, 1::2], sigma=sigma, axis=-1
+                sub_data[..., self.valid_channel, 1::2], sigma=sigma, max_iter=max_iter, axis=-1
             )
             mean2 = data2.mean(-1)
             std2 = data2.std(-1, ddof=1)
