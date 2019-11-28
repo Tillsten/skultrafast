@@ -87,19 +87,16 @@ plt.ylim(-2, 2)
 #
 # Dispersion estimation and correction
 # ------------------------------------
-# *skultrafast* does this by first using a simple heuristic for determining the
-# time-zero for each transient. The resulting dispersion curve is then fitted with a
-# polynomial, using a robust fitting method. More details are given in the documentation.
+# *skultrafast* does this by first using a simple heuristic for determining the time-
+# zero for each transient. The resulting dispersion curve is then fitted with a poly-
+# nomial, using a robust fitting method. More details are given in the documentation.
 #
-# First calculate and plot the estimate.
+# To estimate the dispersion just call the function. It will plot two colormaps, one
+# with the original dataset, the time-zeros found by the heuristic and the robust
+# polynomial fit of these values. The bottom color map shows the dispersion corrected
+# data.
 res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=3)
 
-# %%
-ds.plot.map(symlog=0, con_step=10., con_filter=(3, 10))
-plt.ylim(-2, 2)
-# The polynomial is defined in wavenumbers
-plt.plot(ds.wavelengths, res.polynomial(ds.wavenumbers))
-plt.plot(ds.wavelengths, res.tn)
 
 # %%
 # By default, *skultrafast* uses a very simple heuristic to find the time-zero.
