@@ -30,6 +30,4 @@ which are automatically installed when using pip:
 To build the docs, more packages are necessary.
 
 * sphinx
-* nbsphinx
-* nbsphinx-link
-
+* sphinx-gallery

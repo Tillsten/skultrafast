@@ -1,10 +1,9 @@
 """
-Simple starting tutorial for skultrast
+Starting with skultrafast
+=========================
 """
 
 # %%  [rst]
-# Starting with skultrafast
-# =========================
 # First we import numpy, matplotlib and skultrafast. For reproducebilty we should
 # always print out the version of skultrafast
 
@@ -94,7 +93,8 @@ plt.ylim(-2, 2)
 #
 # First calculate and plot the estimate.
 res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=3)
-plt.figure()
+
+# %%
 ds.plot.map(symlog=0, con_step=10., con_filter=(3, 10))
 plt.ylim(-2, 2)
 # The polynomial is defined in wavenumbers
@@ -148,7 +148,8 @@ lines = res.correct_ds.plot.trans(500, 550, 620, 680)
 # look at the docstring to see how the starting guess is structured.
 # _Note_, the the fitting inter may change in the future.
 
-fit_res = new_ds.fit_exp([-0.0, 0.05, 0.2, 2, 20, 10000], model_coh=True)
+fit_res = new_ds.fit_exp([-0.0, 0.05, 0.2, 2, 20, 10000],
+                          model_coh=True, fix_sigma=False, fix_t0=False)
 fit_res.lmfit_res.params
 
 # %%

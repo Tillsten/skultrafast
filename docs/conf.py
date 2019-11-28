@@ -27,16 +27,16 @@ needs_sphinx = '1.8'
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              'sphinx.ext.coverage', 'nbsphinx', 'nbsphinx_link',
+              'sphinx.ext.coverage',
               'matplotlib.sphinxext.plot_directive',
               'sphinx.ext.mathjax', 'sphinx.ext.autosummary',
-              'sphinx.ext.viewcode','sphinx.ext.napoleon',
+              'sphinx.ext.viewcode', 'sphinx.ext.napoleon',
               'sphinx_gallery.gen_gallery']
 
 sphinx_gallery_conf = {
   'examples_dirs': ['../skultrafast/examples', ],
   'gallery_dirs': ['auto_examples', ],
-  'ignore_pattern': r'__init__\.py',
+  'filename_pattern': r'tutorial_start\.py|/convolution\.py',
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -263,5 +263,5 @@ autodoc_member_order = 'bysource'
 body_max_width = '80em'
 plot_formats = ['svg', ('png', 150)]
 #autodoc_mock_imports = ['matplotlib', 'matplotlib.pyplot']
-import matplotlib
-matplotlib.use('agg')
+#import matplotlib
+#matplotlib.use('agg')

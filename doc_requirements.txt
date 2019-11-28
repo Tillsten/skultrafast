@@ -1,6 +1,5 @@
 sphinx > 1.8
-nbsphinx
-nbsphinx-link
+sphinx-gallery
 attrs
 numpy
 scipy

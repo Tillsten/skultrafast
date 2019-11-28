@@ -16,7 +16,7 @@ Contents:
 
    introduction
    install
-   tutorial
+   auto_examples/index.rst
    zero-finding
    data_io
    api
