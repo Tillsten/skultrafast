@@ -8,7 +8,6 @@ Simple starting tutorial for skultrast
 # First we import numpy, matplotlib and skultrafast. For reproducebilty we should
 # always print out the version of skultrafast
 
-import numpy as np
 import matplotlib.pyplot as plt
 from skultrafast.dataset import TimeResSpec
 from skultrafast import plot_helpers
@@ -20,7 +19,7 @@ skultrafast.__version__
 # %%
 # Some matplotlib setting for nicer pictures.
 plt.rcParams['figure.dpi'] = 150
-plt.rcParams['figure.figsize'] = (4,3)
+plt.rcParams['figure.figsize'] = (4, 3)
 plt.rcParams['figure.autolayout'] = True
 plt.rcParams['font.size'] = 9
 
@@ -72,7 +71,7 @@ print(ds.t_idx(0), ds.t[ds.t_idx(0)])
 # changed by changing the `disp_freq_unit` of the `TimeResSpecPlotter` object.
 
 # %%
-ds.plot.disp_freq_unit = 'nm' # does nothing, since 'nm' is the default
+ds.plot.disp_freq_unit = 'nm'  # does nothing, since 'nm' is the default
 # ds.plot.disp_freq_unit = 'cm' would use wavenumbers
 
 # %%
@@ -94,10 +93,12 @@ plt.ylim(-2, 2)
 # polynomial, using a robust fitting method. More details are given in the documentation.
 #
 # First calculate and plot the estimate.
-res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=2)
+res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=3)
+plt.figure()
 ds.plot.map(symlog=0, con_step=10., con_filter=(3, 10))
 plt.ylim(-2, 2)
-plt.plot(ds.wavelengths, res.polynomial(ds.wavenumbers)) #The polynomial is defined in wavenumbers
+# The polynomial is defined in wavenumbers
+plt.plot(ds.wavelengths, res.polynomial(ds.wavenumbers))
 plt.plot(ds.wavelengths, res.tn)
 
 # %%
@@ -113,7 +114,7 @@ plt.plot(ds.wavelengths, res.tn)
 # **WARNING**: The cell below changes the dataset inplace. Therefore repeated
 # calls to the cell will shift the time-zero again and again.
 
-new_ds = res.correct_ds #warning, this does not copy the dataset.
+new_ds = res.correct_ds  # Warning, this does not copy the dataset!
 new_ds.t -= 0.2
 
 
@@ -136,7 +137,7 @@ lines = res.correct_ds.plot.spec(-.2, 0.05, 0.3, 1, 2, 150)
 
 lines = res.correct_ds.plot.trans(500, 550, 620, 680)
 
-# %% [markdown]
+# %%
 # All these function offer a number of options. More information can be found in
 # the doctring.
 #
@@ -147,17 +148,16 @@ lines = res.correct_ds.plot.trans(500, 550, 620, 680)
 # look at the docstring to see how the starting guess is structured.
 # _Note_, the the fitting inter may change in the future.
 
-fit_res = new_ds.fit_exp([-0.0, 0.05, 0.2, 2, 20, 10000])
+fit_res = new_ds.fit_exp([-0.0, 0.05, 0.2, 2, 20, 10000], model_coh=True)
 fit_res.lmfit_res.params
 
 # %%
 # Lets plot the DAS
 new_ds.plot.das()
 
+# %%
 # We can always work with the results directly to make plots manually. Here,
 # the `t_idx`, `wl_idx` and `wn_idx` methods of the dataset are very useful:
-
-# %%
 for wl in [500, 580, 620]:
     t0 = fit_res.lmfit_res.params['p0'].value
     idx = new_ds.wl_idx(wl)
@@ -165,7 +165,5 @@ for wl in [500, 580, 620]:
              alpha=0.4)
     plt.plot(new_ds.t - t0, fit_res.fitter.model[:, idx], lw=2, label='%d nm' % wl)
 plt.xlim(-1, 10)
-plt.legend(loc='best', ncol=2)
 plot_helpers.lbl_trans(use_symlog=False)
-
-
+plt.legend(loc='best', ncol=1)
