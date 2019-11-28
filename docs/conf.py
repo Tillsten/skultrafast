@@ -36,7 +36,8 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
 sphinx_gallery_conf = {
   'examples_dirs': ['../skultrafast/examples', ],
   'gallery_dirs': ['auto_examples', ],
-  'filename_pattern': r'tutorial_start\.py|/convolution\.py',
+  'filename_pattern': r'tutorial',
+  'ignore_pattern': r'convo'
 }
 
 # Add any paths that contain templates here, relative to this directory.
