@@ -90,8 +90,8 @@ plt.ylim(-2, 2)
 # Dispersion estimation and correction
 # ------------------------------------
 # *skultrafast* does this by first using a simple heuristic for determining the
-# time-zero for each transient. The resulting dispersion curve is then fitted with
-# a polynomial, using a robust fitting method. More details are given in the documentation.
+# time-zero for each transient. The resulting dispersion curve is then fitted with a
+# polynomial, using a robust fitting method. More details are given in the documentation.
 #
 # First calculate and plot the estimate.
 res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=2)
@@ -152,7 +152,7 @@ fit_res.lmfit_res.params
 
 # %%
 # Lets plot the DAS
-fit_res.plot.das()
+new_ds.plot.das()
 
 # We can always work with the results directly to make plots manually. Here,
 # the `t_idx`, `wl_idx` and `wn_idx` methods of the dataset are very useful:
@@ -163,7 +163,7 @@ for wl in [500, 580, 620]:
     idx = new_ds.wl_idx(wl)
     plt.plot(new_ds.t - t0, fit_res.fitter.data[:, idx], 'o', color='k', ms=4,
              alpha=0.4)
-    plt.plot(new_ds.t - t0, fit_res.fitter.model[:, idx], lw=2, label='%d nm'%wl)
+    plt.plot(new_ds.t - t0, fit_res.fitter.model[:, idx], lw=2, label='%d nm' % wl)
 plt.xlim(-1, 10)
 plt.legend(loc='best', ncol=2)
 plot_helpers.lbl_trans(use_symlog=False)

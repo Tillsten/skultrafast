@@ -8,7 +8,7 @@ which internally may still use older methods and
 classes.
 
 TimeResSpec
--------
+-----------
 
 .. autoclass:: dataset.TimeResSpec
    :members:

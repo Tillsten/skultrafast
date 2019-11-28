@@ -30,7 +30,14 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.coverage', 'nbsphinx', 'nbsphinx_link',
               'matplotlib.sphinxext.plot_directive',
               'sphinx.ext.mathjax', 'sphinx.ext.autosummary',
-              'sphinx.ext.viewcode','sphinx.ext.napoleon']
+              'sphinx.ext.viewcode','sphinx.ext.napoleon',
+              'sphinx_gallery.gen_gallery']
+
+sphinx_gallery_conf = {
+  'examples_dirs': ['../skultrafast/examples', ],
+  'gallery_dirs': ['auto_examples', ],
+  'ignore_pattern': r'__init__\.py',
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

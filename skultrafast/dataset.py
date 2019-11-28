@@ -7,7 +7,6 @@ import numpy as np
 
 from scipy.interpolate import interp1d, UnivariateSpline
 
-
 import skultrafast.dv as dv
 from skultrafast.utils import sigma_clip
 import skultrafast.plot_helpers as ph
@@ -266,7 +265,6 @@ class TimeResSpec:
             self.err[:, idx] = np.ma.masked
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
-
 
     def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
         """
@@ -609,7 +607,12 @@ class TimeResSpec:
             lmfit.fit_report(result)
         return result_tuple
 
-    def lifetime_density_map(self, taus=None, alpha=1e-4, cv=True, maxiter=30000, **kwargs):
+    def lifetime_density_map(self,
+                             taus=None,
+                             alpha=1e-4,
+                             cv=True,
+                             maxiter=30000,
+                             **kwargs):
         """Calculates the LDM from a dataset by regularized regression.
 
         Parameters
@@ -629,16 +632,14 @@ class TimeResSpec:
             end = np.ceil(np.log10(max_t))
             taus = np.geomspace(start, end, 5 * (end - start))
 
-        result = lifetimemap.start_ltm(
-            self,
-            taus,
-            use_cv=cv,
-            add_const=False,
-            alpha=alpha,
-            add_coh=False,
-            max_iter=30000,
-            **kwargs
-        )
+        result = lifetimemap.start_ltm(self,
+                                       taus,
+                                       use_cv=cv,
+                                       add_const=False,
+                                       alpha=alpha,
+                                       add_coh=False,
+                                       max_iter=30000,
+                                       **kwargs)
         result = LDMResult(*result)
         return result
 
@@ -693,17 +694,19 @@ class TimeResSpec:
         nwl = self.wavelengths.copy()
         nspec = self.data.copy()
         nerr = self.err.copy() if self.err is not None else None
-        weights = 1/self.err.copy()**2 if self.err is not None else None
-
+        weights = 1 / self.err.copy()**2 if self.err is not None else None
 
         for i in range(nwl.size - 1):
             if i in skiplist:
                 continue
             if abs(nwl[i + 1] - nwl[i]) < distance:
                 if self.err is not None:
-                    w = weights[:, i:i+2] if self.err is not None else None
-                    mean = np.average(nspec[:, i:i+2], 1, weights=w)
-                    err = np.sqrt(np.average((nspec[:, i:i+2]-mean[:, None])**2, 1,  weights=w))
+                    w = weights[:, i:i + 2] if self.err is not None else None
+                    mean = np.average(nspec[:, i:i + 2], 1, weights=w)
+                    err = np.sqrt(
+                        np.average((nspec[:, i:i + 2] - mean[:, None])**2,
+                                   1,
+                                   weights=w))
                     nspec[:, i] = mean
                     if nerr is not None:
                         nerr[:, i] = err
@@ -909,7 +912,7 @@ class PlotterMixin:
         ax.set_ylabel(ph.sig_label)
         ax.autoscale(1, "x", 1)
         ax.axhline(0, color="k", lw=0.5, zorder=1.9)
-        # ax.legend(loc='best', ncol=2, title='Delay time')
+        ax.legend(loc='best', ncol=2, title='Delay time')
         ax.minorticks_on()
 
     def upsample_spec(self, y, kind='cubic', factor=4):
@@ -929,7 +932,6 @@ class PlotterMixin:
             w = 1 / self.dataset.err
 
         UnivariateSpline(x=self.x, y=y, w=w)
-
 
 
 class TimeResSpecPlotter(PlotterMixin):
@@ -1087,6 +1089,9 @@ class TimeResSpecPlotter(PlotterMixin):
         upsample : int,
             If upsample is >1, it will plot an upsampled version of the spectrum
             using cubic spline interplotation.
+        use_weights : bool
+            If given a tuple, the function will plot the average of the given range.
+            use_weights determines if error weights are in calculating the average.
 
         Returns
         -------
@@ -1108,17 +1113,18 @@ class TimeResSpecPlotter(PlotterMixin):
         for i in args:
             if isinstance(i, tuple):
                 if ds.err is not None:
-                    weights = 1/ds.err[ds.t_idx(i[0]):ds.t_idx(i[1]), :]**2
+                    weights = 1 / ds.err[ds.t_idx(i[0]):ds.t_idx(i[1]), :]**2
                 else:
                     weights = None
                 dat = np.average(ds.data[ds.t_idx(i[0]):ds.t_idx(i[1]), :],
-                         weights=weights, axis=0)
-                #dat = ds.data[ds.t_idx(i[0]):ds.t_idx(i[1]), :]
-                label = '%.1f ps to %.1f ps'%(i[0], i[1])
+                                 weights=weights,
+                                 axis=0)
+                label = '%.1f ps to %.1f ps' % (i[0], i[1])
             else:
                 idx = dv.fi(ds.t, i)
                 if n_average > 0:
-                    dat = uniform_filter(ds, (2 * n_average + 1, 1)).data[idx, :]
+                    dat = uniform_filter(ds,
+                                         (2 * n_average + 1, 1)).data[idx, :]
                 elif n_average == 0:
                     dat = ds.data[idx, :]
                 else:
@@ -1130,11 +1136,7 @@ class TimeResSpecPlotter(PlotterMixin):
                 dat = dat / abs(dat).max()
             markevery = None if upsample == 1 else upsample + 1
 
-            li += ax.plot(x,
-                          dat,
-                          markevery=markevery,
-                          label=label,
-                          **kwargs)
+            li += ax.plot(x, dat, markevery=markevery, label=label, **kwargs)
 
         self.lbl_spec(ax)
         if not is_nm:
@@ -1158,8 +1160,8 @@ class TimeResSpecPlotter(PlotterMixin):
         symlog : bool
             If to use a symlog scale for the delay-time.
         norm : bool or float
-            If `true`, normalize to transients. If it is a float, the transients are normalzied to
-            value at the delaytime norm.
+            If `true`, normalize to transients. If it is a float, the transients are
+            normalzied to value at the delaytime norm.
         ax : plt.Axes or None
             Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
             current axes. The lines are plotted in this ax
@@ -1196,7 +1198,7 @@ class TimeResSpecPlotter(PlotterMixin):
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
-        ax.legend(loc="best", ncol=3)
+        ax.legend(loc="best", ncol=2)
         ax.set_xlim(right=ds.t.max())
         ax.yaxis.set_tick_params(which="minor", left=True)
         return l
@@ -1434,8 +1436,7 @@ class TimeResSpecPlotter(PlotterMixin):
 class PolDataSetPlotter(PlotterMixin):
 
     perp_ls = dict(marker='s', markersize=3, linewidth=1, markerfacecolor='w')
-    para_ls = dict(marker='o', markersize=3,
-                    linewidth=1)
+    para_ls = dict(marker='o', markersize=3, linewidth=1)
 
     def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
         """
@@ -1601,8 +1602,7 @@ class PolDataSetPlotter(PlotterMixin):
             l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec()
-        ax.legend(title="Decay\nConstants",
-                  ncol=2)
+        ax.legend(title="Decay\nConstants", ncol=2)
         return l1, l2
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
@@ -1646,6 +1646,7 @@ class PolDataSetPlotter(PlotterMixin):
             ax.set_xscale("symlog")
         ax.set_xlim(-1)
         return l
+
 
 
 class DataSetInteractiveViewer:

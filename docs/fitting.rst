@@ -30,8 +30,7 @@ can be expressed in terms of the complementary error-function `erfc`. Using
 sympy, the calculation is done in 'convolution.ipynb' notebook. Therefore,
 by default *skultrafast* fits the function
 
-:math:`y(t, \omega)= A \exp(\frac{-t}{\tau_i}+\frac{\sigma^2}{2\tau_i^2})
-       \frac{1}{2} erfc(\frac{\sigma}{\sqrt 2 \tau_i}-\frac{t}{\sqrt 2\sigma})`_
+:math:`y(t, \omega)= A \exp(\frac{-t}{\tau_i}+\frac{\sigma^2}{2\tau_i^2})\frac{1}{2} erfc(\frac{\sigma}{\sqrt 2 \tau_i}-\frac{t}{\sqrt 2\sigma})`_
 
 Variable projection
 -------------------
@@ -59,7 +58,7 @@ and its pesudoinverse has to be calculated for every channel, which gets
 time-consuming for larger datasets.
 
 The advantage of the latter approach is that it allows for easier inclusion
-of the dispersion parameters to the fitting model. 
+of the dispersion parameters to the fitting model.
 
 
 
