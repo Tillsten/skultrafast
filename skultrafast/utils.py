@@ -24,7 +24,7 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
     """
     data = np.ma.masked_invalid(data)
     num_masked = 0
-    for i in range(max_iter):
+    for _ in range(max_iter):
         median = np.ma.median(data, axis, keepdims=1)
         std = np.ma.std(data, axis, keepdims=1)
         upper, lower = median + sigma * std, median - sigma * std
@@ -40,7 +40,7 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
 
 def gauss_step(x, amp: float, center: float, sigma: float):
     """Returns the stepfunction (erf-style) for given arguments.
-    
+
     Parameters
     ----------
     x : array
@@ -48,10 +48,10 @@ def gauss_step(x, amp: float, center: float, sigma: float):
     amp : float
         Amplitude of the step
     center : float
-        Position of the step    
+        Position of the step
     sigma : float
         Width of the step
-    
+
     Returns
     -------
     array
