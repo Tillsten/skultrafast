@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from .dv import make_fi
 
 from scipy.ndimage import gaussian_filter1d
+from scipy.stats import trim_mean
 from typing import Tuple, Union
 
 
@@ -297,9 +298,10 @@ class MessPyFile:
         self.wl = np.add.outer(new_wl, center_wls) + offset
         self.wavenumbers = 1e7/self.wl
 
-    def subtract_background(self, n=10):
+    def subtract_background(self, n=10, prop_cut=0):
         """Substracts the the first n-points of the data"""
-        self.data -= self.data[:, :n, ...].mean(1, keepdims=1)
+        back = trim_mean(self.data[:, :n, ...], prop_cut, axis=0)
+        self.data -= back
 
     def avg_and_concat(self):
         """Averages the data and concatenates the resulting TimeResSpec"""
