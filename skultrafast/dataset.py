@@ -1207,6 +1207,7 @@ class TimeResSpecPlotter(PlotterMixin):
               norm=False,
               ax=None,
               freq_unit="auto",
+              linscale=1,
               **kwargs):
         """
         Plot the nearest transients for given frequencies.
@@ -1228,6 +1229,8 @@ class TimeResSpecPlotter(PlotterMixin):
         freq_unit : 'auto', 'cm' or 'nm'
             How to interpret the given frequencies. If 'auto' it defaults to
             the plotters freq_unit.
+        linscale : float
+            If symlog is True, determines the ratio of linear to log-space.
 
         All other kwargs are forwarded to the plot function.
 
@@ -1273,7 +1276,7 @@ class TimeResSpecPlotter(PlotterMixin):
                         **kwargs))
 
         if symlog:
-            ax.set_xscale("symlog", linthreshx=1.0)
+            ax.set_xscale("symlog", linthreshx=1.0, linscalex=linscale)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
         ax.legend(loc="best", ncol=3)
         ax.set_xlim(right=t.max())
