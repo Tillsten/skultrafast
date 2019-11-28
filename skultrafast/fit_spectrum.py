@@ -86,10 +86,10 @@ def fit_spectrum(x,
         paras.add('x0_' + si, x0), print(x0)
         paras.add('width_' + si, w, min=wmin, max=wmax)
     p = paras
-    print(p)
+    #print(p)
     x0 = np.array([i.value for i in p.values()])
-    up_bounds = np.array([i.max for i in p.values()])
-    min_bounds = np.array([i.min for i in p.values()])
+    #up_bounds = np.array([i.max for i in p.values()])
+    #min_bounds = np.array([i.min for i in p.values()])
 
     def residuals(p, x, y, peak_func):
         fit = np.array([i.value for i in p.values()]).reshape((3 + n, -1),
@@ -97,7 +97,7 @@ def fit_spectrum(x,
         #fit = p.reshape((3+n, -1), order='f')
         base_peak = peak_func(x, np.ones_like(fit[0, :]), *fit[[-2, -1], :])
 
-        dichro = skultrafast.unit_conversions.angle2dichro(fit[-3, :])
+        dichro = unit_conversions.angle2dichro(fit[-3, :])
         #print(*fit[[-2, -1], :])
         resi = []
         for i in range(n):
@@ -143,5 +143,5 @@ def bin_every_n(x, start_idx, n=10, reduction_func=lambda x: np.mean(x, 0)):
     for i in range(start_idx, x.shape[0], n):
         end_idx = min(i + n, x.shape[0])
         out.append(
-            st.sigma_clip(x[i:end_idx, :], sigma=2.5, iters=1, axis=0).mean(0))
+            st.sigma_clip(x[i:end_idx, :], sigma=2.5, maxiters=1, axis=0).mean(0))
     return np.array(out)
