@@ -725,6 +725,26 @@ class TimeResSpec:
         new_ds.data = nspec
         return new_ds
 
+    def apply_filter(self, kind, args) -> 'TimeResSpec':
+        """Apply a filter to the data. Will always return
+        a copy of the data.
+
+        Returns
+        -------
+        kind: callable or in ('svd', 'uniform')
+            What kind of filter to use.
+        args: any
+            Argument to the filter. Depends on the kind.
+        """
+        filtered_ds = self.copy()
+        if callable(kind):
+            kind(filtered_ds.data, *args)
+        elif kind == 'svd':
+            svd_filter(filtered_ds.data, args)
+        elif kind == 'uniform':
+            uniform_filter(filtered_ds.data, args)
+        return filtered_ds
+
 
 class PolTRSpec:
     def __init__(self,
@@ -762,7 +782,7 @@ class PolTRSpec:
         self.wavelengths = para.wavelengths
         self.t = para.t
         self.disp_freq_unit = para.disp_freq_unit
-        self.plot = PolDataSetPlotter(self, self.disp_freq_unit)
+        self.plot = PolTRSpecPlotter(self, self.disp_freq_unit)
 
         trs = TimeResSpec
         self.copy = delgator(self, trs.copy)
@@ -774,6 +794,7 @@ class PolTRSpec:
         self.mask_times = delgator(self, trs.mask_times)
         self.subtract_background = delgator(self, trs.subtract_background)
         self.merge_nearby_channels = delgator(self, trs.merge_nearby_channels)
+        self.apply_filter = delgator(self, trs.apply_filter)
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
@@ -1433,14 +1454,14 @@ class TimeResSpecPlotter(PlotterMixin):
         result.correct_ds.plot.freq_unit = tmp_unit[1]
 
 
-class PolDataSetPlotter(PlotterMixin):
+class PolTRSpecPlotter(PlotterMixin):
 
     perp_ls = dict(marker='s', markersize=3, linewidth=1, markerfacecolor='w')
     para_ls = dict(marker='o', markersize=3, linewidth=1)
 
     def __init__(self, pol_dataset: PolTRSpec, disp_freq_unit=None):
         """
-        Plotting commands for a PolDataSet
+        Plotting commands for a PolTRSpec
 
         Parameters
         ----------
@@ -1454,8 +1475,8 @@ class PolDataSetPlotter(PlotterMixin):
         if disp_freq_unit is not None:
             self.freq_unit = disp_freq_unit
 
-        self.perp_ls = PolDataSetPlotter.perp_ls.copy()
-        self.para_ls = PolDataSetPlotter.para_ls.copy()
+        self.perp_ls = PolTRSpecPlotter.perp_ls.copy()
+        self.para_ls = PolTRSpecPlotter.para_ls.copy()
 
     def _get_wl(self):
         return self.pol_ds.para.wavelengths
@@ -1646,7 +1667,6 @@ class PolDataSetPlotter(PlotterMixin):
             ax.set_xscale("symlog")
         ax.set_xlim(-1)
         return l
-
 
 
 class DataSetInteractiveViewer:

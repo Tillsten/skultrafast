@@ -192,7 +192,7 @@ def das(tup,  x0, from_t=0.4, uniform_fil=None, plot_result=True, fit_kws=None):
         tupf = tup
     if fit_kws is None:
         fit_kws = {}
-    import numpy as np
+
     #ct = dv.tup(np.hstack((wl, wl)), tup.t[ti(t0):],  np.hstack((pa[ti(t0):, :], se[ti(t0):, :])))
     ct = dv.tup(tup.wl, tup.t[ti(from_t):], tupf.data[ti(from_t):, :])
     f = fitter.Fitter(ct, model_coh=0, model_disp=0)

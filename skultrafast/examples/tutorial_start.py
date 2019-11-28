@@ -1,6 +1,6 @@
 """
-Starting with skultrafast
-=========================
+Starting tutorial
+=================
 """
 
 # %%  [rst]
@@ -24,7 +24,7 @@ plt.rcParams['font.size'] = 9
 
 # %% [markdown]
 # Creating a TimeResSpec
-# ======================
+# ----------------------
 # In this tuturial we use the example data which is provided by *skultrafast*.
 # The `load_example` function gives us three arrays. One containing the wavelengths,
 # another one containing the delay times and one two dimensional array containing
@@ -139,7 +139,7 @@ lines = res.correct_ds.plot.trans(500, 550, 620, 680)
 # the doctring.
 #
 # Exponential fitting
-# ===================
+# -------------------
 # Fitting a decay-associated spectra (DAS) is a one-liner in skultrafast. If the
 # dataset is dispersion corrected, only a starting guess is necessay. Please
 # look at the docstring to see how the starting guess is structured.

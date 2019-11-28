@@ -54,7 +54,7 @@ class Model(object):
 
     def get_compartments(self):
         return get_comparments(self.transitions)
-    
+
     def make_diff_equation(self):
         A = self.build_matrix()
         funcs = []
@@ -63,24 +63,24 @@ class Model(object):
             funcs.append(sympy.Function(c)(t))
         eqs = []
         for i, row in enumerate(A):
-        
+
             eqs.append(sympy.Eq(sympy.diff(funcs[i]), row.sum()))
         print(eqs)
-            
-        
-        
+
+
+
 
     def get_func(self, y0=None):
         """
         Gives back a function (compiled with cython)
         """
-        
+
         A = self.build_matrix()
         if y0 is None:
             y0 = sympy.zeros(A.shape[0])
             y0[0] = 1
 
-        
+
         ts = sympy.Symbol('ts', real=True, positive=True)
         (P, J ) = (A*ts).jordan_form()
         out = sympy.zeros(P.cols)
@@ -93,8 +93,8 @@ class Model(object):
         #print(sol)
         print(sympy.cse(sol))
         return sol
-        
-   
+
+
 
 
     def get_trans(self, y0, taus, t):

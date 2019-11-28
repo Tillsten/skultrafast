@@ -8,3 +8,4 @@ docs/_build/*
 docs/auto_examples/*
 dist/*
 *egg-info/*
+docs/api/*
