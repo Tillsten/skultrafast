@@ -17,9 +17,9 @@ Contents:
    introduction
    install
    auto_examples/tutorial_start
-
    zero-finding
    data_io
+   auto_examples/tutorial_messpy
    api
    development
    fitting

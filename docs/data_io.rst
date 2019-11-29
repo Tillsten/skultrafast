@@ -8,6 +8,8 @@ skultrafast also offer various methods for data pre-processing. Currently,
 the package focus is on working with data from *MessPy*, the software for
 controlling the experiments in our lab.
 
+A tutorial can be found at :ref:auto_examples/tutorial_messpy.
+
 
 Working with MessPy-files
 -------------------------

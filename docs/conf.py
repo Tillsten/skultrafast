@@ -262,7 +262,7 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 autoclass_content = "init"
 autodoc_member_order = 'bysource'
 autosummary_generate = True
-body_max_width = '80em'
+body_max_width = '100em'
 plot_formats = ['svg', ('png', 150)]
 #autodoc_mock_imports = ['matplotlib', 'matplotlib.pyplot']
 #import matplotlib

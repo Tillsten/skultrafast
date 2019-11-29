@@ -209,3 +209,16 @@ def load_example():
     a = np.load(skultrafast.__path__[0] + '/examples/test.npz')
     wl, data, t = a['wl'], a['data'], a['t']
     return wl, t*1000-2, data/3.
+
+
+def messpy_example_path():
+    """
+    Returns the path to the messpy example data shipped with skultrafast.
+
+    Returns
+    -------
+    str
+        The full path
+    """
+    import skultrafast
+    return skultrafast.__path__[0] + '/examples/messpyv1_data.npz'
