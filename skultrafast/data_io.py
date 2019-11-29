@@ -6,6 +6,7 @@ Created on Wed Nov 28 18:34:30 2012
 """
 from __future__ import print_function
 import numpy as np
+import re
 
 
 def vbload(fname=r'C:\Users\Tillsten\Documents\weisslicht.dat'):
@@ -38,12 +39,12 @@ def read_data(d):
     sig_err = np.zeros((num_times, 400))
     ref_err = np.zeros((num_times, 400))
     for i in range(num_times):
-        times[i] = d[i * 800 + 1, 0]
+        times[i] = d[i*800 + 1, 0]
         for j in range(0, 400):
-            sig[i, j] = d[i * 800 + j, 2]
-            sig_err[i, j] = d[i * 800 + j, 3]
-            ref[i, j] = d[i * 800 + j + 400, 2]
-            ref_err[i, j] = d[i * 800 + j + 400, 3]
+            sig[i, j] = d[i*800 + j, 2]
+            sig_err[i, j] = d[i*800 + j, 3]
+            ref[i, j] = d[i*800 + j + 400, 2]
+            ref_err[i, j] = d[i*800 + j + 400, 3]
     return (times, wl, sig, sig_err, ref, ref_err)
 
 
@@ -126,8 +127,7 @@ def make_report(fitter, info, raw=None, plot_fastest=1, make_ltm=False):
     solvent = info.get('solvent', '')
     excitation = info.get('excitation', '')
     add_info = info.get('add_info', '')
-    title = u"{} in {} excited at {}. {}".format(name, solvent, excitation,
-                                                 add_info)
+    title = u"{} in {} excited at {}. {}".format(name, solvent, excitation, add_info)
     plot_funcs.a4_overview(g,
                            'pics\\' + title + '.png',
                            title=title,
@@ -137,25 +137,23 @@ def make_report(fitter, info, raw=None, plot_fastest=1, make_ltm=False):
     save_txt(name + '_ex' + excitation + '_iso.txt', g.wl, g.t, g.data)
     save_txt(name + '_ex' + excitation + '_iso_fit.txt', g.wl, g.t, g.model)
 
-    dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data),
-                                fitter.tn, 0.0)
+    dat = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data), fitter.tn, 0.0)
     save_txt(name + '_ex' + excitation + '_iso_timecor.txt', *dat)
     if make_ltm:
         plot_funcs.plot_ltm_page(dat, 'pics\\' + title + 'lft_map.png')
 
-    fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model),
-                                fitter.tn, 0.0)
+    fit = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.model), fitter.tn, 0.0)
     save_txt(name + '_ex' + excitation + '_iso_fit_timecor.txt', *fit)
 
     if raw:
         save_txt(name + '_ex' + excitation + '_raw.txt', *raw)
 
     if hasattr(fitter, 'data_perp'):
-        perp = zero_finding.interpol(
-            dv.tup(fitter.wl, fitter.t, fitter.data_perp), fitter.tn, 0.0)
+        perp = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_perp),
+                                     fitter.tn, 0.0)
 
-        para = zero_finding.interpol(
-            dv.tup(fitter.wl, fitter.t, fitter.data_para), fitter.tn, 0.0)
+        para = zero_finding.interpol(dv.tup(fitter.wl, fitter.t, fitter.data_para),
+                                     fitter.tn, 0.0)
 
         #plot_funcs.a4_overview_second_page(fitter, para, perp, 'bla.png')
         save_txt(name + '_ex' + excitation + '_para.txt', *para)
@@ -188,9 +186,6 @@ def sort_scans(data):
     return dsorted
 
 
-import re
-
-
 def extract_freqs_from_gaussianlog(fname):
     f = open(fname)
     fr, ir, raman = [], [], []
@@ -218,7 +213,7 @@ def load_example():
     import skultrafast
     a = np.load(skultrafast.__path__[0] + '/examples/data/test.npz')
     wl, data, t = a['wl'], a['data'], a['t']
-    return wl, t * 1000 - 2, data / 3.
+    return wl, t*1000 - 2, data / 3.
 
 
 def messpy_example_path():
@@ -244,7 +239,6 @@ def get_example_path(kind):
     """
     import skultrafast
     root = skultrafast.__path__[0] + '/examples/data/'
-    file_dict = {"messpy": 'messpyv1_data.npz',
-                 "sys_response": 'germanium.npz'}
+    file_dict = {"messpy": 'messpyv1_data.npz', "sys_response": 'germanium.npz'}
 
     return root + file_dict[kind]
