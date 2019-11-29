@@ -170,6 +170,7 @@ class MessPyFile:
         self.plot = MessPyPlotter(self)
         self.t_idx = make_fi(self.t)
 
+
     def average_scans(self, sigma=3, max_iter=3, min_scan=0, max_scan=None, disp_freq_unit=None):
         """
         Calculate the average of the scans. Uses sigma clipping, which
@@ -297,6 +298,11 @@ class MessPyFile:
         new_wl = (np.arange(-n // 2, n // 2) + (center_ch - 16)) * dispersion
         self.wl = np.add.outer(new_wl, center_wls) + offset
         self.wavenumbers = 1e7/self.wl
+        if hasattr(self, "av_scans_"):
+            for k, i in self.av_scans_.items():
+                idx = int(k.strip("paraisoperp"))
+                i.wavenumbers = self.wavenumbers[:, idx]
+                i.wavelengths = self.wl[:, idx]
 
     def subtract_background(self, n=10, prop_cut=0):
         """Substracts the the first n-points of the data"""
@@ -396,8 +402,8 @@ class MessPyPlotter(PlotterMixin):
             if "perp" + str(i) in ds.av_scans_:
                 d = ds.av_scans_["perp" + str(i)]
                 ax.plot(d.wavelengths, d.data[sl, :].mean(0), c=c, lw=1)
-            if "iso" + str(i) in ds.av_scans_:
-                d = ds.av_scans_["perp" + str(i)]
+            elif "iso" + str(i) in ds.av_scans_:
+                d = ds.av_scans_["iso" + str(i)]
                 ax.plot(d.wavelengths, d.data[sl, :].mean(0), c=c, lw=1)
         ph.lbl_spec(ax)
 
