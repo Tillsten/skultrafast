@@ -675,7 +675,7 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
-    def merge_nearby_channels(self, distance: float = 8) -> "TimeResSpec":
+    def merge_nearby_channels(self, distance: float = 8, use_err: bool = False) -> "TimeResSpec":
         """Merges sequetential channels together if their distance
         is smaller than given.
 
@@ -684,6 +684,7 @@ class TimeResSpec:
         distance : float, optional
             The minimal distance allowed between two channels. If smaller,
             they will be merged together, by default 8.
+        use_err : bool
 
         Returns
         -------
@@ -701,7 +702,10 @@ class TimeResSpec:
                 continue
             if abs(nwl[i + 1] - nwl[i]) < distance:
                 if self.err is not None:
-                    w = weights[:, i:i + 2] if self.err is not None else None
+                    if self.err is not None and use_err:
+                        w = weights[:, i:i + 2]
+                    else:
+                        w = None
                     mean = np.average(nspec[:, i:i + 2], 1, weights=w)
                     err = np.sqrt(
                         np.average((nspec[:, i:i + 2] - mean[:, None])**2,
@@ -1558,6 +1562,20 @@ class PolTRSpecPlotter(PlotterMixin):
         if ax is None:
             ax = plt.gca()
         pa, pe = self.pol_ds.para, self.pol_ds.perp
+
+        # Avoid duplicated keywords
+        duplicated_para = {}
+        duplicated_perp = {}
+
+        for k in kwargs:
+            if k in self.para_ls:
+                self.para_ls.pop(k)
+                duplicated_para[k] = kwargs[k]
+
+            if k in self.perp_ls:
+                self.perp_ls.pop(k)
+                duplicated_perp[k] = kwargs[k]
+
         l1 = pa.plot.trans(*args,
                            symlog=symlog,
                            norm=norm,
@@ -1570,6 +1588,9 @@ class PolTRSpecPlotter(PlotterMixin):
                            ax=ax,
                            **kwargs,
                            **self.perp_ls)
+
+        self.para_ls.update(**duplicated_para)
+        self.para_ls.update(**duplicated_perp)
         dv.equal_color(l1, l2)
         ax.legend(l1, [i.get_label() for i in l1])
         return l1, l2
