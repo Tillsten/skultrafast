@@ -3,8 +3,8 @@ Messpy v1 Example
 =================
 
 This example shows how to load files from MessPy v1, hence it is only of interested for
-people working with files produced by it. Here we loading a file, which used our
-infrared detection.
+people working with files produced by it. Here we loading a datafile, which used our
+infrared detection setup.
 
 MessPy v1 files are .npz files, which consists of zipped npy (numpy) files. Under
 the module messpy we a helper class to work with it. We will start with importing
@@ -18,6 +18,7 @@ print(skultrafast.__version__)
 
 plt.rcParams['figure.dpi'] = 130
 plt.rcParams['figure.figsize'] = (3.2, 2)
+plt.rcParams['figure.autolayout'] = True
 
 # %%
 # The main tool is the `MessPyFile` class. Note the constructor takes all the neccesary
@@ -26,7 +27,7 @@ plt.rcParams['figure.figsize'] = (3.2, 2)
 
 # Get the file location first
 fname = data_io.messpy_example_path()
-print("Tutorial MessPy located at %s" % fname)
+print("Tutorial MessPy-file located at %s" % fname)
 mpf = messpy.MessPyFile(
     fname,
     invert_data=True,  # Changes the sign of the data
@@ -85,7 +86,7 @@ iso.plot.spec(1, 3, 10, n_average=5);
 # our spectrum. Either we uniformally bin or only merge channgels which are too close
 # together.
 
-fig, (ax0, ax1) = plt.subplots(2, figsize=(3,4), sharex=True)
+fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4), sharex=True)
 
 bin_iso = iso.bin_freqs(30)
 bin_iso.plot.spec(1, 3, 10, n_average=5, marker='o', ax=ax0, ms=3)
@@ -100,8 +101,8 @@ ax1.legend_ = None
 ax1.set_ylabel('');
 
 # %%
-# The work with are polarisation resolved transient spectrum we use `PolTRSpec`, which
-# takes the two datasets we get from avg_and_concat.
+# The prefered way to work with are polarisation resolved transient spectra is to use
+# `PolTRSpec`, which takes the two datasets we get from avg_and_concat.
 
 pol_ds = dataset.PolTRSpec(para, perp)
 merged_ds = pol_ds.merge_nearby_channels(8)
