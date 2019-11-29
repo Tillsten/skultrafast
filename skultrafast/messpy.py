@@ -14,7 +14,6 @@ from scipy.stats import trim_mean
 from typing import Tuple, Union
 
 
-
 def _add_rel_errors(data1, err1, data2, err2):
     # TODO Implement
     pass
@@ -123,12 +122,12 @@ class MessPy2File:
 
 class MessPyFile:
     def __init__(
-        self,
-        fname,
-        invert_data=False,
-        is_pol_resolved=False,
-        pol_first_scan="unknown",
-        valid_channel=None,
+            self,
+            fname,
+            invert_data=False,
+            is_pol_resolved=False,
+            pol_first_scan="unknown",
+            valid_channel=None,
     ):
         """Class for working with data files from MessPy.
 
@@ -158,7 +157,7 @@ class MessPyFile:
             if invert_data:
                 self.data *= -1
 
-        self.wavenumbers = 1e7/self.wl
+        self.wavenumbers = 1e7 / self.wl
         self.pol_first_scan = pol_first_scan
         self.is_pol_resolved = is_pol_resolved
         if valid_channel is not None:
@@ -170,8 +169,12 @@ class MessPyFile:
         self.plot = MessPyPlotter(self)
         self.t_idx = make_fi(self.t)
 
-
-    def average_scans(self, sigma=3, max_iter=3, min_scan=0, max_scan=None, disp_freq_unit=None):
+    def average_scans(self,
+                      sigma=3,
+                      max_iter=3,
+                      min_scan=0,
+                      max_scan=None,
+                      disp_freq_unit=None):
         """
         Calculate the average of the scans. Uses sigma clipping, which
         also filters nans. For polarization resolved measurements, the
@@ -209,7 +212,10 @@ class MessPyFile:
         kwargs = dict(disp_freq_unit=disp_freq_unit)
 
         if not self.is_pol_resolved:
-            data = sigma_clip(sub_data, sigma=sigma, max_iter=max_iter, axis=-1)
+            data = sigma_clip(sub_data,
+                              sigma=sigma,
+                              max_iter=max_iter,
+                              axis=-1)
             mean = data.mean(-1)
             std = data.std(-1)
             err = std / np.sqrt((~data.mask).sum(-1))
@@ -223,30 +229,30 @@ class MessPyFile:
 
                 if num_wls > 1:
                     for i in range(num_wls):
-                        ds = TimeResSpec(
-                            self.wl[:, i], t, mean[i, ..., :], err[i, ...], **kwargs
-                        )
+                        ds = TimeResSpec(self.wl[:, i], t, mean[i, ..., :],
+                                         err[i, ...], **kwargs)
                         out[self.pol_first_scan + str(i)] = ds
                 else:
-                    out = TimeResSpec(
-                        self.wl[:, 0], t, mean[0, ...], err[0, ...], **kwargs
-                    )
+                    out = TimeResSpec(self.wl[:, 0], t, mean[0, ...],
+                                      err[0, ...], **kwargs)
                 return out
             else:
                 raise NotImplementedError("TODO")
 
         elif self.is_pol_resolved and self.valid_channel in [0, 1]:
             assert self.pol_first_scan in ["para", "perp"]
-            data1 = sigma_clip(
-                sub_data[..., self.valid_channel, ::2], sigma=sigma,  max_iter=max_iter, axis=-1
-            )
+            data1 = sigma_clip(sub_data[..., self.valid_channel, ::2],
+                               sigma=sigma,
+                               max_iter=max_iter,
+                               axis=-1)
             mean1 = data1.mean(-1)
             std1 = data1.std(-1, ddof=1)
             err1 = std1 / np.sqrt(np.ma.count(data1, -1))
 
-            data2 = sigma_clip(
-                sub_data[..., self.valid_channel, 1::2], sigma=sigma, max_iter=max_iter, axis=-1
-            )
+            data2 = sigma_clip(sub_data[..., self.valid_channel, 1::2],
+                               sigma=sigma,
+                               max_iter=max_iter,
+                               axis=-1)
             mean2 = data2.mean(-1)
             std2 = data2.std(-1, ddof=1)
             err2 = std2 / np.sqrt(np.ma.count(data2, -1))
@@ -297,7 +303,7 @@ class MessPyFile:
         center_wls = self.initial_wl[16, :]
         new_wl = (np.arange(-n // 2, n // 2) + (center_ch - 16)) * dispersion
         self.wl = np.add.outer(new_wl, center_wls) + offset
-        self.wavenumbers = 1e7/self.wl
+        self.wavenumbers = 1e7 / self.wl
         if hasattr(self, "av_scans_"):
             for k, i in self.av_scans_.items():
                 idx = int(k.strip("paraisoperp"))
@@ -358,9 +364,11 @@ class MessPyPlotter(PlotterMixin):
         """
         n = self.ds.num_cwl
         ds = self.ds
-        fig, axs = plt.subplots(
-            1, n, figsize=(n * 2.5 + 0.5, 2.5), sharex=True, sharey=True
-        )
+        fig, axs = plt.subplots(1,
+                                n,
+                                figsize=(n * 2.5 + 0.5, 2.5),
+                                sharex=True,
+                                sharey=True)
 
         if not hasattr(ds, "av_scans_"):
             return
@@ -407,10 +415,12 @@ class MessPyPlotter(PlotterMixin):
                 ax.plot(d.wavelengths, d.data[sl, :].mean(0), c=c, lw=1)
         ph.lbl_spec(ax)
 
-    def compare_scans(
-        self, t_region=(0, 4), channel=None, cmap="jet",
-                      ax=None, every_nth=1
-    ):
+    def compare_scans(self,
+                      t_region=(0, 4),
+                      channel=None,
+                      cmap="jet",
+                      ax=None,
+                      every_nth=1):
         """
         Plots the spectrum averaged over `t_region` for `every_nth` scan.
         """
@@ -452,7 +462,8 @@ def get_t0(fname: str,
            display_result: bool = True,
            plot: bool = True,
            t_range: Tuple[float, float] = (-2, 2),
-           invert: bool = False):
+           invert: bool = False,
+           no_slope: bool = True):
     """Determine t0 from a semiconductor messuarement in the IR. For that, it opens
     the given file, takes the mean of all channels and fits the resulting curve with
     a step function.
@@ -476,6 +487,9 @@ def get_t0(fname: str,
         The range which is used to fit the data.
     invert : bool
         If true, invert data.
+    no_slope : bool
+        Determines if a variable slope is added to the fit model.
+
     Returns
     -------
     tuple of float, float, lmfit.model.ModelResult, plt.Figure
@@ -503,22 +517,25 @@ def get_t0(fname: str,
 
     idx = (t > t_range[0]) & (t < t_range[1])
     sig = sig.squeeze()[idx]
-    from scipy.signal import savgol_filter
+    #from scipy.signal import savgol_filter
     #dsig = savgol_filter(sig, 11, 2, 1)
     dsig = gaussian_filter1d(sig, sigma=1, order=1)
 
-
     GaussStep = lmfit.Model(gauss_step)
-    model = GaussStep + lmfit.models.LinearModel()
-    max_diff = np.argmax(abs(dsig))
 
-    result = model.fit(data=sig,
-                       x=t[idx],
+    model = GaussStep + lmfit.models.LinearModel()
+    max_diff_idx = np.argmax(abs(dsig))
+
+    params = model.make_params(
                        amp=np.ptp(sig),
-                       center=t[idx][np.argmax(abs(dsig))],
-                       sigma=0.1,
-                       b=sig.min(),
-                       m=0)
+                       center=t[idx][max_diff_idx],
+                       sigma=0.2,
+                       slope=0,
+                       intercept=sig.min())
+    if no_slope:
+        params['slope'].vary = False
+    params.add(lmfit.Parameter('FWHM', expr="sigma*2.355"))
+    result = model.fit(params=params, data=sig,   x=t[idx])
     fig = None
     if display_result:
         import IPython.display
@@ -533,6 +550,7 @@ def get_t0(fname: str,
         axs[0].plot(t[idx], sig)
         tw = axs[0].twinx()
         tw.plot(t[idx], dsig, c='r', label='Nummeric Diff')
+        tw.legend()
         #axs[1].plot(t[idx], dsig, color='red')
         axs[1].set_xlabel('t')
         plt.sca(axs[1])
