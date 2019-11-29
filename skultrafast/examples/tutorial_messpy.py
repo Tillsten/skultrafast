@@ -26,7 +26,8 @@ plt.rcParams['figure.autolayout'] = True
 # documentation proposes. Some of the parameters can be infered automatically.
 
 # Get the file location first
-fname = data_io.messpy_example_path()
+
+fname = data_io.get_example_path('messpy')
 print("Tutorial MessPy-file located at %s" % fname)
 mpf = messpy.MessPyFile(
     fname,
