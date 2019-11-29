@@ -17,12 +17,13 @@ Contents:
    introduction
    install
    auto_examples/tutorial_start
-   zero-finding
    data_io
    auto_examples/tutorial_messpy
    api
    development
+   zero-finding
    fitting
+   auto_examples/index
 
 
 Indices and tables

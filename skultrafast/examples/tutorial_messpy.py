@@ -1,13 +1,14 @@
 """
-Working with MessPy 1 files
----------------------------
+Messpy v1 Example
+=================
 
 This example shows how to load files from MessPy v1, hence it is only of interested for
-people working with files produced by it.
+people working with files produced by it. Here we loading a file, which used our
+infrared detection.
 
 MessPy v1 files are .npz files, which consists of zipped npy (numpy) files. Under
 the module messpy we a helper class to work with it. We will start with importing
-the module and the standard toools.
+the module and the standard tools.
 """
 # %%
 from skultrafast import messpy, dataset, data_io
@@ -25,7 +26,7 @@ plt.rcParams['figure.figsize'] = (3.2, 2)
 
 # Get the file location first
 fname = data_io.messpy_example_path()
-print("Tutorial MessPy located at %s"%fname)
+print("Tutorial MessPy located at %s" % fname)
 mpf = messpy.MessPyFile(
     fname,
     invert_data=True,  # Changes the sign of the data
