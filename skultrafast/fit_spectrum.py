@@ -14,7 +14,7 @@ pi = np.pi
 
 
 def voigt(x, A, mu, sig, gamma=0.1):
-    w = wofz(((x - mu) + 1j * gamma) * 2**-0.5 / sig)
+    w = wofz(((x-mu) + 1j*gamma) * 2**-0.5 / sig)
     return A * w.real * (2 * pi)**-0.5 / sig
 
 
@@ -25,8 +25,7 @@ def lorentz_peaks(x, A, x0, w):
 
 def gauss_peaks(x, A, x0, w):
     A, x0, w = map(np.asarray, [A, x0, w])
-    return A[:, None] * np.exp(-0.5 *
-                               ((x[None, :] - x0[:, None]) / w[:, None])**2)
+    return A[:, None] * np.exp(-0.5 * ((x[None, :] - x0[:, None]) / w[:, None])**2)
 
 
 def voigt_peaks(x, A, x0, w):
@@ -88,17 +87,17 @@ def fit_spectrum(x,
     p = paras
     #print(p)
     x0 = np.array([i.value for i in p.values()])
+
     #up_bounds = np.array([i.max for i in p.values()])
     #min_bounds = np.array([i.min for i in p.values()])
 
     def residuals(p, x, y, peak_func):
-        fit = np.array([i.value for i in p.values()]).reshape((3 + n, -1),
-                                                              order='f')
+        fit = np.array([i.value for i in p.values()]).reshape((3 + n, -1), order='f')
         #fit = p.reshape((3+n, -1), order='f')
         base_peak = peak_func(x, np.ones_like(fit[0, :]), *fit[[-2, -1], :])
 
         dichro = unit_conversions.angle2dichro(fit[-3, :])
-        #print(*fit[[-2, -1], :])
+
         resi = []
         for i in range(n):
 
@@ -120,7 +119,7 @@ def fit_spectrum(x,
             if yerr is None:
                 return np.array(resi).ravel()
             else:
-                return np.array(resi/yerr).ravel()
+                return np.array(resi / yerr).ravel()
 
     print(x.shape)
     mini = lmfit.Minimizer(residuals, paras, fcn_args=(x, y, peak_func))
@@ -142,6 +141,5 @@ def bin_every_n(x, start_idx, n=10, reduction_func=lambda x: np.mean(x, 0)):
         x = x[:, None]
     for i in range(start_idx, x.shape[0], n):
         end_idx = min(i + n, x.shape[0])
-        out.append(
-            st.sigma_clip(x[i:end_idx, :], sigma=2.5, maxiters=1, axis=0).mean(0))
+        out.append(st.sigma_clip(x[i:end_idx, :], sigma=2.5, maxiters=1, axis=0).mean(0))
     return np.array(out)

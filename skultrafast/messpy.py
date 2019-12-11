@@ -11,7 +11,7 @@ from .dv import make_fi
 
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 
 def _add_rel_errors(data1, err1, data2, err2):
@@ -35,11 +35,7 @@ class MessPy2File:
     def vis_wls(self, slope=-1.5, intercept=864.4):
         return slope * np.arange(390) + intercept
 
-    def process_vis(self,
-                    vis_range=(390, 720),
-                    min_scan=None,
-                    max_scan=None,
-                    sigma=2.3):
+    def process_vis(self, vis_range=(390, 720), min_scan=None, max_scan=None, sigma=2.3):
         data_file = self.file
         wls = self.vis_wls()
         t = data_file['t']
@@ -50,8 +46,7 @@ class MessPy2File:
             para_idx = (np.int64(np.round(rot)) == 45)
         else:
             n_ir_cwl = data_file['wl_Remote IR 32x2'].shape[0]
-            para_idx = np.repeat(np.array([False, True], dtype='bool'),
-                                 n_ir_cwl)
+            para_idx = np.repeat(np.array([False, True], dtype='bool'), n_ir_cwl)
 
         dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=sigma)
         dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=sigma)
@@ -63,16 +58,8 @@ class MessPy2File:
         ds -= ds[:, :10, ...].mean(1, keepdims=True)
         dp -= dp[:, :10, ...].mean(1, keepdims=True)
 
-        para = TimeResSpec(wls,
-                           t,
-                           dp[0, :, 0, ...],
-                           freq_unit='nm',
-                           disp_freq_unit='nm')
-        perp = TimeResSpec(wls,
-                           t,
-                           ds[0, :, 0, ...],
-                           freq_unit='nm',
-                           disp_freq_unit='nm')
+        para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
+        perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
         pol = PolTRSpec(para, perp)
 
         pol = pol.cut_freqs([vis_range], invert_sel=True)
@@ -212,10 +199,7 @@ class MessPyFile:
         kwargs = dict(disp_freq_unit=disp_freq_unit)
 
         if not self.is_pol_resolved:
-            data = sigma_clip(sub_data,
-                              sigma=sigma,
-                              max_iter=max_iter,
-                              axis=-1)
+            data = sigma_clip(sub_data, sigma=sigma, max_iter=max_iter, axis=-1)
             mean = data.mean(-1)
             std = data.std(-1)
             err = std / np.sqrt((~data.mask).sum(-1))
@@ -229,12 +213,12 @@ class MessPyFile:
 
                 if num_wls > 1:
                     for i in range(num_wls):
-                        ds = TimeResSpec(self.wl[:, i], t, mean[i, ..., :],
-                                         err[i, ...], **kwargs)
+                        ds = TimeResSpec(self.wl[:, i], t, mean[i, ..., :], err[i, ...],
+                                         **kwargs)
                         out[self.pol_first_scan + str(i)] = ds
                 else:
-                    out = TimeResSpec(self.wl[:, 0], t, mean[0, ...],
-                                      err[0, ...], **kwargs)
+                    out = TimeResSpec(self.wl[:, 0], t, mean[0, ...], err[0, ...],
+                                      **kwargs)
                 return out
             else:
                 raise NotImplementedError("TODO")
@@ -275,7 +259,7 @@ class MessPyFile:
                 perp_ds = TimeResSpec(wl, t, perp, perp_err, **kwargs)
                 out["para" + str(i)] = para_ds
                 out["perp" + str(i)] = perp_ds
-                iso = 1 / 3 * para + 2 / 3 * perp
+                iso = 1/3*para + 2/3*perp
                 out["iso" + str(i)] = TimeResSpec(wl, t, iso, **kwargs)
             self.av_scans_ = out
             return out
@@ -301,7 +285,7 @@ class MessPyFile:
         # Here we assume that the set wavelength of the spectrometer
         # is written in channel 16
         center_wls = self.initial_wl[16, :]
-        new_wl = (np.arange(-n // 2, n // 2) + (center_ch - 16)) * dispersion
+        new_wl = (np.arange(-n // 2, n // 2) + (center_ch-16)) * dispersion
         self.wl = np.add.outer(new_wl, center_wls) + offset
         self.wavenumbers = 1e7 / self.wl
         if hasattr(self, "av_scans_"):
@@ -366,7 +350,7 @@ class MessPyPlotter(PlotterMixin):
         ds = self.ds
         fig, axs = plt.subplots(1,
                                 n,
-                                figsize=(n * 2.5 + 0.5, 2.5),
+                                figsize=(n*2.5 + 0.5, 2.5),
                                 sharex=True,
                                 sharey=True)
 
@@ -451,9 +435,19 @@ class MessPyPlotter(PlotterMixin):
                     ax.plot(x, y, label="%d" % i, c=c)
                     if i + 1 < n_scans:
                         y = d[j, sl, :, channel, i + 1].mean(0)
-                        ax.plot(x, y, label="%d" % (i + 1), c=c)
+                        ax.plot(x, y, label="%d" % (i+1), c=c)
 
         ph.lbl_spec(ax)
+
+
+@attr.s(auto_attribs=True)
+class TzResult:
+    x0: float
+    sigma: float
+    fwhm: float
+    fit_result: lmfit.model.ModelResult
+    data: Tuple[np.array, np.ndarray]
+    fig: Optional[any] = None
 
 
 def get_t0(fname: str,
@@ -463,7 +457,7 @@ def get_t0(fname: str,
            plot: bool = True,
            t_range: Tuple[float, float] = (-2, 2),
            invert: bool = False,
-           no_slope: bool = True):
+           no_slope: bool = True) -> TzResult:
     """Determine t0 from a semiconductor messuarement in the IR. For that, it opens
     the given file, takes the mean of all channels and fits the resulting curve with
     a step function.
@@ -492,7 +486,7 @@ def get_t0(fname: str,
 
     Returns
     -------
-    tuple of float, float, lmfit.model.ModelResult, plt.Figure
+    TzResult
         Result and presentation of the fit.
     """
     a = np.load(fname)
@@ -526,16 +520,15 @@ def get_t0(fname: str,
     model = GaussStep + lmfit.models.LinearModel()
     max_diff_idx = np.argmax(abs(dsig))
 
-    params = model.make_params(
-                       amp=np.ptp(sig),
-                       center=t[idx][max_diff_idx],
-                       sigma=0.2,
-                       slope=0,
-                       intercept=sig.min())
+    params = model.make_params(amp=np.ptp(sig),
+                               center=t[idx][max_diff_idx],
+                               sigma=0.2,
+                               slope=0,
+                               intercept=sig.min())
     if no_slope:
         params['slope'].vary = False
     params.add(lmfit.Parameter('FWHM', expr="sigma*2.355"))
-    result = model.fit(params=params, data=sig,   x=t[idx])
+    result = model.fit(params=params, data=sig, x=t[idx])
     fig = None
     if display_result:
         import IPython.display
@@ -557,4 +550,12 @@ def get_t0(fname: str,
         result.plot_fit()
         axs[1].axvline(result.params['center'])
 
-    return result.params['center'], result.params['sigma'], result, fig
+    res = TzResult(
+        x0=result.params['center'],
+        sigma=result.params['sigma'],
+        fwhm=result.params['FWHM'],
+        data=(t[idx], sig),
+        fit_result=result,
+        fig=fig,
+    )
+    return res

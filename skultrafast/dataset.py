@@ -126,9 +126,9 @@ class TimeResSpec:
             self.err = self.err[:, idx]
         self.auto_plot = auto_plot
         self.plot = TimeResSpecPlotter(self)
-        self.t_idx = dv.make_fi(self.t)
-        self.wl_idx = dv.make_fi(self.wavelengths)
-        self.wn_idx = dv.make_fi(self.wavenumbers)
+        self.t_idx = lambda x: dv.fi(self.t, x)
+        self.wl_idx = lambda x: dv.fi(self.wavelengths, x)
+        self.wn_idx = lambda x: dv.fi(self.wavenumbers, x)
 
         if disp_freq_unit is None:
             self.disp_freq_unit = freq_unit
@@ -742,11 +742,12 @@ class TimeResSpec:
         """
         filtered_ds = self.copy()
         if callable(kind):
-            kind(filtered_ds.data, *args)
+            tup = kind(filtered_ds.data, *args)
         elif kind == 'svd':
-            svd_filter(filtered_ds.data, args)
+            tup = svd_filter(filtered_ds, args)
         elif kind == 'uniform':
-            uniform_filter(filtered_ds.data, args)
+            tup = uniform_filter(filtered_ds, args)
+        filtered_ds.data = tup.data
         return filtered_ds
 
 
@@ -820,10 +821,10 @@ class PolTRSpec:
         Parameters
         ----------
         x0 : list of floats or array
-            Starting values of the fit. The first value is the estimate of the
-            system response time omega. If `fit_t0` is true, the second float is
-            the guess of the time-zero. All other floats are interpreted as the
-            guessing values for exponential decays.
+            Starting values of the fit.  The first value is the guess of the time-zero.
+            The second value is the estimate of the system response time omega. If
+            `fit_t0` is true, All other floats are interpreted as the guessing values
+             for exponential decays.
         fix_sigma : bool (optional)
             If to fix the IRF duration sigma.
         fix_t0 : bool (optional)
@@ -1175,7 +1176,7 @@ class TimeResSpecPlotter(PlotterMixin):
                         ax=None,
                         **kwargs) -> typing.List[plt.Line2D]:
         """
-        Plot the transients of integrated region. The integration will use np.tranpz in
+        Plot the transients of integrated region. The integration will use np.trapz in
         wavenumber-space.
 
         Parameters
@@ -1206,7 +1207,7 @@ class TimeResSpecPlotter(PlotterMixin):
         for (a, b) in args:
             a, b = sorted([a, b])
             idx = (a < ds.wavenumbers) & (ds.wavenumbers < b)
-            dat = np.trapz(ds.data[:, idx], ds.wavenumbers[idx], axis=1)
+            dat = np.trapz(-ds.data[:, idx], ds.wavenumbers[idx], axis=1)
 
             if norm is True:
                 dat = np.sign(dat[np.argmax(abs(dat))]) * dat / abs(dat).max()
@@ -1299,7 +1300,7 @@ class TimeResSpecPlotter(PlotterMixin):
             l.extend(
                 ax.plot(t,
                         dat,
-                        label="%.1f %s" % (x[idx], ph.freq_unit),
+                        label="%.0f %s" % (x[idx], ph.freq_unit),
                         **kwargs))
 
         if symlog:
@@ -1441,9 +1442,10 @@ class TimeResSpecPlotter(PlotterMixin):
         return ui
 
     def plot_disp_result(self, result: EstDispResult):
-        """Visualize the result of a dispersion correction"""
-        ds = self.dataset
+        """Visualize the result of a dispersion correction, creates a figure"""
+
         fig, (ax1, ax2) = plt.subplots(2, 1, sharex="col", figsize=(3, 4))
+        ds = self.dataset
         tmp_unit = self.freq_unit, result.correct_ds.plot.freq_unit
         self.freq_unit = "cm"
         result.correct_ds.plot.freq_unit = "cm"
@@ -1643,7 +1645,7 @@ class PolTRSpecPlotter(PlotterMixin):
                          label=leg_text[i])
             l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
-        ph.lbl_spec()
+        ph.lbl_spec(ax=ax)
         ax.legend(title="Decay\nConstants", ncol=2)
         return l1, l2
 
