@@ -21,7 +21,7 @@ def _add_rel_errors(data1, err1, data2, err2):
 
 class MessPy2File:
     def __init__(self, fname: os.PathLike):
-        self.file = np.load(fname)
+        self.file = np.load(fname,  allow_pickle=True)
 
     def get_meta_info(self):
         meta = self.file['meta']
@@ -35,7 +35,8 @@ class MessPy2File:
     def vis_wls(self, slope=-1.5, intercept=864.4):
         return slope * np.arange(390) + intercept
 
-    def process_vis(self, vis_range=(390, 720), min_scan=None, max_scan=None, sigma=2.3):
+    def process_vis(self, vis_range=(390, 720), min_scan=None,
+                    max_scan=None, sigma=2.3, para_angle=45):
         data_file = self.file
         wls = self.vis_wls()
         t = data_file['t']
@@ -43,36 +44,38 @@ class MessPy2File:
 
         if 'rot' in data_file:
             rot = data_file['rot'][min_scan:max_scan]
-            para_idx = (np.int64(np.round(rot)) == 45)
+            para_idx = (abs(np.round(rot) - para_angle) < 3)
         else:
             n_ir_cwl = data_file['wl_Remote IR 32x2'].shape[0]
             para_idx = np.repeat(np.array([False, True], dtype='bool'), n_ir_cwl)
 
-        dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=sigma)
-        dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=sigma)
+        dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=sigma, max_iter=10)
+        dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=sigma, max_iter=10)
         dp = dpm.mean(0)
         dps = dpm.std(0)
         ds = dsm.mean(0)
         dss = dsm.std(0)
 
-        ds -= ds[:, :10, ...].mean(1, keepdims=True)
-        dp -= dp[:, :10, ...].mean(1, keepdims=True)
 
-        para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
-        perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
+        #ds -= ds[:, :10, ...].mean(1, keepdims=True)
+        #dp -= dp[:, :10, ...].mean(1, keepdims=True)
+
+        para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm',
+             disp_freq_unit='nm')
+        perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm',
+            disp_freq_unit='nm')
         pol = PolTRSpec(para, perp)
 
         pol = pol.cut_freqs([vis_range], invert_sel=True)
         return pol.para, pol.perp, pol
 
-    def process_ir(self, t0=0, max_scans=None):
+    def process_ir(self, t0=0, min_scans=0, max_scans=None):
         data_file = self.file
         t = data_file['t'] - t0
         wli = data_file['wl_Remote IR 32x2']
         wli = -(14.0 * (np.arange(32) - 17)) + wli[:, 16, None]
         wli = 1e7 / wli
-        d = data_file['data_Remote IR 32x2'][:max_scans]
-        print(d.shape)
+        d = data_file['data_Remote IR 32x2'][min_scans:max_scans]
 
         dp = sigma_clip(d[1::2, ...], axis=0, sigma=2.4).mean(0)
         ds = sigma_clip(d[0::2, ...], axis=0, sigma=2.4).mean(0)

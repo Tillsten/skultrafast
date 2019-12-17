@@ -43,7 +43,8 @@ def fit_spectrum(x,
                  amp_penalty=0.01,
                  amp_bounds=(-.6, .4),
                  wmin=2,
-                 wmax=10):
+                 wmax=10,
+                 add_const=False):
     """
     Fits multiple peaks to mulitple spektra, the position and width of
     each peak is the same for all spectra, only the amplitude is
@@ -70,6 +71,8 @@ def fit_spectrum(x,
        Upper bound for the width parameter.
     wmin: float, optional
        Lower bound for the width parameter.
+    add_const: bool
+       Weather to add an const background.
     """
     y = np.atleast_2d(y)
     n = y.shape[0]

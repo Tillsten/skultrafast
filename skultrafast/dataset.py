@@ -799,6 +799,7 @@ class PolTRSpec:
         self.mask_times = delgator(self, trs.mask_times)
         self.subtract_background = delgator(self, trs.subtract_background)
         self.merge_nearby_channels = delgator(self, trs.merge_nearby_channels)
+        self.interpolate_disp = delgator(self, trs.interpolate_disp)
         self.apply_filter = delgator(self, trs.apply_filter)
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
@@ -915,8 +916,9 @@ def delgator(pol_tr: PolTRSpec, method: typing.Callable):
     def func(*args, **kwargs):
         para = method(pol_tr.para, *args, **kwargs)
         perp = method(pol_tr.perp, *args, **kwargs)
+        iso = method(pol_tr.iso, *args, **kwargs)
         if do_return:
-            return PolTRSpec(para, perp)
+            return PolTRSpec(para, perp, iso=iso)
 
     func.__docs__ = method.__doc__
     func.__name__ = name
@@ -1637,16 +1639,17 @@ class PolTRSpecPlotter(PlotterMixin):
         n = ds.para.wavelengths.size
         x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
         start = 0 if plot_first_das else 1
-        for i in range(start, num_exp):
+        for c,i in enumerate(range(start, num_exp)):
             l1 = ax.plot(x,
                          f.c[:n, -num_exp + i],
                          **kwargs,
                          **self.para_ls,
-                         label=leg_text[i])
+                         label=leg_text[i], color='C%d'%c)
             l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec(ax=ax)
-        ax.legend(title="Decay\nConstants", ncol=2)
+        ncol = max(num_exp // 3, 1)
+        ax.legend(title="Decay\nConstants", ncol=ncol)
         return l1, l2
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
