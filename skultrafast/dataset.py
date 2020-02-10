@@ -189,11 +189,7 @@ class TimeResSpec:
         t = tmp[1:, 0] / time_div
         freq = tmp[0, 1:]
         data = tmp[1:, 1:]
-        return cls(freq,
-                   t,
-                   data,
-                   freq_unit=freq_unit,
-                   disp_freq_unit=disp_freq_unit)
+        return cls(freq, t, data, freq_unit=freq_unit, disp_freq_unit=disp_freq_unit)
 
     def save_txt(self, fname, freq_unit="wl"):
         """
@@ -365,7 +361,7 @@ class TimeResSpec:
         """Subtracts the first n-spectra from the dataset"""
         self.data -= np.mean(self.data[:n, :], 0, keepdims=True)
 
-    def bin_freqs(self, n: int, freq_unit=None) -> "TimeResSpec":
+    def bin_freqs(self, n: int, freq_unit=None, use_err: bool = True) -> "TimeResSpec":
         """
         Bins down the dataset by averaging over several transients.
 
@@ -377,7 +373,8 @@ class TimeResSpec:
         freq_unit : 'nm', 'cm' or None
             Whether to calculate the bin-borders in frequency- of wavelength
             space. If `None`, it defaults to `self.disp_freq_unit`.
-
+        use_err : bool
+            If true, use error for weighting.
         Returns
         -------
         TimeResSpec
@@ -392,21 +389,30 @@ class TimeResSpec:
         idx = np.searchsorted(arr, edges)
         binned = np.empty((self.data.shape[0], n))
         binned_wl = np.empty(n)
+        binned_err = np.empty_like(binned)
+
         for i in range(n):
-            if self.err is None:
+            if self.err is None or not use_err:
                 weights = None
             else:
-                weights = 1 / self.err[:, idx[i]:idx[i + 1]]
-            binned[:, i] = np.average(self.data[:, idx[i]:idx[i + 1]],
-                                      1,
-                                      weights=weights)
+                weights = 1 / self.err[:, idx[i]:idx[i + 1]]**2
+            vals = self.data[:, idx[i]:idx[i + 1]]
+            binned[:, i] = np.average(vals, 1, weights=weights)
+            if weights is not None:
+                binned_err[:, i] = np.average((vals - binned[:, i, None])**2,
+                                              1,
+                                              weights=weights)
             binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
         if freq_unit == "cm":
             binned_wl = -binned_wl
+        if self.err is None or not use_err:
+            weights = None
+
         return TimeResSpec(
             binned_wl,
             self.t,
             binned,
+            err=binned_err,
             freq_unit=freq_unit,
             disp_freq_unit=self.disp_freq_unit,
         )
@@ -434,9 +440,7 @@ class TimeResSpec:
         for i in range(start_index, m, n):
             end_idx = min(i + n, m)
             out.append(
-                sigma_clip(self.data[i:end_idx, :],
-                           sigma=2.5,
-                           max_iter=1,
+                sigma_clip(self.data[i:end_idx, :], sigma=2.5, max_iter=1,
                            axis=0).mean(0))
             out_t.append(self.t[i:end_idx].mean())
 
@@ -548,6 +552,7 @@ class TimeResSpec:
             lower_bound=0.1,
             verbose=True,
             use_error=False,
+            fixed_names=None,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -578,6 +583,8 @@ class TimeResSpec:
             Prints the results out if True.
         use_error : bool
             If the errors are used in the fit.
+        fixed_names : list of str
+            Can be used to fix time-constants
         """
 
         f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
@@ -630,7 +637,7 @@ class TimeResSpec:
             max_t = self.t.max()
             start = np.floor(np.log10(dt))
             end = np.ceil(np.log10(max_t))
-            taus = np.geomspace(start, end, 5 * (end - start))
+            taus = np.geomspace(start, end, 5 * (end-start))
 
         result = lifetimemap.start_ltm(self,
                                        taus,
@@ -675,7 +682,8 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
-    def merge_nearby_channels(self, distance: float = 8, use_err: bool = False) -> "TimeResSpec":
+    def merge_nearby_channels(self, distance: float = 8,
+                              use_err: bool = False) -> "TimeResSpec":
         """Merges sequetential channels together if their distance
         is smaller than given.
 
@@ -708,9 +716,7 @@ class TimeResSpec:
                         w = None
                     mean = np.average(nspec[:, i:i + 2], 1, weights=w)
                     err = np.sqrt(
-                        np.average((nspec[:, i:i + 2] - mean[:, None])**2,
-                                   1,
-                                   weights=w))
+                        np.average((nspec[:, i:i + 2] - mean[:, None])**2, 1, weights=w))
                     nspec[:, i] = mean
                     if nerr is not None:
                         nerr[:, i] = err
@@ -814,6 +820,8 @@ class PolTRSpec:
             from_t=None,
             model_coh=False,
             lower_bound=0.1,
+            use_error=False,
+            fixed_names=None,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -842,6 +850,10 @@ class PolTRSpec:
             added to the linear model.
         lower_bound : float (optional)
             Lower bound for decay-constants.
+        use_error : bool
+            Wether to use the error to weight the residuals
+        fix_names : list of str
+            Can be used to fix names.
         """
         pa, pe = self.para, self.perp
         if not from_t is None:
@@ -850,10 +862,14 @@ class PolTRSpec:
         all_data = np.hstack((pa.data, pe.data))
         all_wls = np.hstack((pa.wavelengths, pe.wavelengths))
         all_tup = dv.tup(all_wls, pa.t, all_data)
-
         f = fitter.Fitter(all_tup, model_coh=model_coh, model_disp=1)
+        if use_error:
+            all_err = np.hstack((pa.err, pe.err))
+            f.weights = 1 / all_err**2
         f.res(x0)
-        fixed_names = []
+        if fixed_names is None:
+            fixed_names = []
+
         if fix_sigma:
             fixed_names.append("w")
 
@@ -1043,13 +1059,7 @@ class TimeResSpecPlotter(PlotterMixin):
             vmin, vmax = -m, m
         else:
             vmin, vmax = ds.data.max(), ds.data.min()
-        mesh = ax.pcolormesh(x,
-                             ds.t,
-                             ds.data,
-                             vmin=vmin,
-                             vmax=vmax,
-                             cmap=cmap,
-                             **kwargs)
+        mesh = ax.pcolormesh(x, ds.t, ds.data, vmin=vmin, vmax=vmax, cmap=cmap, **kwargs)
         if symlog:
             ax.set_yscale("symlog", linthreshy=1)
             ph.symticks(ax, axis="y")
@@ -1091,13 +1101,7 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(*ax.get_xlim()[::-1])
         return mesh, con
 
-    def spec(self,
-             *args,
-             norm=False,
-             ax=None,
-             n_average=0,
-             upsample=1,
-             **kwargs):
+    def spec(self, *args, norm=False, ax=None, n_average=0, upsample=1, **kwargs):
         """
         Plot spectra at given times.
 
@@ -1151,8 +1155,7 @@ class TimeResSpecPlotter(PlotterMixin):
             else:
                 idx = dv.fi(ds.t, i)
                 if n_average > 0:
-                    dat = uniform_filter(ds,
-                                         (2 * n_average + 1, 1)).data[idx, :]
+                    dat = uniform_filter(ds, (2*n_average + 1, 1)).data[idx, :]
                 elif n_average == 0:
                     dat = ds.data[idx, :]
                 else:
@@ -1171,11 +1174,7 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(x.max(), x.min())
         return li
 
-    def trans_integrals(self,
-                        *args,
-                        symlog: bool = True,
-                        norm=False,
-                        ax=None,
+    def trans_integrals(self, *args, symlog: bool = True, norm=False, ax=None,
                         **kwargs) -> typing.List[plt.Line2D]:
         """
         Plot the transients of integrated region. The integration will use np.trapz in
@@ -1217,11 +1216,7 @@ class TimeResSpecPlotter(PlotterMixin):
                 pass
             else:
                 dat = dat / dat[ds.t_idx(norm)]
-            l.extend(
-                ax.plot(ds.t,
-                        dat,
-                        label=f"{a: .0f} cm-1 to {b: .0f}",
-                        **kwargs))
+            l.extend(ax.plot(ds.t, dat, label=f"{a: .0f} cm-1 to {b: .0f}", **kwargs))
 
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0)
@@ -1299,11 +1294,7 @@ class TimeResSpecPlotter(PlotterMixin):
             else:
                 dat = dat / dat[dv.fi(t, norm)]
             plotted_vals.append(dat)
-            l.extend(
-                ax.plot(t,
-                        dat,
-                        label="%.0f %s" % (x[idx], ph.freq_unit),
-                        **kwargs))
+            l.extend(ax.plot(t, dat, label="%.0f %s" % (x[idx], ph.freq_unit), **kwargs))
 
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0, linscalex=linscale)
@@ -1388,8 +1379,7 @@ class TimeResSpecPlotter(PlotterMixin):
         """
         ds = self.dataset
         if not hasattr(ds, "fit_exp_result_"):
-            raise ValueError("The PolTRSpec must have successfully fit the "
-                             "data first")
+            raise ValueError("The PolTRSpec must have successfully fit the " "data first")
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
@@ -1399,14 +1389,14 @@ class TimeResSpecPlotter(PlotterMixin):
             ph.ir_mode()
         f = ds.fit_exp_result_.fitter
         num_exp = f.num_exponentials
-        leg_text = [
-            ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]
-        ]
+        leg_text = [ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]]
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
 
         l1 = ax.plot(self.x, f.c[:, :num_exp], **kwargs)
-        ax.legend(l1, leg_text, title="Decay\nConstants")
+        for i, l in enumerate(l1):
+            l.set_label(leg_text[i])
+        ax.legend(title="Decay\nConstants")
         ph.lbl_spec(ax)
         return l1
 
@@ -1619,8 +1609,7 @@ class PolTRSpecPlotter(PlotterMixin):
         """
         ds = self.pol_ds
         if not hasattr(self.pol_ds, "fit_exp_result_"):
-            raise ValueError("The PolTRSpec must have successfully fit the "
-                             "data")
+            raise ValueError("The PolTRSpec must have successfully fit the " "data")
         if ax is None:
             ax = plt.gca()
         is_nm = self.freq_unit == "nm"
@@ -1631,21 +1620,20 @@ class PolTRSpecPlotter(PlotterMixin):
             ph.ir_mode()
         f = ds.fit_exp_result_.fitter
         num_exp = f.num_exponentials
-        leg_text = [
-            ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]
-        ]
+        leg_text = [ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]]
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
         n = ds.para.wavelengths.size
         x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
         start = 0 if plot_first_das else 1
-        for c,i in enumerate(range(start, num_exp)):
+        for c, i in enumerate(range(start, num_exp)):
             l1 = ax.plot(x,
-                         f.c[:n, -num_exp + i],
+                         f.c[:n, i],
                          **kwargs,
                          **self.para_ls,
-                         label=leg_text[i], color='C%d'%c)
-            l2 = ax.plot(x, f.c[n:, -num_exp + i], **kwargs, **self.perp_ls)
+                         label=leg_text[i],
+                         color='C%d' % c)
+            l2 = ax.plot(x, f.c[n:, i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
         ph.lbl_spec(ax=ax)
         ncol = max(num_exp // 3, 1)
@@ -1684,7 +1672,7 @@ class PolTRSpecPlotter(PlotterMixin):
         for i in wls:
             idx = dv.fi(x, i)
             pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
-            aniso = (pa - pe) / (2 * pe + pa)
+            aniso = (pa-pe) / (2*pe + pa)
             l += ax.plot(ds.para.t,
                          aniso,
                          label=ph.time_formatter(ds.t[idx], ph.time_unit))

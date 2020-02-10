@@ -45,10 +45,10 @@ def _coh_gaussian(ta, w, tz):
 exp_half = np.exp(0.5)
 
 
-@njit
+@njit(parallel=True)
 def _coh_loop(y, ta, w, n, m):
-    for i in range(n):
-        for j in range(m):
+    for i in prange(n):
+        for j in prange(m):
             tt = ta[i, j]
             if tt / w < 3.:
                 y[i, j, 0] = np.exp(
@@ -59,7 +59,7 @@ def _coh_loop(y, ta, w, n, m):
                 #y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
 
-@jit(parallel=True, fastmath=True)
+@njit(parallel=True, fastmath=True)
 def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
     a = _fold_exp(t_arr, w, tz, tau_arr)
     b = _coh_gaussian(t_arr, w, tz)
