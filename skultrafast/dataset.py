@@ -93,7 +93,7 @@ class TimeResSpec:
             Helper function to search for the nearest wavelength index for a
             given wavelength.
         auto_plot : bool
-            When True, some function will display their result automatically.
+            When True, some function will display their result automatically.            
         """
 
         assert (t.shape[0], wl.shape[0]) == data.shape
@@ -139,6 +139,18 @@ class TimeResSpec:
     def __iter__(self):
         """For compatibility with dv.tup"""
         return iter((self.wavelengths, self.t, self.data))
+
+    def wl_d(self, wl):
+        idx = self.wl_idx(wl)
+        return self.data[:, idx]
+    
+    def wn_d(self, wl):
+        idx = self.wn_idx(wl)
+        return self.data[:, idx]
+
+    def t_d(self, t):
+        idx = self.t_idx(t)
+        return self.data[idx, :]
 
     def copy(self) -> "TimeResSpec":
         """Returns a copy of the TimeResSpec."""
@@ -810,6 +822,18 @@ class PolTRSpec:
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
+
+    def wl_d(self, wl):
+        idx = self.wl_idx(wl)
+        return self.para[:, idx], self.perp[:, idx]
+    
+    def wn_d(self, wn):
+        idx = self.wn_idx(wl)
+        return self.para[:, idx], self.perp[:, idx]
+    
+    def t_d(self, t):
+        idx = self.t_idx(t)
+        return self.para.T[:, idx], self.perp.T[:, idx]
 
     def fit_exp(
             self,
