@@ -125,11 +125,12 @@ class ModelBuilder:
                 p.min = 2
         y = mod.eval(wl=self.wl_arr[:, None], t=self.t_arr, **params)
         #plt.plot(y[0][ :, 0])
-        return params
+        return params, mod
         
     def plot_peaks(self, params=None):
         if params is None:
-            params = self.make_params()
+            params, mod = self.make_params()
+
         para = sympy.Tuple(*(i[1] for i in self.funcs))
         perp = sympy.Tuple(*(i[0] for i in self.funcs))
         
@@ -143,7 +144,7 @@ class ModelBuilder:
         for a,b in zip(pa, pe):
             l1, = plt.plot(a[:, 0], lw=2)        
             plt.plot(b[:, 0], c=l1.get_color())
-
+        y = mod.eval(wl=self.wl_arr[:, None], t=self.t_arr, **params)
 
 
 if __name__ == "__main__":
