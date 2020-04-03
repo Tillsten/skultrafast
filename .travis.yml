@@ -20,7 +20,8 @@ before_install:
     - conda info -a
 
 install:
-    - source activate test_env
+    - conda create -n test_env    
+    - conda activate test_env
     - conda install --file requirements.txt.txt -c conda-forge
     - conda install --file doc_requirements.txt.txt -c conda-forge    
     - python setup.py install
