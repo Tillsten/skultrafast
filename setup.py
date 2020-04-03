@@ -51,11 +51,12 @@ setup(
     author_email='tillsten@zedat.fu-berlin.de',
     url='http://github.com/tillsten/skultrafast',
     packages=['skultrafast', 'skultrafast.base_funcs'],
-    package_data={'skultrafast': ['examples/test.npz', 'examples/messpyv1_data.npz']},
+    package_data={'skultrafast': ['examples/data/test.npz', 'examples/data/messpyv1_data.npz', 'examples/data/germanium.npz']},
     license='LICENSE.txt',
     description='Python package for analyzing time-resolved spectra.',
     long_description=open('README.rst').read(),
     install_requires=install_reqs,
     keywords='science physics chemistry pump-probe spectroscopy time-resolved',
     python_requires='>=3.5',
+    include_package_data=True,
 )

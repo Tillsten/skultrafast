@@ -1,2 +1,4 @@
 include versioneer.py
 include skultrafast/_version.py
+include examples/*
+include examples/data/*

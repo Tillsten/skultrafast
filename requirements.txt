@@ -6,4 +6,4 @@ numba
 scikit-learn
 matplotlib
 pytest
-pre-commit
+sympy
