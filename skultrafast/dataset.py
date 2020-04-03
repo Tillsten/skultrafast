@@ -34,7 +34,7 @@ polynomial : function
 FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
 
 
-@attr.s(cmp=False)
+@attr.s(eq=False)
 class LDMResult:
     skmodel: object = attr.ib()
     coefs: ndarray = attr.ib()
@@ -738,7 +738,8 @@ class TimeResSpec:
 
         nwl = np.delete(nwl, skiplist)
         nspec = np.delete(nspec, skiplist, axis=1)
-        nerr = np.delete(nerr, skiplist, axis=1)
+        if nerr is not None:
+            nerr = np.delete(nerr, skiplist, axis=1)
         new_ds = self.copy()
         if self.err is not None:
             new_ds.err = nerr
@@ -1372,7 +1373,7 @@ class TimeResSpecPlotter(PlotterMixin):
         x = ds.wavelengths if is_nm else ds.wavenumbers
         fig, axs = plt.subplots(3, 1, figsize=(4, 5))
         u, s, v = np.linalg.svd(ds.data)
-        axs[0].stem(s)
+        axs[0].stem(s, use_line_collection=True)
         axs[0].set_xlim(0, 11)
         try:
             len(n)
