@@ -20,7 +20,7 @@ before_install:
     - conda info -a
 
 install:
-    - conda create -n test_env    
+    - conda create -n test_env python=3.7
     - source activate test_env
     - conda install --file requirements.txt -c conda-forge
     - conda install --file doc_requirements.txt -c conda-forge    
