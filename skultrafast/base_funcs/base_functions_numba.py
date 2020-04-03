@@ -3,7 +3,7 @@
 Numba implementation of the base matrix building functions.
 """
 import numpy as np
-from numba import autojit, vectorize, njit, jit, prange
+from numba import  vectorize, njit, jit, prange
 import math
 #from lmmv
 sq2 = math.sqrt(2)
