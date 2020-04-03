@@ -4,7 +4,7 @@ language: python
 sudo: false
 
 python:
-    - 3.6
+    - 3.7
 
 # test minium required and latest versions of SciPy and NumPy
 env:
@@ -20,10 +20,9 @@ before_install:
     - conda info -a
 
 install:
-    - if [[ $version == latest ]]; then conda create -q -n test_env python=$TRAVIS_PYTHON_VERSION numpy scipy six pandas matplotlib dill nose statsmodels scikit-learn; fi
     - source activate test_env
-    - pip install lmfit
-    - pip install nbsphinx
+    - conda install --file requirements.txt.txt -c conda-forge
+    - conda install --file doc_requirements.txt.txt -c conda-forge    
     - python setup.py install
     - conda list
 
