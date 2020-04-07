@@ -2,3 +2,8 @@ include versioneer.py
 include skultrafast/_version.py
 include examples/*
 include examples/data/*
+# added by check_manifest.py
+include *.txt
+include *.yaml
+include *.yml
+include LICENSE
