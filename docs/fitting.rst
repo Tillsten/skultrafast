@@ -42,30 +42,29 @@ by default *skultrafast* fits the function
 
 Variable projection
 -------------------
-For given :math:`\tau` and :math:`\omega`, the least squares problem is
-linear since the function is a sum of term where only the coefficients are
-unknown. Therefore we use our nonlinear functions as a basis matrix
-:math:`A_{ij} = y(t_i, \tau_j)`. The linear least-squares problem can be
-written as :math:`min_x |Ax-b|_2` and can be directly solved.
-The separation of the linear and non-linear parameters is also know as variable
-projection.
+For given :math:`\tau` and :math:`\omega`, the least squares problem is linear
+since the function is a sum of term where only the coefficients are unknown.
+Therefore we use our nonlinear functions as a basis matrix :math:`A_{ij} =
+y(t_i, \tau_j)`. The linear least-squares problem can be written as :math:`min_x
+|Ax-b|_2` and can be directly solved. The separation of the linear and
+non-linear parameters is also know as variable projection.
 
-Since the exponential function basis is numerically unstable, skultrafast
-uses L2-regularization by default. This is also called Tikhonov regularization
-or  Rigde regression. It modifies the problem to
-:math:`min_x |Ax-b|_2+\alpha |x|_2`, alpha being small.
+Since the exponential function basis is numerically unstable, skultrafast uses
+L2-regularization by default. This is also called Tikhonov regularization or
+Rigde regression. It modifies the problem to :math:`min_x |Ax-b|_2+\alpha
+|x|_2`, alpha being small.
 
-Depending on how the dispersion is handled, we can accelerate these steps.
-First we will assume that each frequency was interpolated or binned on the same
-common time-points. Then we just have to calculate the matrix A and its
-pseudoinverse once. The coefficients c for a single channel :math:`b` are than
-just the dot product :math:`c = A_{PINV}b`.
+Depending on how the dispersion is handled, we can accelerate these steps. First
+we will assume that each frequency was interpolated or binned on the same common
+time-points. Then we just have to calculate the matrix A and its pseudoinverse
+once. The coefficients c for a single channel :math:`b` are than just the dot
+product :math:`c = A_{PINV}b`.
 
 If the different frequencies don't share a common time-axis, the matrix A has
 and its pesudoinverse has to be calculated for every channel, which gets
 time-consuming for larger datasets.
 
-The advantage of the latter approach is that it allows for easier inclusion
-of the dispersion parameters to the fitting model.
+The advantage of the latter approach is that it allows for easier inclusion of
+the dispersion parameters to the fitting model.
 
 

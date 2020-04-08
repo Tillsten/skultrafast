@@ -22,15 +22,15 @@ the workflow can be found in the `Matplotlib documentation
 Documentation
 -------------
 The documentation is in `docs` directory and uses the Sphinx documentation
-generator. Sphinx uses reStructuredText (`.rst`) as its makeup language.
-Simple changes to the documentation can be done by using the github web
-interface directly. Browse to the file, click it and use the `Edit this file`
-button. Use the "Create a new branch for this commit and start a pull request."
-option for submitting the change.
+generator. Sphinx uses reStructuredText (`.rst`) as its makeup language. Simple
+changes to the documentation can be done by using the github web interface
+directly. Browse to the file, click it and use the `Edit this file` button. Use
+the "Create a new branch for this commit and start a pull request." option for
+submitting the change.
 
 The code itself uses the numpy-doc style doc-strings for public functions and
-classes. These doc-strings are in the source files itself. This part of
-can be found in the :ref:`api_docs` section.
+classes. These doc-strings are in the source files itself. This part of can be
+found in the :ref:`api_docs` section.
 
 Running tests
 -------------
