@@ -24,11 +24,12 @@ install:
     - source activate test_env
     - conda install --file requirements.txt -c conda-forge
     - conda install --file doc_requirements.txt -c conda-forge    
-    - python setup.py install
+    - python setup.py sdist
+    - pip install dist/*
     - conda list
-
+    
 script:
     - pytest
-
+    
 notifications:
   email: false
