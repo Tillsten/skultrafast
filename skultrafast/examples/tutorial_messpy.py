@@ -2,13 +2,13 @@
 Messpy v1 Example
 =================
 
-This example shows how to load files from MessPy v1, hence it is only of interested for
-people working with files produced by it. Here we loading a datafile, which used our
-infrared detection setup.
+This example shows how to load files from MessPy v1, hence it is only of
+interested for people working with files produced by it. Here we loading a
+datafile, which used our infrared detection setup.
 
-MessPy v1 files are .npz files, which consists of zipped npy (numpy) files. Under
-the module messpy we a helper class to work with it. We will start with importing
-the module and the standard tools.
+MessPy v1 files are .npz files, which consists of zipped npy (numpy) files.
+Under the module messpy we a helper class to work with it. We will start with
+importing the module and the standard tools.
 """
 # %%
 from skultrafast import messpy, dataset, data_io
@@ -21,9 +21,10 @@ plt.rcParams['figure.figsize'] = (3.2, 2)
 plt.rcParams['figure.autolayout'] = True
 
 # %%
-# The main tool is the `MessPyFile` class. Note the constructor takes all the neccesary
-# information to do the processing. Here I will pass all parameters explictily for
-# documentation proposes. Some of the parameters can be infered automatically.
+# The main tool is the `MessPyFile` class. Note the constructor takes all the
+# neccesary information to do the processing. Here I will pass all parameters
+# explictily for documentation proposes. Some of the parameters can be infered
+# automatically.
 
 # Get the file location first
 
@@ -41,8 +42,8 @@ mpf = messpy.MessPyFile(
 print(mpf.data.shape)
 # %%
 # Simlar to TimeResSpec the MessPyFile class has a plotter subclass with various
-# plot methods. For example, the `compare_spec` method plots a averaged spectrum for
-# each central channel recored.
+# plot methods. For example, the `compare_spec` method plots a averaged spectrum
+# for each central channel recored.
 
 mpf.plot.compare_spec()
 
@@ -55,8 +56,8 @@ mpf.plot.compare_spec()
 
 # %%
 # Note that `MessPyFile` uses sigma clipping when averaging the scans. If you
-# want more control over the process, use the `average_scans` method. For example
-# here we change the clipping range and use only the first 5 scans.
+# want more control over the process, use the `average_scans` method. For
+# example here we change the clipping range and use only the first 5 scans.
 
 mpf.average_scans(sigma=2, max_scan=20);
 # %%
@@ -80,12 +81,13 @@ para, perp, iso = mpf.avg_and_concat()
 iso.plot.spec(1, 3, 10, n_average=5);
 
 # %%
-# Why does the spectrum now look so yanky? Because now neighboring points
-# where recorded indifferent spectral windows and hence their noise differ, while the
-# noise within one window is often correlated. Also the spectrum now suggest are larger
-# spectral resolution the it has. Hence, the mitigate both points we can bin down
-# our spectrum. Either we uniformally bin or only merge channgels which are too close
-# together.
+# The spectrum looks a little bit janky now, since after merging neighboring
+# points in the overlap regions were recorded in different spectral windows. The
+# noise within a spectral window is correlated hence the spectrum looks kind of
+# smooth within the window. There is also a second issue with the merged
+# spectrum, the point density suggests a larger spectral resolution than it is
+# available. Hence, the mitigate both issues, we have to bin down the spectrum.
+# Either we bin uniformly or only merge channels that are too close.
 
 fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4), sharex=True)
 
@@ -102,8 +104,8 @@ ax1.legend_ = None
 ax1.set_ylabel('');
 
 # %%
-# The prefered way to work with are polarisation resolved transient spectra is to use
-# `PolTRSpec`, which takes the two datasets we get from avg_and_concat.
+# The prefered way to work with are polarisation resolved transient spectra is
+# to use `PolTRSpec`, which takes the two datasets we get from avg_and_concat.
 
 pol_ds = dataset.PolTRSpec(para, perp)
 merged_ds = pol_ds.merge_nearby_channels(8)
