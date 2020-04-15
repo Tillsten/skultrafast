@@ -143,7 +143,7 @@ class TimeResSpec:
     def wl_d(self, wl):
         idx = self.wl_idx(wl)
         return self.data[:, idx]
-    
+
     def wn_d(self, wl):
         idx = self.wn_idx(wl)
         return self.data[:, idx]
@@ -342,6 +342,31 @@ class TimeResSpec:
             "nm",
             disp_freq_unit=self.disp_freq_unit,
         )
+
+    def scale_and_shift(self, scale: float = 1, t_shift: float = 0,
+                        wl_shift: float = 0) -> "TimeResSpec":
+        """
+        Return a dataset which is scaled and/or has shifted times
+        and frequencies.
+
+        scale : float
+            Scales the whole dataset by given factor.
+        t_shift : float
+            Shifts the time-axis of an dataset.
+        wl_shift : float
+            Shifts the wavelengths axis and updates the wavenumbers too.
+        
+        Returns
+        -------
+        TimeResSpec
+            A modified new dataset
+        """
+        cpy = self.copy()
+        cpy.data *= scale
+        cpy.t += t_shift
+        cpy.wavelengths += wl_shift
+        cpy.wavenumbers = 1e7 / cpy.wavelengths
+        return cpy
 
     def mask_times(self, time_ranges, invert_sel=False):
         """
@@ -809,17 +834,18 @@ class PolTRSpec:
         self.plot = PolTRSpecPlotter(self, self.disp_freq_unit)
 
         trs = TimeResSpec
-        self.copy = delgator(self, trs.copy)
-        self.bin_times = delgator(self, trs.bin_times)
-        self.bin_freqs = delgator(self, trs.bin_freqs)
-        self.cut_times = delgator(self, trs.cut_times)
-        self.cut_freqs = delgator(self, trs.cut_freqs)
-        self.mask_freqs = delgator(self, trs.mask_freqs)
-        self.mask_times = delgator(self, trs.mask_times)
-        self.subtract_background = delgator(self, trs.subtract_background)
-        self.merge_nearby_channels = delgator(self, trs.merge_nearby_channels)
-        self.interpolate_disp = delgator(self, trs.interpolate_disp)
-        self.apply_filter = delgator(self, trs.apply_filter)
+        self.copy = delegator(self, trs.copy)
+        self.bin_times = delegator(self, trs.bin_times)
+        self.bin_freqs = delegator(self, trs.bin_freqs)
+        self.cut_times = delegator(self, trs.cut_times)
+        self.scale_and_shift = delegator(self, trs.scale_and_shift)
+        self.cut_freqs = delegator(self, trs.cut_freqs)
+        self.mask_freqs = delegator(self, trs.mask_freqs)
+        self.mask_times = delegator(self, trs.mask_times)
+        self.subtract_background = delegator(self, trs.subtract_background)
+        self.merge_nearby_channels = delegator(self, trs.merge_nearby_channels)
+        self.interpolate_disp = delegator(self, trs.interpolate_disp)
+        self.apply_filter = delegator(self, trs.apply_filter)
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
@@ -827,11 +853,11 @@ class PolTRSpec:
     def wl_d(self, wl):
         idx = self.wl_idx(wl)
         return self.para[:, idx], self.perp[:, idx]
-    
+
     def wn_d(self, wn):
         idx = self.wn_idx(wl)
         return self.para[:, idx], self.perp[:, idx]
-    
+
     def t_d(self, t):
         idx = self.t_idx(t)
         return self.para.T[:, idx], self.perp.T[:, idx]
@@ -934,7 +960,7 @@ import functools
 import typing
 
 
-def delgator(pol_tr: PolTRSpec, method: typing.Callable):
+def delegator(pol_tr: PolTRSpec, method: typing.Callable):
     """
     Helper function to delegate methods calls from PolTRSpec to
     the methods of TimeResSpec.

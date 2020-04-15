@@ -19,6 +19,11 @@ def test_methods():
     assert (nds.t.size == np.ceil(ds.t.size / 5))
     ds.mask_freqs([(400, 600)])
     assert (np.all(ds.data.mask[:, ds.wl_idx(550)]))
+    ds2 = ds.scale_and_shift(2, t_shift=1, wl_shift=10)
+    assert_almost_equal(2*ds.data, ds2.data)
+    assert_almost_equal(ds.t+1, ds2.t)
+    assert_almost_equal(ds.wavelengths+10, ds2.wavelengths)
+    assert_almost_equal(1e7/ds2.wavelengths, ds2.wavenumbers)
 
 
 def test_est_disp():
@@ -57,7 +62,7 @@ def test_pol_tr():
     assert (np.all(out.para.wavelengths >= 550))
     assert (np.all(out.perp.wavelengths >= 550))
     ps.bin_times(6)
-
+    ps.scale_and_shift(1, 0.5)
 
 def test_plot():
     ds = TimeResSpec(wl, t, data)
