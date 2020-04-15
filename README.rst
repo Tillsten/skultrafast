@@ -7,9 +7,6 @@ skultrafast
 .. image:: https://travis-ci.org/Tillsten/skultrafast.svg?branch=master
     :target: https://travis-ci.org/Tillsten/skultrafast
 
-**WARNING! THE PROJECT IS A RESTRUCTURING PHASE AND NOT VERY USABLE FOR NEW
-USERS!**
-
 What is skultrafast?
 ====================
 Skultrafast stands for scikit.ultrafast and is an python package which aims
