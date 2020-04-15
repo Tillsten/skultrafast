@@ -855,7 +855,7 @@ class PolTRSpec:
         return self.para[:, idx], self.perp[:, idx]
 
     def wn_d(self, wn):
-        idx = self.wn_idx(wl)
+        idx = self.wn_idx(wn)
         return self.para[:, idx], self.perp[:, idx]
 
     def t_d(self, t):
