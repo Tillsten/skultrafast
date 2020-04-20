@@ -12,7 +12,7 @@ from skultrafast.utils import sigma_clip
 import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter, lifetimemap
 from skultrafast.data_io import save_txt
-from skultrafast.filter import uniform_filter, svd_filter
+from skultrafast import filter
 
 ndarray = np.ndarray
 from typing import Optional
@@ -779,8 +779,9 @@ class TimeResSpec:
 
         Returns
         -------
-        kind: callable or in ('svd', 'uniform')
-            What kind of filter to use.
+        kind: callable or in ('svd', 'uniform', 'gaussian')
+            What kind of filter to use. Either a string 
+            indicating a inbuild filter or a callable.            
         args: any
             Argument to the filter. Depends on the kind.
         """
@@ -788,9 +789,11 @@ class TimeResSpec:
         if callable(kind):
             tup = kind(filtered_ds.data, *args)
         elif kind == 'svd':
-            tup = svd_filter(filtered_ds, args)
+            tup = filter.svd_filter(filtered_ds, args)
         elif kind == 'uniform':
-            tup = uniform_filter(filtered_ds, args)
+            tup = filter.uniform_filter(filtered_ds, args)
+        elif kind == "gaussian":
+            tup = filter.gaussian_filter(filtered_ds, args)
         filtered_ds.data = tup.data
         return filtered_ds
 
@@ -1133,9 +1136,9 @@ class TimeResSpecPlotter(PlotterMixin):
                 data = con_filter.data
             elif con_filter is not None:  # must be int or tuple of int
                 if isinstance(con_filter, tuple):
-                    data = uniform_filter(ds, con_filter).data
+                    data = filter.uniform_filter(ds, con_filter).data
                 else:
-                    data = svd_filter(ds, con_filter).data
+                    data = filter.svd_filter(ds, con_filter).data
             else:
                 data = ds.data
             con = ax.contour(
@@ -1152,7 +1155,8 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(*ax.get_xlim()[::-1])
         return mesh, con
 
-    def spec(self, *args, norm=False, ax=None, n_average=0, upsample=1, **kwargs):
+    def spec(self, *args, norm=False, ax=None, n_average=0, upsample=1, 
+             use_weights=False, offset=0., **kwargs):
         """
         Plot spectra at given times.
 
@@ -1175,6 +1179,9 @@ class TimeResSpecPlotter(PlotterMixin):
         use_weights : bool
             If given a tuple, the function will plot the average of the given range.
             use_weights determines if error weights are in calculating the average.
+        offset: float or 'auto'
+            If non-zero, each spectrum will be shifted by 'offset' relatively to the last one.
+            'auto' is not yet implemented.
 
         Returns
         -------
@@ -1190,12 +1197,14 @@ class TimeResSpecPlotter(PlotterMixin):
             ph.vis_mode()
         else:
             ph.ir_mode()
+
+        cur_offset = 0.
         ds = self.dataset
         x = ds.wavelengths if is_nm else ds.wavenumbers
         li = []
         for i in args:
             if isinstance(i, tuple):
-                if ds.err is not None:
+                if ds.err is not None and use_weights:
                     weights = 1 / ds.err[ds.t_idx(i[0]):ds.t_idx(i[1]), :]**2
                 else:
                     weights = None
@@ -1206,7 +1215,7 @@ class TimeResSpecPlotter(PlotterMixin):
             else:
                 idx = dv.fi(ds.t, i)
                 if n_average > 0:
-                    dat = uniform_filter(ds, (2*n_average + 1, 1)).data[idx, :]
+                    dat = filter.uniform_filter(ds, (2*n_average + 1, 1)).data[idx, :]
                 elif n_average == 0:
                     dat = ds.data[idx, :]
                 else:
@@ -1218,8 +1227,9 @@ class TimeResSpecPlotter(PlotterMixin):
                 dat = dat / abs(dat).max()
             markevery = None if upsample == 1 else upsample + 1
 
-            li += ax.plot(x, dat, markevery=markevery, label=label, **kwargs)
 
+            li += ax.plot(x, dat + cur_offset, markevery=markevery, label=label, **kwargs)
+            cur_offset += offset
         self.lbl_spec(ax)
         if not is_nm:
             ax.set_xlim(x.max(), x.min())
@@ -1677,6 +1687,8 @@ class PolTRSpecPlotter(PlotterMixin):
         n = ds.para.wavelengths.size
         x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
         start = 0 if plot_first_das else 1
+        palines = []
+        pelines = []
         for c, i in enumerate(range(start, num_exp)):
             l1 = ax.plot(x,
                          f.c[:n, i],
@@ -1686,10 +1698,12 @@ class PolTRSpecPlotter(PlotterMixin):
                          color='C%d' % c)
             l2 = ax.plot(x, f.c[n:, i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
+            palines += l1
+            pelines += l2
         ph.lbl_spec(ax=ax)
         ncol = max(num_exp // 3, 1)
         ax.legend(title="Decay\nConstants", ncol=ncol)
-        return l1, l2
+        return palines, pelines
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
         """

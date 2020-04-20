@@ -360,8 +360,10 @@ def plot_diff(tup, t0, t_list, **kwargs):
 
 def time_formatter(time, unit='ps'):
     mag = np.floor(np.log10(abs(time)))
-    if mag > -1:
-        return '%d %s' % (time, unit)
+    if time > 5:
+        return '%.0f %s' % (time, unit)
+    if time > 1:
+        return '%.1f %s' % (time, unit)
     else:
         return '%1.2f %s' % (time, unit)
 
@@ -725,8 +727,8 @@ def nsf(num, n=1):
     """n-Significant Figures"""
     if num > 30:
         return '%4.0f' % np.around(num, -1)
-    if num > 3:
-        return '%4.0f' % num
+    if num > 6:
+        return '%4.1f' % num
     if num > 1:
         return '%4.1f' % num
     if num < 1:
