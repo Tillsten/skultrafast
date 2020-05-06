@@ -727,8 +727,8 @@ def nsf(num, n=1):
     """n-Significant Figures"""
     if num > 30:
         return '%4.0f' % np.around(num, -1)
-    if num > 6:
-        return '%4.1f' % num
+    if num > 10:
+        return '%4.0f' % num
     if num > 1:
         return '%4.1f' % num
     if num < 1:
