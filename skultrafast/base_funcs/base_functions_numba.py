@@ -164,8 +164,8 @@ def _fold_exp(t_arr, w, tz, tau_arr):
 def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
     for tau_idx in prange(l):
         k = 1 / tau_arr[tau_idx]
-        for j in prange(m):
-            for i in prange(n):
+        for j in range(m):
+            for i in range(n):
                 t = t_arr[i, j] - tz
                 if t < -5. * w:
                     ret = 0
