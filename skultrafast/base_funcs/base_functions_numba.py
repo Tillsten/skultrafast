@@ -160,9 +160,9 @@ def _fold_exp(t_arr, w, tz, tau_arr):
         return out
 
 
-@njit(parallel=True, fastmath=True)
+@njit(fastmath=True)
 def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
-    for tau_idx in prange(l):
+    for tau_idx in range(l):
         k = 1 / tau_arr[tau_idx]
         for j in range(m):
             for i in range(n):
