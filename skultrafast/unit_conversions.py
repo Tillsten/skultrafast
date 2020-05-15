@@ -13,12 +13,12 @@ names = dict(
     THz="frequency in THz",
     dichro="Dichroic ratio (para/perp)",
     angle="relative angle between transition dipole moments in degrees",
-    aniso="Anisotropy (para-perp)/(para+2*perp)")
+    aniso="Anisotropy (para-perp)/(para+2*perp)",
+    kcal="energy in kcal/mol")
 
 
 def make_doc(func):
     a, b = str.split(func.__name__, '2')
-
     func.__doc__ = ('%s to %s' % (names[a], names[b])).capitalize()
     return func
 
@@ -87,3 +87,11 @@ def angle2aniso(deg):
 @make_doc
 def aniso2angle(r):
     return np.arccos(np.sqrt((r * 10 / 2 + 1) / 3)) / np.pi * 180
+
+@make_doc
+def cm2kcal(cm):
+    return cm * 2.859e-3
+
+@make_doc
+def kcal2cm(kcal):
+    return kcal / 2.859e-3
