@@ -785,6 +785,50 @@ def lbl_axes(axs=None, pos=(-.2, -.2), fmt="(%s)", labels=None, **kwargs):
     for i, a in enumerate(axs):
         a.text(pos[0], pos[1], fmt % labels[i], transform=a.transAxes, **text_kwargs)
 
+def ci_plot(ci_dict, trace):
+    """
+    Plots the given CI intervals. Needs the trace output from coinfidence
+    intervals. Currently assumes the CI are calculated for 1,2 and 3 sigmas.
+
+    Parameters
+    ----------
+    ci_dict : dict
+        Out
+    trace : dict
+        Trace dict
+    """
+    n = len(ci_dict)
+    fig, ax = plt.subplots(n, 1, figsize=(1.5, n*0.8), gridspec_kw=dict(hspace=0.0))
+    
+    for i, (pname, vals) in enumerate(ci_dict.items()):
+        para_trace = trace[pname] 
+        idx = np.argsort(para_trace[pname])
+        
+        center = vals[len(vals)//2][1]
+        arr = np.array(vals)
+        b = -.2
+        x, y = trace[pname][pname][idx], 1-trace[pname]['prob'][idx]
+        u, l = arr[[0, -1], 1]
+        
+        r = (x > u) & (x < l)
+        
+        xn = np.linspace(u, l, 100)
+        un, idx = np.unique(x, return_index=True)
+        
+        yn = np.interp(xn, x[idx], y[idx])
+        yn = interpolate.interp1d(x[idx], y[idx], 'quadratic')(xn)
+        ax[i].plot(arr[[0, -1], 1], [b, b], lw=1, c='k')
+        ax[i].plot(arr[[1, -2], 1], [b, b], lw=3, c='k')
+        ax[i].plot(arr[[2, -3], 1], [b, b], lw=5, c='k')
+        ax[i].plot(center,  b, 'wx' )
+        ax[i].plot(x[r], y[r], 'o', ms=3, mec='None', clip_on=False)
+        ax[i].fill_between(xn, 0, yn, lw=0, alpha=0.8)
+        ax[i].set_ylim(-.35, 1.03)
+        for n in 'top', 'left', 'right':
+            ax[i].spines[n].set_visible(False)
+        ax[i].yaxis.set_tick_params(left=False, labelleft=False)
+        ax[i].annotate(pname, (0.05, 0.90), xycoords='axes fraction')
+
 
 def enable_style():
     plt.rcParams['figure.facecolor'] = 'w'
