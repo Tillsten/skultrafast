@@ -957,6 +957,7 @@ class PolTRSpec:
         """
         self.para.save_txt(fname + '_para.txt', freq_unit)
         self.perp.save_txt(fname + '_perp.txt', freq_unit)
+        self.iso.save_txt(fname + '_iso.txt', freq_unit)
 
 
 import functools
@@ -1344,7 +1345,6 @@ class TimeResSpecPlotter(PlotterMixin):
         t, d = ds.t, ds.data
         l, plotted_vals = [], []
         for i in args:
-
             idx = dv.fi(x, i)
 
             dat = d[:, idx]
@@ -1360,7 +1360,7 @@ class TimeResSpecPlotter(PlotterMixin):
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0, linscalex=linscale)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
-        ax.legend(loc="best", ncol=3)
+        ax.legend(loc="best", ncol=max(1,len(l)//3))
         ax.set_xlim(right=t.max())
         ax.yaxis.set_tick_params(which="minor", left=True)
         return l
@@ -1423,12 +1423,16 @@ class TimeResSpecPlotter(PlotterMixin):
         ph.lbl_trans(axs[1], use_symlog=True)
         self.lbl_spec(axs[2])
 
-    def das(self, ax=None, **kwargs):
+    def das(self, first_comp=0, ax=None, **kwargs):
         """
         Plot a DAS, if available.
 
         Parameters
         ----------
+        fist_comp : int
+            Index of the first shown component, useful if 
+            fast components model coherent artefact and should
+            not be shown
         ax : plt.Axes or None
             Axes to plot.
         kwargs : dict
@@ -1454,9 +1458,9 @@ class TimeResSpecPlotter(PlotterMixin):
         if max(f.last_para) > 5 * f.t.max():
             leg_text[-1] = "const."
 
-        l1 = ax.plot(self.x, f.c[:, :num_exp], **kwargs)
+        l1 = ax.plot(self.x, f.c[:, first_comp:num_exp], **kwargs)
         for i, l in enumerate(l1):
-            l.set_label(leg_text[i])
+            l.set_label(leg_text[i+first_comp])
         ax.legend(title="Decay\nConstants")
         ph.lbl_spec(ax)
         return l1
