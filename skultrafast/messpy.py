@@ -492,7 +492,7 @@ def get_t0(fname: str,
     TzResult
         Result and presentation of the fit.
     """
-    a = np.load(fname)
+    a = np.load(fname, allow_pickle=True)
     if not fname[-11:] == 'messpy1.npz':
         data = a['data']
         if isinstance(scan, slice):
