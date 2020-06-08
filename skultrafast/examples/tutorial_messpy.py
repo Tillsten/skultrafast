@@ -23,7 +23,7 @@ plt.rcParams['figure.autolayout'] = True
 # %%
 # The main tool is the `MessPyFile` class. Note the constructor takes all the
 # neccesary information to do the processing. Here I will pass all parameters
-# explictily for documentation proposes. Some of the parameters can be infered
+# explictily for documentation proposes. Some of the parameters are infered
 # automatically.
 
 # Get the file location first
