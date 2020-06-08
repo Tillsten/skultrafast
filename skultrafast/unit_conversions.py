@@ -5,16 +5,15 @@ import numpy as np
 from scipy.constants import physical_constants, c
 
 c_cm = c * 100
-names = dict(
-    cm="wavenumbers in 1/cm",
-    fs="period in femotoseconds",
-    nm="wavelengths in nanometer",
-    eV="energy in electron Volt",
-    THz="frequency in THz",
-    dichro="Dichroic ratio (para/perp)",
-    angle="relative angle between transition dipole moments in degrees",
-    aniso="Anisotropy (para-perp)/(para+2*perp)",
-    kcal="energy in kcal/mol")
+names = dict(cm="wavenumbers in 1/cm",
+             fs="period in femotoseconds",
+             nm="wavelengths in nanometer",
+             eV="energy in electron Volt",
+             THz="frequency in THz",
+             dichro="Dichroic ratio (para/perp)",
+             angle="relative angle between transition dipole moments in degrees",
+             aniso="Anisotropy (para-perp)/(para+2*perp)",
+             kcal="energy in kcal/mol")
 
 
 def make_doc(func):
@@ -25,12 +24,12 @@ def make_doc(func):
 
 @make_doc
 def fs2cm(t):
-    return 1 / (t * 1e-15 * c_cm)
+    return 1 / (t*1e-15*c_cm)
 
 
 @make_doc
 def cm2fs(cm):
-    return 1e15 / (cm * c_cm)
+    return 1e15 / (cm*c_cm)
 
 
 @make_doc
@@ -69,7 +68,7 @@ def THz2cm(THz):
 
 @make_doc
 def dichro2angle(d):
-    return np.arccos(np.sqrt((2 * d - 1) / (d + 2))) / np.pi * 180
+    return np.arccos(np.sqrt((2*d - 1) / (d+2))) / np.pi * 180
 
 
 @make_doc
@@ -86,11 +85,13 @@ def angle2aniso(deg):
 
 @make_doc
 def aniso2angle(r):
-    return np.arccos(np.sqrt((r * 10 / 2 + 1) / 3)) / np.pi * 180
+    return np.arccos(np.sqrt((r*10/2 + 1) / 3)) / np.pi * 180
+
 
 @make_doc
 def cm2kcal(cm):
     return cm * 2.859e-3
+
 
 @make_doc
 def kcal2cm(kcal):
