@@ -126,7 +126,7 @@ def pfid_r6(T, om, om_10, om_21, T_2):
 
     om = cm2THz(om) * 2 * np.pi
     om_10 = cm2THz(np.asarray(om_10)) * 2 * np.pi
-    om_21 = cm2THz(np.asarray(om_10)) * 2 * np.pi
+    om_21 = cm2THz(np.asarray(om_21)) * 2 * np.pi
 
     T, om, om_10 = np.meshgrid(T, om, om_10, indexing='ij', copy=False)
     om_21 = np.broadcast_to(om_21, om_10.shape)
