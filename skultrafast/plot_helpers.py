@@ -11,6 +11,7 @@ import skultrafast.dv as dv
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import Normalize, SymLogNorm
 import matplotlib.cbook as cbook
+from scipy import interpolate
 ma = np.ma
 
 linewidth = 2
@@ -798,7 +799,7 @@ def ci_plot(ci_dict, trace):
         Trace dict
     """
     n = len(ci_dict)
-    fig, ax = plt.subplots(n, 1, figsize=(1.5, n*0.8), gridspec_kw=dict(hspace=0.0))
+    fig, ax = plt.subplots(n, 1, figsize=(1.5, n*0.8), gridspec_kw=dict(hspace=0.5))
     
     for i, (pname, vals) in enumerate(ci_dict.items()):
         para_trace = trace[pname] 
@@ -828,6 +829,7 @@ def ci_plot(ci_dict, trace):
             ax[i].spines[n].set_visible(False)
         ax[i].yaxis.set_tick_params(left=False, labelleft=False)
         ax[i].annotate(pname, (0.05, 0.90), xycoords='axes fraction')
+    fig.tight_layout()
 
 
 def enable_style():
