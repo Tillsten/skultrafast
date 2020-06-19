@@ -9,3 +9,5 @@ docs/auto_examples/*
 dist/*
 *egg-info/*
 docs/api/*
+.mypy_cache/*
+skultrafast/.mypy_cache/*
