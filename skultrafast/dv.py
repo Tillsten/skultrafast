@@ -410,7 +410,7 @@ def do_nnls(A,b):
 
 import lmfit
 def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=None, weights=None, amp_penalty=0,
-            verbose=True):
+            verbose=True, start_amps=None):
     num_exp = len(start_taus)
     para = lmfit.Parameters()
     if use_constant:
@@ -419,7 +419,10 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
     for i in range(num_exp):
         para.add('tau' + str(i), start_taus[i], min=0)
         y_c = y - y[-1]
-        a = y_c[fi(x, start_taus[i])]
+        if start_amps is None:
+            a = y_c[fi(x, start_taus[i])]
+        else: 
+            a = start_amps[i]
         para.add('amp' + str(i), a)
         if amp_max is not None:
             para['amp' + str(i)].max = amp_max
@@ -435,13 +438,17 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
             amp = p['amp'+str(i)].value
             tau = p['tau'+str(i)].value
 
-            y_fit += amp * np.exp(-x/tau) + amp_penalty/y.size
+            y_fit += amp * np.exp(-x/tau) 
 
         return y_fit
 
     def res(p):
+        
         if weights is None:
-            return y - fit(p)
+            pen = 0
+            for i in range(num_exp):
+                pen += p['amp'+str(i)].value**2
+            return np.hstack(((y - fit(p)), amp_penalty*pen))
         else:
             return (y - fit(p)) / weights
 
