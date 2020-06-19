@@ -817,7 +817,8 @@ def ci_plot(ci_dict, trace):
         un, idx = np.unique(x, return_index=True)
         
         yn = np.interp(xn, x[idx], y[idx])
-        yn = interpolate.interp1d(x[idx], y[idx], 'quadratic')(xn)
+        yn = interpolate.interp1d(x[idx], y[idx], 'quadratic',
+                                  fill_value=0)(xn)
         ax[i].plot(arr[[0, -1], 1], [b, b], lw=1, c='k')
         ax[i].plot(arr[[1, -2], 1], [b, b], lw=3, c='k')
         ax[i].plot(arr[[2, -3], 1], [b, b], lw=5, c='k')
