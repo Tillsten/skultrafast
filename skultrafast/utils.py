@@ -61,6 +61,11 @@ def gauss_step(x, amp: float, center: float, sigma: float):
     return amp * 0.5 * (1 + erf((x-center) / sigma / np.sqrt(2)))
 
 
+import numba
+
+cm2THz = numba.jit(cm2THz)
+
+@numba.jit(fastmath=True)
 def pfid_r4(T, om, om_10, T_2):
     """
     Calculates the PFID contribution for pure bleaching.
@@ -95,7 +100,7 @@ def pfid_r4(T, om, om_10, T_2):
     num = (1/T_2) * np.cos(dom * T) - dom * np.sin(dom * T)
     return np.exp(-T / T_2) * num / (dom**2 + (1 / T_2**2))
 
-
+@numba.jit(fastmath=True)
 def pfid_r6(T, om, om_10, om_21, T_2):
     """
     Calculates the PFID contribution for the shifted frequecy.
@@ -136,3 +141,30 @@ def pfid_r6(T, om, om_10, om_21, T_2):
 
     num = (1/T_2) * np.cos(dom * T) - dom2 * np.sin(dom * T)
     return np.exp(-T / T_2) * num / (dom2**2 + (1 / T_2**2))
+
+@numba.jit(fastmath=True)
+def pfid(T, om, om_10, fac, om_21, T_2):
+    om = cm2THz(om) * 2 * np.pi
+    om_10 = cm2THz(np.asarray(om_10)) * 2 * np.pi
+    om_21 = cm2THz(np.asarray(om_21)) * 2 * np.pi
+
+    T, om, om_10 = np.meshgrid(T, om, om_10, indexing='ij', copy=False)
+    om_21 = np.broadcast_to(om_21, om_10.shape)
+    T_2 = np.broadcast_to(T_2, om_10.shape)
+    fac = np.broadcast_to(fac, om_10.shape)
+    dom = om - om_10
+    dom2 = om - om_21
+
+    # tmp to make it faster
+    dec = np.exp(-T / T_2)
+    cos = np.cos(dom * T)
+    sin = np.sin(dom * T)
+
+
+    num = (1/T_2) * cos - dom * sin
+    r4 = dec * num / (dom**2 + (1 / T_2**2))    
+    
+    num = (1/T_2) * cos - dom2 * sin
+    r6 = dec * num / (dom2**2 + (1 / T_2**2))
+    return r4 + fac*r6
+

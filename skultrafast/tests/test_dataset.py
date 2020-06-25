@@ -6,6 +6,9 @@ from numpy.testing import assert_almost_equal
 
 wl, t, data = load_example()
 
+def test_integrate():
+    ds = TimeResSpec(wl, t, data)
+    ds.wn_i(15000, 20000)
 
 def test_methods():
     ds = TimeResSpec(wl, t, data)
@@ -13,7 +16,11 @@ def test_methods():
     assert (len(bds.wavelengths) == 300)
     nds = ds.cut_freqs([(400, 600)])
     assert (np.all(nds.wavelengths > 600))
+    nds = ds.cut_freq(400, 600)
+    assert (np.all(nds.wavelengths > 600))
     nds = ds.cut_times([(-100, 1)])
+    assert (np.all(nds.t > .99))
+    nds = ds.cut_time(-100, 1)
     assert (np.all(nds.t > .99))
     nds = ds.bin_times(5)
     assert (nds.t.size == np.ceil(ds.t.size / 5))

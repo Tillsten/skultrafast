@@ -20,6 +20,7 @@ class PFID_Fitter:
     num_peaks: int = 0
     alpha: float = 0
 
+
     def start_fit(self):
         if 't0' not in self.params:
             self.params.add("t0", 0, vary=False)

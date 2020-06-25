@@ -1,11 +1,11 @@
 from collections import namedtuple
 import attr
 import lmfit
-from uncertainties import unumpy as u
 import matplotlib.pyplot as plt
 import numpy as np
 
 from scipy.interpolate import interp1d, UnivariateSpline
+from matplotlib.cbook import deprecated
 
 import skultrafast.dv as dv
 from skultrafast.utils import sigma_clip
@@ -13,6 +13,7 @@ import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter, lifetimemap
 from skultrafast.data_io import save_txt
 from skultrafast import filter
+
 
 ndarray = np.ndarray
 from typing import Optional
@@ -102,13 +103,15 @@ class TimeResSpec:
         data = data.copy()
 
         if freq_unit == "nm":
-            self.wavelengths = wl
-            self.wavenumbers = 1e7 / wl
-            self.wl = self.wavelengths
+            self._wavelengths = wl
+            self._wavenumbers = 1e7 / wl
+
         else:
-            self.wavelengths = 1e7 / wl
-            self.wavenumbers = wl
-            self.wl = self.wavenumbers
+            self._wavelengths = 1e7 / wl
+            self._wavenumbers = wl
+
+        self.wn = self.wavenumbers
+        self.wl = self.wavelengths
 
         self.t = t
         self.data = data
@@ -118,9 +121,9 @@ class TimeResSpec:
             self.name = name
 
         # Sort wavelenths and data.
-        idx = np.argsort(self.wavelengths)
-        self.wavelengths = self.wavelengths[idx]
-        self.wavenumbers = self.wavenumbers[idx]
+        idx = np.argsort(self._wavelengths)
+        self._wavelengths = self._wavelengths[idx]
+        self._wavenumbers = self._wavenumbers[idx]
         self.data = self.data[:, idx]
         if err is not None:
             self.err = self.err[:, idx]
@@ -136,13 +139,62 @@ class TimeResSpec:
             self.disp_freq_unit = disp_freq_unit
         self.plot.freq_unit = self.disp_freq_unit
 
+    @property
+    def wavelengths(self):
+        return self._wavelengths
+
+    @wavelengths.setter
+    def wavelengths(self, wavelengths):
+        self._wavelengths = wavelengths
+        self._wavenumbers = 1e7/wavelengths
+
+    @property
+    def wavenumbers(self):
+        return self._wavenumbers
+
+    @wavenumbers.setter
+    def wavenumbers(self, wavenumbers):
+        self._wavelengths = 1e7/ wavenumbers
+        self._wavenumbers = wavenumbers
+
     def __iter__(self):
         """For compatibility with dv.tup"""
         return iter((self.wavelengths, self.t, self.data))
 
+    def _integrate(self, wn_a, wn_b):
+        i1, i2 = self.wl_idx
+
     def wl_d(self, wl):
         idx = self.wl_idx(wl)
         return self.data[:, idx]
+
+    def wn_i(self, wn1, wn2, method='trapz'):
+        """
+        Integrates the signal from wn1 to wn2
+
+        Parameters
+        ----------
+        wn1, float
+            Wavenumber of the first edge
+        wn2, float
+            Wavenumber of the second edge
+        method, ('trapz', 'spline')
+            Method used to integrate.
+        """
+        wn_min, wn_max = sorted([wn1, wn2])
+        idx_min, idx_max = self.wn_idx(wn_min), self.wn_idx(wn_max)
+        if (wn_max > self.wavenumbers.max()):
+            idx_max = None
+        if (wn_min < self.wavenumbers.min()):
+            idx_min = None
+        sl = slice(idx_min, idx_max)
+        x = self.wavenumbers[sl]
+        y = self.data[:, sl]
+        if method == 'trapz':
+            return np.trapz(x=x, y=y, axis=1)
+        elif method == 'spline':
+            sp = UnivariateSpline(x, y)
+            return sp.antiderivative(1)(x)
 
     def wn_d(self, wl):
         idx = self.wn_idx(wl)
@@ -218,6 +270,8 @@ class TimeResSpec:
         wl = self.wavelengths if freq_unit == "wl" else self.wavenumbers
         save_txt(fname, wl, self.t, self.data)
 
+
+    @deprecated("cut_freqs is deprecated, use cut_freq instead")
     def cut_freqs(self, freq_ranges=None, invert_sel=False,
                   freq_unit=None) -> "TimeResSpec":
         """
@@ -244,6 +298,48 @@ class TimeResSpec:
         arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
         for (lower, upper) in freq_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
+        if not invert_sel:
+            idx = ~idx
+        if self.err is not None:
+            err = self.err[:, idx]
+        else:
+            err = None
+        return TimeResSpec(
+            self.wavelengths[idx],
+            self.t,
+            self.data[:, idx],
+            err,
+            "nm",
+            disp_freq_unit=self.disp_freq_unit,
+        )
+
+    def cut_freq(self, lower=-np.inf, upper=np.inf, invert_sel=False,
+                  freq_unit=None) -> "TimeResSpec":
+        """
+        Removes channels inside (or outside ) of given frequency ranges.
+
+        Parameters
+        ----------
+        lower : float
+            Lower bound of the region
+        upper : float
+            Upper bound of the region
+        invert_sel : bool
+            Invert the final selection.
+        freq_unit : 'nm', 'cm' or None
+            Unit of the given edges.
+
+        Returns
+        -------
+        : TimeResSpec
+            TimeResSpec containing only the listed regions.
+        """
+        idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        if freq_unit is None:
+            freq_unit = self.disp_freq_unit
+        arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
+
+        idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
@@ -308,6 +404,7 @@ class TimeResSpec:
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
 
+    @deprecated("Use cut_time instead.")
     def cut_times(self, time_ranges, invert_sel=False) -> "TimeResSpec":
         """
         Remove spectra inside (or outside) of given time-ranges.
@@ -327,6 +424,43 @@ class TimeResSpec:
         arr = self.t
         for (lower, upper) in time_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
+        if not invert_sel:
+            idx = ~idx
+        if self.err is not None:
+            err = self.err[idx, :]
+        else:
+            err = None
+
+        return TimeResSpec(
+            self.wavelengths,
+            self.t[idx],
+            self.data[idx, :],
+            err,
+            "nm",
+            disp_freq_unit=self.disp_freq_unit,
+        )
+
+    def cut_time(self, lower=-np.inf, upper=np.inf, invert_sel=False) -> "TimeResSpec":
+        """
+        Remove spectra inside (or outside) of given time-ranges.
+
+        Parameters
+        ----------
+        lower : float
+            Lower bound of the region
+        upper : float
+            Upper bound of the region
+        invert_sel : bool
+            Inverts the final selection.
+        Returns
+        -------
+        : TimeResSpec
+            TimeResSpec containing only the requested regions.
+        """
+        idx = np.zeros_like(self.t, dtype=np.bool)
+        arr = self.t
+
+        idx ^= np.logical_and(arr > lower, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
@@ -629,7 +763,8 @@ class TimeResSpec:
             f.weights = 1 / self.err
         f.res(x0)
 
-        fixed_names = []
+        if fixed_names is None:
+            fixed_names = list()
         if fix_sigma:
             fixed_names.append("w")
 
@@ -906,7 +1041,7 @@ class PolTRSpec:
             Lower bound for decay-constants.
         use_error : bool
             Wether to use the error to weight the residuals
-        fix_names : list of str
+        fixed_names : list of str
             Can be used to fix names.
         """
         pa, pe = self.para, self.perp
@@ -1707,6 +1842,67 @@ class PolTRSpecPlotter(PlotterMixin):
         ph.lbl_spec(ax=ax)
         ncol = max(num_exp // 3, 1)
         ax.legend(title="Decay\nConstants", ncol=ncol)
+        return palines, pelines
+
+    def sas(self, ax=None, **kwargs):
+        """
+        Plots a SAS (also called EDAS), if available.
+
+        Parameters
+        ----------
+        ax : plt.Axes or None
+            Axes to plot.
+        kwargs : dict
+            Keyword args given to the plot function
+
+        Returns
+        -------
+        Tuple of (List of Lines2D)
+        """
+        ds = self.pol_ds
+        if not hasattr(self.pol_ds, "fit_exp_result_"):
+            raise ValueError("The PolTRSpec must have successfully fit the " "data")
+        if ax is None:
+            ax = plt.gca()
+        is_nm = self.freq_unit == "nm"
+
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        f = ds.fit_exp_result_.fitter
+        num_exp = f.num_exponentials
+        taus = f.last_para[-num_exp:]
+        leg_text = [ph.nsf(i) + " " + ph.time_unit for i in taus]
+        if max(f.last_para) > 5 * f.t.max():
+            leg_text[-1] = "const."
+        n = ds.para.wavelengths.size
+        x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
+        start = 0
+
+        if any(np.diff(taus) < 0):
+            raise ValueError("SAS assumes sorted taus")
+
+        sas_pa = np.cumsum(f.c[:n, ::-1])
+        sas_pe = np.cumsum(f.c[n:, ::-1])
+
+        palines = []
+        pelines = []
+
+        for c, i in enumerate(range(start, num_exp)):
+            l1 = ax.plot(x,
+                         sas_pa[i],
+                         **kwargs,
+                         **self.para_ls,
+                         label=leg_text[i],
+                         color='C%d' % c)
+            l2 = ax.plot(x, sas_pe[i], **kwargs, **self.perp_ls)
+            dv.equal_color(l1, l2)
+            palines += l1
+            pelines += l2
+        ph.lbl_spec(ax=ax)
+        ncol = max(num_exp // 3, 1)
+        ax.legend(title="SAS\nConstants", ncol=ncol)
         return palines, pelines
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
