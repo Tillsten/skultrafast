@@ -508,12 +508,16 @@ def get_t0(fname: str,
     """
     a = np.load(fname, allow_pickle=True)
     if not fname[-11:] == 'messpy1.npz':
-        data = a['data']
-        if isinstance(scan, slice):
-            sig = np.nanmean(data[0, ..., scan], axis=-1)
+        if 'data' in a:
+            data = a['data']
+            if isinstance(scan, slice):
+                sig = np.nanmean(data[0, ..., scan], axis=-1)
+            else:
+                sig = data[0, ..., scan]
+            sig = np.nanmean(sig[:, :, 1], axis=1)            
         else:
-            sig = data[0, ..., scan]
-        sig = np.nanmean(sig[:, :, 1], axis=1)
+            sig = np.nanmean(a['signal'], 1)
+            
         t = a['t'] / 1000.
     else:
         data = a['data_Remote IR 32x2']

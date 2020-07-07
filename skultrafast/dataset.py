@@ -278,6 +278,8 @@ class TimeResSpec:
         """
         wl = self.wavelengths if freq_unit == "wl" else self.wavenumbers
         save_txt(fname, wl, self.t, self.data)
+        if self.err is not None:
+            save_txt(str(fname) + '.stderr', wl, self.t, self.err)
 
     @deprecated("cut_freqs is deprecated, use cut_freq instead")
     def cut_freqs(self, freq_ranges=None, invert_sel=False,
@@ -985,8 +987,10 @@ class PolTRSpec:
         self.bin_times = delegator(self, trs.bin_times)
         self.bin_freqs = delegator(self, trs.bin_freqs)
         self.cut_times = delegator(self, trs.cut_times)
+        self.cut_time = delegator(self, trs.cut_time)
         self.scale_and_shift = delegator(self, trs.scale_and_shift)
         self.cut_freqs = delegator(self, trs.cut_freqs)
+        self.cut_freq = delegator(self, trs.cut_freq)
         self.mask_freqs = delegator(self, trs.mask_freqs)
         self.mask_times = delegator(self, trs.mask_times)
         self.subtract_background = delegator(self, trs.subtract_background)
@@ -1063,7 +1067,7 @@ class PolTRSpec:
         f = fitter.Fitter(all_tup, model_coh=model_coh, model_disp=1)
         if use_error:
             all_err = np.hstack((pa.err, pe.err))
-            f.weights = 1 / all_err**2
+            f.weights = 1 / all_err
         f.res(x0)
         if fixed_names is None:
             fixed_names = []
@@ -1100,9 +1104,9 @@ class PolTRSpec:
             Which frequency unit is used.
         """
         fname = Path(fname)
-        self.para.save_txt(fname + '_para.txt', freq_unit)
-        self.perp.save_txt(fname + '_perp.txt', freq_unit)
-        self.iso.save_txt(fname + '_iso.txt', freq_unit)
+        self.para.save_txt(fname.with_suffix('.para.txt'), freq_unit)
+        self.perp.save_txt(fname.with_suffix('.perp.txt'), freq_unit)
+        self.iso.save_txt(fname.with_suffix('.iso.txt'), freq_unit)
 
 
 import functools
