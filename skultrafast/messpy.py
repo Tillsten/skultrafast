@@ -7,7 +7,7 @@ from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast import plot_helpers as ph
 from skultrafast.utils import sigma_clip, gauss_step
 import matplotlib.pyplot as plt
-from .dv import make_fi
+from .dv import make_fi, subtract_background
 
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
@@ -69,41 +69,55 @@ class MessPy2File:
         pol = pol.cut_freqs([vis_range], invert_sel=True)
         return pol.para, pol.perp, pol
 
-    def process_ir(self, t0=0, min_scans=0, max_scans=None):
+    def process_ir(self, t0=0, min_scans=0, 
+                   max_scans=None, subtract_background=True,
+                   center_ch=16, disp=14, sigma=3) -> PolTRSpec:
         data_file = self.file
         t = data_file['t'] - t0
         wli = data_file['wl_Remote IR 32x2']
-        wli = -(14.0 * (np.arange(32) - 17)) + wli[:, 16, None]
+        print( wli[:, 16, None])
+
+        wli = -(disp * (np.arange(32) - center_ch)) + wli[:, 16, None]
         wli = 1e7 / wli
         d = data_file['data_Remote IR 32x2'][min_scans:max_scans]
-
-        dp = sigma_clip(d[1::2, ...], axis=0, sigma=2.4).mean(0)
-        ds = sigma_clip(d[0::2, ...], axis=0, sigma=2.4).mean(0)
-        ds -= ds[:, :10, ...].mean(1, keepdims=True)
-        dp -= dp[:, :10, ...].mean(1, keepdims=True)
+        print(d.shape)
+        dp = sigma_clip(d[1::2, ...], axis=0, sigma=sigma)
+        dpm = dp.mean(0)
+        ds = sigma_clip(d[0::2, ...], axis=0, sigma=sigma)
+        dsm = ds.mean(0)
+        
+        if subtract_background:
+            dsm -= dsm[:, :10, ...].mean(1, keepdims=True)
+            dpm -= dpm[:, :10, ...].mean(1, keepdims=True)
 
         para = TimeResSpec(wli[0],
                            t,
-                           dp[0, :, 0, ...],
+                           dpm[0, :, 0, ...],
                            freq_unit='cm',
                            disp_freq_unit='cm')
         perp = TimeResSpec(wli[0],
                            t,
-                           ds[0, :, 0, ...],
+                           dsm[0, :, 0, ...],
                            freq_unit='cm',
                            disp_freq_unit='cm')
 
+        para.plot.spec(1, n_average=20)
+        
         for i in range(1, wli.shape[0]):
-            para = para.concat_datasets(
-                TimeResSpec(wli[i],
+            para_t =  TimeResSpec(wli[i],
                             t,
-                            dp[i, :, 0, ...],
+                            dpm[i, :, 0, ...],
                             freq_unit='cm',
-                            disp_freq_unit='cm'))
+                            disp_freq_unit='cm')
+
+            para_t.plot.spec(1, n_average=20)
+            para = para.concat_datasets(para_t)
+               
+            
             perp = perp.concat_datasets(
                 TimeResSpec(wli[i],
                             t,
-                            ds[i, :, 0, ...],
+                            dsm[i, :, 0, ...],
                             freq_unit='cm',
                             disp_freq_unit='cm'))
         both = PolTRSpec(para, perp)

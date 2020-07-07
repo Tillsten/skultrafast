@@ -3,9 +3,11 @@ import attr
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 from scipy.interpolate import interp1d, UnivariateSpline
 from matplotlib.cbook import deprecated
+from matplotlib.lines import Line2D
 
 import skultrafast.dv as dv
 from skultrafast.utils import sigma_clip
@@ -15,8 +17,8 @@ from skultrafast.data_io import save_txt
 from skultrafast import filter
 
 
-ndarray = np.ndarray
-from typing import Optional
+from typing import Optional, Type
+ndarray : Type[np.ndarray] = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
 EstDispResult.__doc__ = """
@@ -93,6 +95,7 @@ class TimeResSpec:
         wn_idx : function
             Helper function to search for the nearest wavelength index for a
             given wavelength.
+
         auto_plot : bool
             When True, some function will display their result automatically.            
         """
@@ -146,7 +149,7 @@ class TimeResSpec:
     @wavelengths.setter
     def wavelengths(self, wavelengths):
         self._wavelengths = wavelengths
-        self._wavenumbers = 1e7/wavelengths
+        self._wavenumbers = 1e7 / wavelengths
 
     @property
     def wavenumbers(self):
@@ -154,17 +157,17 @@ class TimeResSpec:
 
     @wavenumbers.setter
     def wavenumbers(self, wavenumbers):
-        self._wavelengths = 1e7/ wavenumbers
+        self._wavelengths = 1e7 / wavenumbers
         self._wavenumbers = wavenumbers
 
     def __iter__(self):
         """For compatibility with dv.tup"""
         return iter((self.wavelengths, self.t, self.data))
 
-    def _integrate(self, wn_a, wn_b):
-        i1, i2 = self.wl_idx
-
-    def wl_d(self, wl):
+    def wl_d(self, wl: float):
+        """
+        Returns the nearest transient for given wavelength.
+        """
         idx = self.wl_idx(wl)
         return self.data[:, idx]
 
@@ -196,11 +199,17 @@ class TimeResSpec:
             sp = UnivariateSpline(x, y)
             return sp.antiderivative(1)(x)
 
-    def wn_d(self, wl):
-        idx = self.wn_idx(wl)
+    def wn_d(self, wn: float):
+        """
+        Returns the nearest transient for given wavenumber.
+        """
+        idx = self.wn_idx(wn)
         return self.data[:, idx]
 
     def t_d(self, t):
+        """
+        Returns the nearest spectrum for given delaytime.
+        """
         idx = self.t_idx(t)
         return self.data[idx, :]
 
@@ -270,7 +279,6 @@ class TimeResSpec:
         wl = self.wavelengths if freq_unit == "wl" else self.wavenumbers
         save_txt(fname, wl, self.t, self.data)
 
-
     @deprecated("cut_freqs is deprecated, use cut_freq instead")
     def cut_freqs(self, freq_ranges=None, invert_sel=False,
                   freq_unit=None) -> "TimeResSpec":
@@ -314,7 +322,7 @@ class TimeResSpec:
         )
 
     def cut_freq(self, lower=-np.inf, upper=np.inf, invert_sel=False,
-                  freq_unit=None) -> "TimeResSpec":
+                 freq_unit=None) -> "TimeResSpec":
         """
         Removes channels inside (or outside ) of given frequency ranges.
 
@@ -617,10 +625,10 @@ class TimeResSpec:
 
         new_data = np.array(out)
         new_t = np.array(out_t)
-        out = self.copy()
-        out.t = new_t
-        out.data = new_data
-        return out
+        out_ds = self.copy()
+        out_ds.t = new_t
+        out_ds.data = new_data
+        return out_ds
 
     def estimate_dispersion(self,
                             heuristic="abs",
@@ -967,6 +975,7 @@ class PolTRSpec:
             self.iso = iso
         self.wavenumbers = para.wavenumbers
         self.wavelengths = para.wavelengths
+        self.wn, self.wl = self.wavenumbers, self.wavelengths
         self.t = para.t
         self.disp_freq_unit = para.disp_freq_unit
         self.plot = PolTRSpecPlotter(self, self.disp_freq_unit)
@@ -1090,6 +1099,7 @@ class PolTRSpec:
         freq_unit : 'nm' or 'cm' (default 'nm')
             Which frequency unit is used.
         """
+        fname = Path(fname)
         self.para.save_txt(fname + '_para.txt', freq_unit)
         self.perp.save_txt(fname + '_perp.txt', freq_unit)
         self.iso.save_txt(fname + '_iso.txt', freq_unit)
@@ -1099,7 +1109,8 @@ import functools
 import typing
 
 
-def delegator(pol_tr: PolTRSpec, method: typing.Callable):
+def delegator(pol_tr: PolTRSpec,
+              method: typing.Callable) -> typing.Callable[..., Optional[PolTRSpec]]:
     """
     Helper function to delegate methods calls from PolTRSpec to
     the methods of TimeResSpec.
@@ -1119,14 +1130,16 @@ def delegator(pol_tr: PolTRSpec, method: typing.Callable):
         do_return = False
 
     @functools.wraps(method)
-    def func(*args, **kwargs):
+    def func(*args, **kwargs) -> Optional[PolTRSpec]:
         para = method(pol_tr.para, *args, **kwargs)
         perp = method(pol_tr.perp, *args, **kwargs)
         iso = method(pol_tr.iso, *args, **kwargs)
         if do_return:
             return PolTRSpec(para, perp, iso=iso)
+        else:
+            return None
 
-    func.__docs__ = method.__doc__
+    func.__doc__ = method.__doc__
     func.__name__ = name
     return func
 
@@ -1291,8 +1304,15 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(*ax.get_xlim()[::-1])
         return mesh, con
 
-    def spec(self, *args, norm=False, ax=None, n_average=0, upsample=1, 
-             use_weights=False, offset=0., **kwargs):
+    def spec(self,
+             *args,
+             norm=False,
+             ax=None,
+             n_average=0,
+             upsample=1,
+             use_weights=False,
+             offset=0.,
+             **kwargs):
         """
         Plot spectra at given times.
 
@@ -1362,7 +1382,6 @@ class TimeResSpecPlotter(PlotterMixin):
             if norm:
                 dat = dat / abs(dat).max()
             markevery = None if upsample == 1 else upsample + 1
-
 
             li += ax.plot(x, dat + cur_offset, markevery=markevery, label=label, **kwargs)
             cur_offset += offset
@@ -1495,7 +1514,7 @@ class TimeResSpecPlotter(PlotterMixin):
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0, linscalex=linscale)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
-        ax.legend(loc="best", ncol=max(1,len(l)//3))
+        ax.legend(loc="best", ncol=max(1, len(l) // 3))
         ax.set_xlim(right=t.max())
         ax.yaxis.set_tick_params(which="minor", left=True)
         return l
@@ -1595,7 +1614,7 @@ class TimeResSpecPlotter(PlotterMixin):
 
         l1 = ax.plot(self.x, f.c[:, first_comp:num_exp], **kwargs)
         for i, l in enumerate(l1):
-            l.set_label(leg_text[i+first_comp])
+            l.set_label(leg_text[i + first_comp])
         ax.legend(title="Decay\nConstants")
         ph.lbl_spec(ax)
         return l1
@@ -1707,7 +1726,8 @@ class PolTRSpecPlotter(PlotterMixin):
         tuple of (List of `Lines2D`)
             List containing the Line2D objects belonging to the spectra.
         """
-
+        if ax is None:
+            ax = plt.gca()
         pa, pe = self.pol_ds.para, self.pol_ds.perp
         l1 = pa.plot.spec(*times,
                           norm=norm,
@@ -1722,7 +1742,17 @@ class PolTRSpecPlotter(PlotterMixin):
                           **self.perp_ls,
                           **kwargs)
         dv.equal_color(l1, l2)
+
+        colored_lines = [
+            Line2D([0], [0], color=l.get_color(), label=l.get_label()) for l in l1
+        ]
+        pol_lines = [
+            Line2D([0], [0], color='0.3', label=r'$\parallel$-pol.', **self.para_ls),
+            Line2D([0], [0], color='0.3', label=r'$\perp$-pol.', **self.perp_ls)
+        ]
+        all_lines = colored_lines + pol_lines
         self.lbl_spec(ax)
+        ax.legend(all_lines, [l.get_label() for l in all_lines])
         return l1, l2
 
     def trans(self, *args, symlog=True, norm=False, ax=None, **kwargs):
@@ -1786,7 +1816,18 @@ class PolTRSpecPlotter(PlotterMixin):
         self.para_ls.update(**duplicated_para)
         self.para_ls.update(**duplicated_perp)
         dv.equal_color(l1, l2)
-        ax.legend(l1, [i.get_label() for i in l1])
+
+        colored_lines = [
+            Line2D([0], [0], color=l.get_color(), label=l.get_label()) for l in l1
+        ]
+        pol_lines = [
+            Line2D([0], [0], color='0.3', label=r'$\parallel$-pol.', **self.para_ls),
+            Line2D([0], [0], color='0.3', label=r'$\perp$-pol.', **self.perp_ls)
+        ]
+        all_lines = colored_lines + pol_lines
+
+        ax.legend(all_lines, [l.get_label() for l in all_lines])
+
         return l1, l2
 
     def das(self, ax=None, plot_first_das=True, **kwargs):
