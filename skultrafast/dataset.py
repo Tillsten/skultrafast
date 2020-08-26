@@ -885,7 +885,7 @@ class TimeResSpec:
         nwl = self.wavelengths.copy()
         nspec = self.data.copy()
         nerr = self.err.copy() if self.err is not None else None
-        weights = 1 / self.err.copy()**2 if self.err is not None else None
+        weights = 1 / self.err.copy() if self.err is not None else None
 
         for i in range(nwl.size - 1):
             if i in skiplist:
@@ -893,7 +893,7 @@ class TimeResSpec:
             if abs(nwl[i + 1] - nwl[i]) < distance:
                 if self.err is not None:
                     if self.err is not None and use_err:
-                        w = weights[:, i:i + 2]
+                        w = weights[:, i:i + 2]**2
                     else:
                         w = None
                     mean = np.average(nspec[:, i:i + 2], 1, weights=w)
@@ -911,8 +911,10 @@ class TimeResSpec:
         if nerr is not None:
             nerr = np.delete(nerr, skiplist, axis=1)
         new_ds = self.copy()
-        if self.err is not None:
+        if nerr is not None and use_err:
             new_ds.err = nerr
+        else:
+            new_ds.err = None
         new_ds.wavelengths = nwl
         new_ds.wavenumbers = 1e7 / nwl
         new_ds.data = nspec

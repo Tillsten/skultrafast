@@ -53,12 +53,22 @@ ds = TimeResSpec(wavelengths, t_ps, data_mOD)
 print(ds.data.shape, ds.t.shape, ds.wavelengths.shape)
 
 # %%
-# The TimeResSpec object also has some helper methods to work with data.
-# These function find the index of value nearest to a given value, e.g. to find
+# The TimeResSpec object also has some helper methods to work with the data.
+# These functions find the index of the nearest value for a given number, e.g. to find
 # the position in the time array where the time is zero we can call the `t_idx`
 # method
 
 print(ds.t_idx(0), ds.t[ds.t_idx(0)])
+
+# %%
+# Hence the spectrum at t = 0 is given by
+
+y_0 = ds.data[ds.t_idx(0), :];
+
+# %%
+# In addition, there is also a shorthand to return the data at these indices directly.
+
+assert(sum(ds.t_d(0) - y_0) == 0)
 
 # %%
 # Overview map
@@ -89,14 +99,14 @@ plt.ylim(-2, 2)
 # ------------------------------------
 # *skultrafast* does this by first using a simple heuristic for determining the time-
 # zero for each transient. The resulting dispersion curve is then fitted with a poly-
-# nomial, using a robust fitting method. More details are given in the documentation.
+# nominal, using a robust fitting method. More details are given in the documentation.
 #
 # To estimate the dispersion just call the function. It will plot two colormaps, one
 # with the original dataset, the time-zeros found by the heuristic and the robust
 # polynomial fit of these values. The bottom color map shows the dispersion corrected
 # data.
-res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=3)
 
+res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=3)
 
 # %%
 # By default, *skultrafast* uses a very simple heuristic to find the time-zero.
@@ -104,16 +114,17 @@ res = ds.estimate_dispersion(heuristic_args=(1.5,), deg=3)
 # therefore underestimates the time-zero systematically. Therefore we slightly
 # shift the time-zero.
 #
-# This generallay works surprinsingly well. But if the exact time-zero is
+# This generally works surprisingly well. But if the exact time-zero is
 # necessary, I recommend to try other methods or measure the dispersion
 # directly.
 #
 # **WARNING**: The cell below changes the dataset inplace. Therefore repeated
-# calls to the cell will shift the time-zero again and again.
+# calls to the cell will shift the time-zero again and again. The shifting
+# can also be applied setting the `shift_result` parameter in the call
+# to `ds.estimate_dispersio`.
 
 new_ds = res.correct_ds  # Warning, this does not copy the dataset!
 new_ds.t -= 0.2
-
 
 # %%
 # Plotting spectra and transients
@@ -136,14 +147,14 @@ lines = res.correct_ds.plot.trans(500, 550, 620, 680)
 
 # %%
 # All these function offer a number of options. More information can be found in
-# the doctring.
+# their docstrings.
 #
 # Exponential fitting
 # -------------------
 # Fitting a decay-associated spectra (DAS) is a one-liner in skultrafast. If the
-# dataset is dispersion corrected, only a starting guess is necessay. Please
+# dataset is dispersion corrected, only a starting guess is necessary. Please
 # look at the docstring to see how the starting guess is structured.
-# _Note_, the the fitting inter may change in the future.
+# _Note_, the the fitting interface may change in the future.
 
 fit_res = new_ds.fit_exp([-0.0, 0.05, 0.2, 2, 20, 10000],
                           model_coh=True, fix_sigma=False, fix_t0=False)

@@ -9,9 +9,11 @@ from skultrafast.unit_conversions import dichro2angle, angle2dichro
 
 import numba
 
+
 @numba.vectorize
 def mexp(x):
     return np.exp(x)
+
 
 @dataclass
 class PFID_Fitter:
@@ -20,12 +22,11 @@ class PFID_Fitter:
     num_peaks: int = 0
     alpha: float = 0
 
-
     def start_fit(self):
         if 't0' not in self.params:
             self.params.add("t0", 0, vary=False)
         mini = lmfit.Minimizer(self.eval, self.params.copy())
-        
+
         fr = mini.least_squares(diff_step=0.001)
         print(fr)
         # self.params = fr.params
@@ -33,7 +34,7 @@ class PFID_Fitter:
         return fr
 
     def add_pfid(
-        self, A: float, x0: float, T2: float, angle: float, B: float, shift: float
+            self, A: float, x0: float, T2: float, angle: float, B: float, shift: float
     ):
         i = self.num_peaks
         items = zip("A x0 T2 angle B shift".split(" "), (A, x0, T2, angle, B, shift))
@@ -51,19 +52,18 @@ class PFID_Fitter:
             if name == 'A':
                 maxval = 0
             self.params.add(f"{name}_{i}", val, min=minval, max=maxval)
-        
-        self.num_peaks += 1
 
+        self.num_peaks += 1
 
     def eval(self, params=None, residual=True, t=None, wn=None):
         # print(params.values())
         if params is None:
-            params=self.params
+            params = self.params
 
         if t is None:
             t = self.ds.t
         if 't0' in params:
-            t = t-params['t0'].value
+            t = t - params['t0'].value
         if wn is None:
             wn = self.ds.wavenumbers
         vals = np.array(list(params.valuesdict().values()), dtype="f")
@@ -74,16 +74,16 @@ class PFID_Fitter:
         out_pe = np.zeros_like(self.ds.iso.data)
         alpha = 0
 
-        #for i in vals:
+        # for i in vals:
         #    A, x0, T2, angle, B, shift = i
-        
+
         A, x0, T2, angle, B, shift = vals.T
-        B = -B*A
+        B = -B * A
         dichro = angle2dichro(angle)
         pe = A * pfid_r4(-t, wn, x0, T2)
         pe += B * pfid_r6(-t, wn, x0, shift, T2)
-        pa = dichro*pe
-        
+        pa = dichro * pe
+
         out_pe = pe.sum(-1)
         out_pa = pa.sum(-1)
         alpha = np.sum(A * A) + np.sum(B * B)
@@ -92,7 +92,7 @@ class PFID_Fitter:
             out_pe -= self.ds.perp.data
             out = np.hstack((out_pa, out_pe))
             if self.alpha > 0:
-                out = np.hstack((out.ravel(),  alpha / self.num_peaks * self.alpha))
+                out = np.hstack((out.ravel(), alpha / self.num_peaks * self.alpha))
             return out
         else:
             return pa, pe

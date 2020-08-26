@@ -3,6 +3,32 @@ import numpy as np
 from scipy.special import erf
 from .unit_conversions import cm2THz
 
+import functools
+import wrapt
+
+def simulate_binning(wrapped=None, *, fac=5):
+    """
+    Simulates
+    """
+    if wrapped is None:
+        return functools.partial(simulate_binning,
+                fac=fac)
+
+    @wrapt.decorator
+    def wrapper(wrapped, instance, args, kwargs):
+        wl = kwargs['wl']
+        n = fac * wl.size
+        dx = abs(wl[1] - wl[0])
+        mids = (wl[:1] + wl[1:]) / 2.
+        upsampled = np.linspace(wl.min()-dx, wl.max()+dx, n)
+        idx = np.digitize(upsampled, mids)
+        kwargs['wl'] = upsampled
+        counts = np.bincount(idx)
+        result = wrapped(*args, **kwargs)
+        return np.bincount(idx, result)/counts
+
+    return wrapper(wrapped)
+
 
 def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
     """Masks outliers by iteratively removing points outside given
