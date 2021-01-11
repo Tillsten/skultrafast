@@ -775,6 +775,8 @@ def lbl_axes(axs=None, pos=(-.2, -.2), fmt="(%s)", labels=None, **kwargs):
         Format string, by default "(%s)"
     labels : [type], optional
         The label, by default None, resulting in a, b, c, ...
+    kwargs: 
+        will be passed to ax.text.
     """
     if axs is None:
         axs  = plt.gcf().get_axes()

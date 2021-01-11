@@ -12,7 +12,12 @@ To get the latest released version from pypi::
 
 To get the latest development version from GitHub (requires git installed)::
 
-    pip install git+https://github.com/tillsten/skultrafast
+    pip install git+https://github.com/tillsten/skultrafast --upgrade
+
+
+If you are using anaconda, git can be installed by::
+
+    conda install git
 
 
 Software prerequisites

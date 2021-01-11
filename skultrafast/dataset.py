@@ -100,7 +100,7 @@ class TimeResSpec:
             When True, some function will display their result automatically.            
         """
 
-        assert (t.shape[0], wl.shape[0]) == data.shape
+        assert (t.shape[0], wl.shape[0]) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
         t = t.copy()
         wl = wl.copy()
         data = data.copy()
@@ -985,7 +985,7 @@ class PolTRSpec:
         self.plot = PolTRSpecPlotter(self, self.disp_freq_unit)
 
         trs = TimeResSpec
-        self.copy = delegator(self, trs.copy)
+        self._copy = delegator(self, trs.copy)
         self.bin_times = delegator(self, trs.bin_times)
         self.bin_freqs = delegator(self, trs.bin_freqs)
         self.cut_times = delegator(self, trs.cut_times)
@@ -1002,6 +1002,12 @@ class PolTRSpec:
         self.t_idx = para.t_idx
         self.wn_idx = para.wn_idx
         self.wl_idx = para.wl_idx
+
+    def copy(self) -> 'PolTRSpec':
+        new_ds = self._copy()
+        new_ds.plot.para_ls = self.plot.para_ls
+        new_ds.plot.perp_ls = self.plot.perp_ls
+        return new_ds
 
     def wl_d(self, wl):
         idx = self.wl_idx(wl)
@@ -1026,7 +1032,7 @@ class PolTRSpec:
             lower_bound=0.1,
             use_error=False,
             fixed_names=None,
-    ):
+    ) -> FitExpResult:
         """
         Fit a sum of exponentials to the dataset. This function assumes
         the two datasets is already corrected for dispersion.
@@ -1426,7 +1432,7 @@ class TimeResSpecPlotter(PlotterMixin):
             ax = plt.gca()
         ph.ir_mode()
         ds = self.dataset
-        l = []
+        lines = []
         for (a, b) in args:
             a, b = sorted([a, b])
             idx = (a < ds.wavenumbers) & (ds.wavenumbers < b)
@@ -1438,7 +1444,7 @@ class TimeResSpecPlotter(PlotterMixin):
                 pass
             else:
                 dat = dat / dat[ds.t_idx(norm)]
-            l.extend(ax.plot(ds.t, dat, label=f"{a: .0f} cm-1 to {b: .0f}", **kwargs))
+            lines.extend(ax.plot(ds.t, dat, label=f"{a: .0f} cm-1 to {b: .0f}", **kwargs))
 
         if symlog:
             ax.set_xscale("symlog", linthreshx=1.0)
@@ -1446,7 +1452,7 @@ class TimeResSpecPlotter(PlotterMixin):
         ax.legend(loc="best", ncol=2)
         ax.set_xlim(right=ds.t.max())
         ax.yaxis.set_tick_params(which="minor", left=True)
-        return l
+        return lines
 
     def trans(self,
               *args,

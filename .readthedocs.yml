@@ -3,6 +3,6 @@ build:
 
 python:
   version: 3.7
-  setup_py_install: true
+  pip_install: true
   use_system_site_packages: true  
   requirements_file: doc_requirements.txt

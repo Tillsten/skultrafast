@@ -191,12 +191,13 @@ def extract_freqs_from_gaussianlog(fname):
     fr, ir, raman = [], [], []
 
     for line in f:
-        if line.lstrip().startswith('Frequencies ---'):
-            fr += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
-        elif line.lstrip().startswith('IR Intensi'):
-            ir += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
+        if line.lstrip().startswith('Frequencies --'):
+
+            fr += (map(float, re.sub(r'[^\d,.\d\d\d\d]', '', line).split()))
+        elif line.lstrip().startswith('IR Inten'):
+            ir += (map(float, re.sub(r'[^\d,.d\d\d\d]', '', line).split()))
         elif line.lstrip().startswith('Raman Activities'):
-            raman += (map(float, re.sub(r'[^\d,. ]', '', line).split()))
+            raman += (map(float, re.sub(r'[^\d,.\d\d\d\d ]', '', line).split()))
     arrs = map(np.array, [fr, ir, raman])
     return np.vstack([i.flatten() for i in arrs])
 

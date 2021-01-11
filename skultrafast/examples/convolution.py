@@ -7,8 +7,9 @@ gaussian with an one-sided decaying exponential. *sympy* is not an requirement o
 """
 # %%
 import sympy
-from sympy import (symbols, Heaviside, exp, sqrt, oo, integrate, simplify,
-                   special,  plot, pi, init_printing, solve)
+from sympy import (symbols, Heaviside, exp, sqrt, oo, integrate, simplify, Eq,
+                   plot, pi, init_printing, solve)
+from sympy import erfc, erf
 init_printing()
 # %%
 # First we need to define sympy symbols.
@@ -38,7 +39,7 @@ func
 
 # %%
 # Rewirte the `erf` with the `erfc` function:
-erfc, erf = special.error_functions.erfc, special.error_functions.erf
+#erfc, erf = special.error_functions.erfc, special.error_functions.erf
 func2 = func.rewrite(erfc)
 func2
 
@@ -52,32 +53,17 @@ plot(func2.subs(sigma, 0.2).subs(tau, 2).subs(A, 1), (t, -1, 10))
 # Used to model coherent contributions.
 
 irf, irf.diff(t, 1), irf.diff(t, 2)
-
+p1 = None
+for i in range(0, 3):
+    f = irf.diff(t, i)
+    sol = solve(f.diff(t, 1), t)
+    ext = f.subs(t, sol[0])
+    if not p1:
+        p1 = plot((f/ext).subs(sigma, 1), (t, -4, 4), show=False)   
+    else: 
+        p1.append(plot((f/ext).subs(sigma, 1), (t, -4, 4), show=False )[0])
+    print((f/ext))
+p1.show()
 # %%
 plot(irf.diff(t).subs(sigma, 0.2).subs(tau, 2), (t, -1, 1))
 plot(irf.diff(t, 2).subs(sigma, 0.2).subs(tau, 2), (t, -1, 1))
-
-# %%
-# Find the maxima and evalute the positions
-sol = solve(Eq(irf.diff(t, 2), 0), t)
-norm1 = dirf.subs(t, sol[0])
-sol, norm1
-
-# %%
-sol = solve(Eq(irf.diff(t, 3), 0), t)
-norm2 = irf.diff(t, 2).subs(t, sol[0])
-sol, norm2
-
-# %%
-nf1, nf2 = irf.diff(t, 1) / norm1, irf.diff(t, 2) / norm2
-
-# %%
-plot(
-    nf1.subs(sigma, 0.2).subs(tau, 2),
-    nf2.subs(sigma, 0.2).subs(tau, 2), (t, -1, 1))
-
-# %%
-nf1
-
-# %%
-nf2

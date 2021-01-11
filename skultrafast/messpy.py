@@ -56,10 +56,6 @@ class MessPy2File:
         ds = dsm.mean(0)
         dss = dsm.std(0)
 
-
-        #ds -= ds[:, :10, ...].mean(1, keepdims=True)
-        #dp -= dp[:, :10, ...].mean(1, keepdims=True)
-
         para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm',
              disp_freq_unit='nm')
         perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm',

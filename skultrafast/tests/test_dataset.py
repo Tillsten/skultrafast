@@ -13,6 +13,10 @@ def test_integrate():
 def test_methods():
     ds = TimeResSpec(wl, t, data)
     bds = ds.bin_freqs(300)
+    ds2 = TimeResSpec(1e7/wl, t, data, freq_unit='cm', disp_freq_unit='cm')
+    bds2 = ds2.bin_freqs(50)
+    assert(np.all(np.isfinite(bds2.data)))
+
     assert (len(bds.wavelengths) == 300)
     nds = ds.cut_freqs([(400, 600)])
     assert (np.all(nds.wavelengths > 600))
@@ -70,6 +74,8 @@ def test_pol_tr():
     assert (np.all(out.perp.wavelengths >= 550))
     ps.bin_times(6)
     ps.scale_and_shift(1, 0.5)
+    ps.copy()
+
 
 def test_plot():
     ds = TimeResSpec(wl, t, data)

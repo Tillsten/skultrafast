@@ -1,10 +1,23 @@
 """Module with various utility functions. Was called dv in older Versions."""
 import numpy as np
 from scipy.special import erf
+from scipy.stats import median_absolute_deviation
 from .unit_conversions import cm2THz
 
 import functools
 import wrapt
+
+
+def weighted_binning(x, arr, bins, weights=None):
+    """
+    Bins a 1D array to given bins using weights.
+    """
+    weights_total, _ = np.histogram(x, bins, weights=weights)
+    if weights is None:
+        weights = 1
+    binned_total, _ = np.histogram(x, bins, weights=arr*weights)
+    return binned_total / weights_total
+
 
 def simulate_binning(wrapped=None, *, fac=5):
     """
@@ -30,7 +43,7 @@ def simulate_binning(wrapped=None, *, fac=5):
     return wrapper(wrapped)
 
 
-def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
+def sigma_clip(data, sigma=3, max_iter=5, axis=-1, use_mad=False):
     """Masks outliers by iteratively removing points outside given
     standard deviations.
 
@@ -53,7 +66,11 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1):
     num_masked = 0
     for _ in range(max_iter):
         median = np.ma.median(data, axis, keepdims=1)
-        std = np.ma.std(data, axis, keepdims=1)
+        if use_mad:
+            std = median_abs_deviation(data, axis=1)
+        else:
+            std = np.ma.std(data, axis, keepdims=1)
+        
         upper, lower = median + sigma*std, median - sigma*std
         data = np.ma.masked_greater(data, upper, copy=False)
         data = np.ma.masked_less(data, lower, copy=False)
