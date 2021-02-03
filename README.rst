@@ -7,8 +7,6 @@ skultrafast
 .. image:: https://github.com/Tillsten/skultrafast/workflows/Python%20package/badge.svg
     :target: https://github.com/Tillsten/skultrafast/actions?query=workflow%3A%22Python+package%22
 
-![Python package](https://github.com/Tillsten/skultrafast/workflows/Python%20package/badge.svg)
-
 What is skultrafast?
 ====================
 Skultrafast stands for scikit.ultrafast and is an python package which aims
