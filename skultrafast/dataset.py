@@ -17,7 +17,7 @@ from skultrafast.data_io import save_txt
 from skultrafast import filter
 
 
-from typing import Optional, Type
+from typing import Callable, Optional, Type, Union, Iterable
 ndarray : Type[np.ndarray] = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
@@ -699,13 +699,13 @@ class TimeResSpec:
         self.disp_result_ = result
         return result
 
-    def interpolate_disp(self, polyfunc) -> "TimeResSpec":
+    def interpolate_disp(self, polyfunc: Union[Callable, Iterable]) -> "TimeResSpec":
         """
         Correct for dispersion by linear interpolation .
 
         Parameters
         ----------
-        polyfunc : function
+        polyfunc : Union[Callable, Iterable]
             Function which takes wavenumbers and returns time-zeros.
 
         Returns
@@ -715,7 +715,10 @@ class TimeResSpec:
             have the same delay point.
         """
         c = self.copy()
-        zeros = polyfunc(self.wavenumbers)
+        if callable(polyfunc):
+            zeros = polyfunc(self.wavenumbers)
+        else:
+            zeros = polyfunc
         ntc = zero_finding.interpol(self, zeros)
         tmp_tup = dv.tup(self.wavelengths, self.t, self.data)
         ntc_err = zero_finding.interpol(tmp_tup, zeros)
@@ -1897,7 +1900,7 @@ class PolTRSpecPlotter(PlotterMixin):
         ax.legend(title="Decay\nConstants", ncol=ncol)
         return palines, pelines
 
-    def sas(self, ax=None, **kwargs):
+    def sas(self, ax=None, *, add_legend=True, **kwargs):
         """
         Plots a SAS (also called EDAS), if available.
 
@@ -1955,7 +1958,8 @@ class PolTRSpecPlotter(PlotterMixin):
             pelines += l2
         ph.lbl_spec(ax=ax)
         ncol = max(num_exp // 3, 1)
-        ax.legend(title="SAS\nConstants", ncol=ncol)
+        if add_legend:
+            ax.legend(title="SAS\nConstants", ncol=ncol)
         return palines, pelines
 
     def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
@@ -2000,7 +2004,7 @@ class PolTRSpecPlotter(PlotterMixin):
         ax.set_xlim(-1)
         return l
 
-
+    def
 class DataSetInteractiveViewer:
     def __init__(self, dataset, fig_kws=None):
         """
