@@ -565,7 +565,7 @@ def get_t0(fname: str,
         axs[1].set_xlabel('t')
         plt.sca(axs[1])
         result.plot_fit()
-        axs[1].axvline(result.params['center'])
+        axs[1].axvline(result.params['center'].value)
 
     res = TzResult(
         x0=result.params['center'],
