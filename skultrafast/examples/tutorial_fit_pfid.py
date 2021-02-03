@@ -5,6 +5,9 @@ Fitting the perturbed free induction decay
 Sometimes it is useful to fit the perturbed free induction (see explanation in
 the PFID tutorial), maybe certain excited state features are yet visible or more
 exact determination of the center frequency is wanted.
+
+
+WORK IN PROGRESS
 """
 # %%
 import numpy as np
@@ -40,8 +43,7 @@ merged_ds.plot.spec(-.5, n_average=3);
 # %%
 merged_ds.plot.spec(-1.5, n_average=1);
 
-# %%
-t
+
 
 # %%
 merged_ds.t
