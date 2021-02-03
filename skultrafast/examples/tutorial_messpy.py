@@ -81,13 +81,14 @@ para, perp, iso = mpf.avg_and_concat()
 iso.plot.spec(1, 3, 10, n_average=5);
 
 # %%
-# The spectrum looks a little bit janky now, since after merging neighboring
-# points in the overlap regions were recorded in different spectral windows. The
-# noise within a spectral window is correlated hence the spectrum looks kind of
-# smooth within the window. There is also a second issue with the merged
-# spectrum, the point density suggests a larger spectral resolution than it is
-# available. Hence, the mitigate both issues, we have to bin down the spectrum.
-# Either we bin uniformly or only merge channels that are too close.
+# The spectrum looks a little bit janky now, since after merging the datasets
+# the points in the overlapping regions were seperataly recorded and the noise
+# within a recording is correlated. Hence, while the spectrum looks kind of
+# smooth within a window, the noise difference between the windows makes it
+# unsmooth. There is also a second issue with the merged spectrum: The point
+# density suggests a larger spectral resolution than available. To mitigate both
+# issues, we have to bin down the spectrum. We can either bin uniformly or only
+# merge channels that are too close together.
 
 fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4), sharex=True)
 
