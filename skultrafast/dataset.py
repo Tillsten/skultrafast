@@ -1007,7 +1007,7 @@ class PolTRSpec:
         self.wl_idx = para.wl_idx
 
     def copy(self) -> 'PolTRSpec':
-        new_ds = self._copy()
+        new_ds: PolTRSpec = self._copy()
         new_ds.plot.para_ls = self.plot.para_ls
         new_ds.plot.perp_ls = self.plot.perp_ls
         return new_ds

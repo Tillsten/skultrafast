@@ -74,8 +74,8 @@ iso_merge = mpf.av_scans_['iso0'].concat_datasets(mpf.av_scans_['iso1'])
 all_iso = iso_merge.concat_datasets(mpf.av_scans_['iso2'])
 
 # %%
-# Since this is quite common, we can also use the avg_and_concat methods,
-# which automates this.
+# Since this is quite common, this is also automated by the `avg_and_concat`
+# method.
 
 para, perp, iso = mpf.avg_and_concat()
 iso.plot.spec(1, 3, 10, n_average=5);

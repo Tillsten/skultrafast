@@ -3,8 +3,8 @@ Fitting the perturbed free induction decay
 ==========================================
 
 Sometimes it is useful to fit the perturbed free induction (see explanation in
-the PFID tutorial), maybe certain excited state features are yet visible or more
-exact determination of the center frequency is wanted.
+the PFID tutorial), maybe certain excited state features are not yet visible or
+a more exact determination of the center frequency is required.
 
 
 WORK IN PROGRESS

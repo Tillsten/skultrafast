@@ -7,10 +7,11 @@ using the approach as presented by van Stokkum
 (doi:10.1016/j.bbabio.2004.04.01).
 
 The general outline is as follows:
-1. Generate a decay associated spectrum
-2. Build the transfer matrix K, choosing starting concentrations j
-3. Generate transformation matricies from K and j
-4. Apply them to the basis vectors of the DAS
+
+    1. Generate a decay associated spectrum
+    2. Build the transfer matrix K, choosing starting concentrations j
+    3. Generate transformation matricies from K and j
+    4. Apply them to the basis vectors of the DAS
 
 Here we assume step 1 is already done. skultrafast has a module to help with step 2.
 For that we need the `Model` class. Please note that the module is quite barebones
@@ -61,13 +62,13 @@ num_mat = f(k2=2, k1=1)
 num_mat
 
 # %%
-# Next, we need the eigenvectors of the matrix. Note that the presented approach
+# Next, we need the eigenvectors of the matrix. Note, that the presented approach
 # assumes that the eigenvalues are simple eigenvalues. If this is not the case,
-# one has to use the jordan normal form. Notice that the eigenvalues of the 
-# matrix are the negative rates. Tha basically means, that the eigenbasis of the
+# one has to use the jordan normal form. As we see, the eigenvalues of the 
+# matrix are the negative rates. That basically means, that the eigenbasis of the
 # problem is given by a diagonal transfer matrix, which is the parallel model
 # described by an DAS. Hence, the eigenvectors allow us to transform the DAS to
-# an SAS and vice versa vie the inverse.
+# a SAS and vice versa by using the inverse.
 
 vals, vecs = np.linalg.eig(num_mat)
 vals
@@ -86,3 +87,7 @@ A = vecs @ np.diag(np.linalg.inv(vecs) @ j)
 A_inv = np.linalg.inv(A)
 
 # %%
+# Multiplying and DAS by `DAS @ A` with A should give the SAS, while `A_inv @
+# basis_vecs` should return the time-depedence of the concentrations.
+
+
