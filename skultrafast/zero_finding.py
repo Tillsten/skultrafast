@@ -12,8 +12,10 @@ import matplotlib.pyplot as plt
 from scipy.linalg import lstsq
 from scipy.optimize import least_squares
 
+
 class est(object):
     pass
+
 
 @dv.add_to_cls(est)
 def use_gaussian(dat, sigma=1):
@@ -22,6 +24,7 @@ def use_gaussian(dat, sigma=1):
     """
     derivate = nd.gaussian_filter(dat, (sigma, 0), 1)
     return np.argmax(np.abs(derivate), 0)
+
 
 @dv.add_to_cls(est)
 def use_diff(dat, smooth=0):
@@ -32,6 +35,7 @@ def use_diff(dat, smooth=0):
         dat = nd.gaussian_filter(dat, smooth)
     derivate = np.diff(dat, 1, 0)
     return np.argmax(np.abs(derivate), 0)
+
 
 @dv.add_to_cls(est)
 def use_sv_filter(dat, window=7, polydeg=5):
@@ -44,6 +48,7 @@ def use_sv_filter(dat, window=7, polydeg=5):
         out[i] = idx
     return out
 
+
 @dv.add_to_cls(est)
 def use_max(dat, use_abs=True):
     """
@@ -53,6 +58,7 @@ def use_max(dat, use_abs=True):
         dat = np.abs(dat)
     return np.argmax(dat, 0)
 
+
 @dv.add_to_cls(est)
 def use_first_abs(dat, val=5):
     """
@@ -61,10 +67,12 @@ def use_first_abs(dat, val=5):
     idx = np.abs(dat) > val
     return np.argmax(idx, 0)
 
+
 import scipy.optimize as opt
 
+
 @dv.add_to_cls(est)
-def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
+def use_fit(dat, t, tau=[5, 20000], w0=0.08, tn=None, n=-1):
     """
     Fits each transient with only w and x0 free.
     """
@@ -89,14 +97,14 @@ def use_fit(dat, t, tau=[ 5, 20000], w0=0.08, tn=None, n=-1):
             #o, w = leastsq(f, list([k, w0]))[0][:2]
             # = opt.minimize(f_sum, [k,w], method='BFGS')
             #x = cma.fmin(f_sum, [o, w0], 0.03, bounds=[(0,0.04),(5, 0.2)], restarts=1, verb_log=0)
-            x = opt.brute(f_sum, (range((tn-0.1),(tn+0.1),0.01),
-                                  np.range(0.04,0.13,0.01)))
-            o, w =x[0]
-            if abs(o-tn[i]) > 0.04:
+            x = opt.brute(f_sum, (range((tn - 0.1),
+                                        (tn + 0.1), 0.01), np.range(0.04, 0.13, 0.01)))
+            o, w = x[0]
+            if abs(o - tn[i]) > 0.04:
                 plt.plot(t, f([o, w]) + y)
                 plt.plot(t, y, 'o')
         except NameError:
-            o = w =  np.NaN
+            o = w = np.NaN
 
         out[i] = o
         w_out[i] = w
@@ -107,30 +115,29 @@ def _fit_func(t, y, x0, w, tau):
     """
     Fit
     """
-    base = np.column_stack((_fold_exp(t, w, x0, np.array(tau)).T,#))
-                            _coh_gaussian(t, w, x0)))
+    base = np.column_stack((
+        _fold_exp(t, w, x0, np.array(tau)).T,  #))
+        _coh_gaussian(t, w, x0)))
     base = np.nan_to_num(base)
     c = lstsq(base, y[:, None])
-    y_fit = np.dot( base, c[0])
-    return (y_fit[:,0] - y)
-
+    y_fit = np.dot(base, c[0])
+    return (y_fit[:, 0] - y)
 
 
 def robust_fit_tz(wl, tn, degree=3, t=1.345):
     """
     Apply a robust 3-degree fit to given tn-indexs.
     """
-    powers = np.arange(degree+1)
-    X = wl[:,None] ** powers[None, :]
+    powers = np.arange(degree + 1)
+    X = wl[:, None]**powers[None, :]
     c = np.linalg.lstsq(X, tn, rcond=1e-10)[0]
+
     def fit_func(p):
-        return tn - X @ p
+        return tn - X@p
 
     o = least_squares(fit_func, c, loss='cauchy')
     zeros = X @ o.x
     return zeros, o.x[::-1]
-
-
 
 
 def interpol(tup, tn, shift=0., new_t=None):
@@ -147,11 +154,11 @@ def interpol(tup, tn, shift=0., new_t=None):
     t_array -= shift
     dat_new = np.zeros((new_t.size, dat.shape[1]))
     for i in range(dat.shape[1]):
-        dat_new[:,i] = np.interp(new_t, t_array[:,i], dat[:,i], left=0)
+        dat_new[:, i] = np.interp(new_t, t_array[:, i], dat[:, i], left=0)
     return dv.tup(tup.wl, t, dat_new)
 
 
-def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
+def get_tz_cor(tup, method=use_diff, deg=3, plot=False, **kwargs):
     """
     Fully automatic timezero correction.
     """
@@ -166,23 +173,3 @@ def get_tz_cor(tup, method=use_diff, deg=3, plot=False,**kwargs):
         from . import plot_funcs as pl
         pl._plot_zero_finding(tup, raw_tn, fit, cor)
     return cor, fit
-
-if __name__ == '__main__':
-    a = np.load('SD5039.npz')
-    w, t, d = a['arr_0']
-    d -= d[:10,:].mean(0)
-    d = d[:,20:]
-    w = w[20:]
-    t = t
-    nt, tn = get_tz_cor(dv.tup(w, t, d), use_max)
-    n = 5
-    figure(0)
-    k, j = use_fit(d[:, ::n], t, tn=tn[::n], n=100)
-    figure(1)
-    pcolormesh(w, t, d)
-    plot(w[::n], k[::])
-    plot(w[::n], tn[::n])
-    ylim(2, 5)
-    xlim(w.min(), w.max())
-
-
