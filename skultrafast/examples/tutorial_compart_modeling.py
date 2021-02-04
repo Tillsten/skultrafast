@@ -124,7 +124,7 @@ m.build_matrix()
 # later.
 
 func = m.build_mat_func()
-num_mat = func(-1 / fr.lmfit_res.params['t0'], 0)
+num_mat = func(-1 / fr.lmfit_res.params['t0'], fr.lmfit_res.params['t1'])
 vals, vecs = np.linalg.eig(num_mat)
 
 # Reverse order
