@@ -104,7 +104,8 @@ res = dsb.estimate_dispersion(heuristic_args=(1.5, ), deg=3, shift_result=.15)
 # Fit the DAS first.
 
 ids = res.correct_ds
-fr = ids.fit_exp([0.0, 0.08, 1, 500000], model_coh=True, fix_sigma=False, fix_t0=False)
+fr = ids.fit_exp([0.0, 0.08, 1, 500000], 
+                 model_coh=True, fix_sigma=False, fix_t0=False)
 ids.plot.das()
 
 # %%
