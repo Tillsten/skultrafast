@@ -17,7 +17,7 @@ Here we assume step 1 is already done. skultrafast has a module to help with ste
 For that we need the `Model` class. Please note that the module is quite barebones
 and may still have bugs.
 """
-# sphinx_gallery_thumbnail_number = 2
+# sphinx_gallery_thumbnail_number = 3
 # %%
 import numpy as np
 from matplotlib import pyplot as plt
@@ -133,7 +133,7 @@ vecs = vecs[:, ::-1]
 j = np.zeros(len(vals))
 j[0] = 1
 
-A = vecs @ np.diag(np.linalg.inv(vecs) @ j)
+A = (vecs @ np.diag(np.linalg.inv(vecs) @ j)).T
 A_inv = np.linalg.inv(A)
 
 # %%
@@ -149,9 +149,9 @@ ax[0].plot(dsb.wn, das)
 ax[0].set_title('DAS')
 plot_helpers.lbl_spec(ax[0])
 
-sas = das @ A_inv
+sas = A_inv @ das.T 
 edas = np.cumsum(das, axis=1)
-ax[1].plot(dsb.wn, sas)
+ax[1].plot(dsb.wn, sas.T)
 ax[1].set_title('SAS')
 plot_helpers.lbl_spec(ax[1])
 # %%
@@ -162,7 +162,7 @@ fig, ax = plt.subplots(2, figsize=(3, 4))
 ax[0].plot(dsb.t, fr.fitter.x_vec[:, :2])
 ax[0].set_title('DAS')
 plot_helpers.lbl_trans(ax[0], use_symlog=False)
-ct = fr.fitter.x_vec[:, [1, 0]] @ A
+ct = fr.fitter.x_vec[:, :2] @ A
 ax[1].plot(dsb.t, ct)
 ax[1].set_title('SAS')
 plot_helpers.lbl_trans(ax[1], use_symlog=False)
@@ -182,3 +182,4 @@ fit - fr.fitter.model
 
 ((C@A) @ (A_inv @ S.T)) - (C @ S.T)
 
+# %%
