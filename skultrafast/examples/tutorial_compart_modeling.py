@@ -17,9 +17,10 @@ Here we assume step 1 is already done. skultrafast has a module to help with ste
 For that we need the `Model` class. Please note that the module is quite barebones
 and may still have bugs.
 """
+# sphinx_gallery_thumbnail_number = 2
 # %%
 import numpy as np
-from matplotlib import pyplot as plt 
+from matplotlib import pyplot as plt
 from skultrafast.kinetic_model import Model
 
 model = Model()
@@ -64,7 +65,7 @@ num_mat
 # %%
 # Next, we need the eigenvectors of the matrix. Note, that the presented approach
 # assumes that the eigenvalues are simple eigenvalues. If this is not the case,
-# one has to use the jordan normal form. As we see, the eigenvalues of the 
+# one has to use the jordan normal form. As we see, the eigenvalues of the
 # matrix are the negative rates. That basically means, that the eigenbasis of the
 # problem is given by a diagonal transfer matrix, which is the parallel model
 # described by an DAS. Hence, the eigenvectors allow us to transform the DAS to
@@ -87,7 +88,96 @@ A = vecs @ np.diag(np.linalg.inv(vecs) @ j)
 A_inv = np.linalg.inv(A)
 
 # %%
-# Multiplying and DAS by `DAS @ A` with A should give the SAS, while `A_inv @
-# basis_vecs` should return the time-depedence of the concentrations.
+# Now `DAS @ A_inv` should give the SAS, while `A_inv @ basis_vecs` should
+# return the time-depedence of the concentrations. Let's test that on some data.
+# Load test data and correct the dispersion.
 
+from skultrafast import dataset, data_io, plot_helpers
+plot_helpers.enable_style()
+
+wl, t, d = data_io.load_example()
+ds = dataset.TimeResSpec(wl, t, d)
+dsb = ds.bin_freqs(50)  # Bin dataset to save computation while building docs
+res = dsb.estimate_dispersion(heuristic_args=(1.5, ), deg=3, shift_result=.15)
+
+# %%
+# Fit the DAS first.
+
+ids = res.correct_ds
+fr = ids.fit_exp([0.0, 0.08, 1, 500000], model_coh=True, fix_sigma=False, fix_t0=False)
+ids.plot.das()
+
+# %%
+# Make sequential Model
+
+m = Model()
+m.add_transition('S1hot', 'S1', 'k1')
+m.add_transition('S1', 'zero', 'const')
+m.build_matrix()
+
+# %%
+# Make transformation matricies. Notice that we reverse the order of the
+# eigenvectors. Initally, they are sorted by they eigenvalue, therefore the
+# slowest componet comes first. Since this order is inverse of the skultrafast
+# order, we reserve it so we don't have to reverse our spectra and basis vectors
+# later.
+
+func = m.build_mat_func()
+num_mat = func(-1 / fr.lmfit_res.params['t0'], 0)
+vals, vecs = np.linalg.eig(num_mat)
+
+# Reverse order
+vecs = vecs[:, ::-1]
+
+j = np.zeros(len(vals))
+j[0] = 1
+
+A = vecs @ np.diag(np.linalg.inv(vecs) @ j)
+A_inv = np.linalg.inv(A)
+
+# %%
+# The DAS are members of the fitter object. Since we are also modeling coherent
+# contributions, we only take the first two components. Also, the eigenvalue
+# routine sorts the eigenvectors after their eigenvalue, which is the opposite
+# of our usal sorting, where the fast component comes first. T
+
+fig, ax = plt.subplots(2, figsize=(3, 4))
+
+das = fr.fitter.c[:, :2]
+ax[0].plot(dsb.wn, das)
+ax[0].set_title('DAS')
+plot_helpers.lbl_spec(ax[0])
+
+sas = das @ A_inv
+edas = np.cumsum(das, axis=1)
+ax[1].plot(dsb.wn, sas)
+ax[1].set_title('SAS')
+plot_helpers.lbl_spec(ax[1])
+# %%
+# As we can see, we sucessfully get the SAS, which in this case are just EDAS.
+# Let's also look at the concentrations.
+
+fig, ax = plt.subplots(2, figsize=(3, 4))
+ax[0].plot(dsb.t, fr.fitter.x_vec[:, :2])
+ax[0].set_title('DAS')
+plot_helpers.lbl_trans(ax[0], use_symlog=False)
+ct = fr.fitter.x_vec[:, [1, 0]] @ A
+ax[1].plot(dsb.t, ct)
+ax[1].set_title('SAS')
+plot_helpers.lbl_trans(ax[1], use_symlog=False)
+# %%
+# So why does it work?  The dataset is given by the outer product
+# of the concentrations and the spectrum
+
+C = fr.fitter.x_vec[:, :2]
+S = das[:, :2]
+
+fit = C @ S.T
+fit - fr.fitter.model
+
+# %%
+# Now we can insert `1 = A @ A_inv`. As expected this does not change the
+# product.
+
+((C@A) @ (A_inv @ S.T)) - (C @ S.T)
 

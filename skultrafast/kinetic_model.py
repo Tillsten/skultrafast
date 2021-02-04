@@ -70,8 +70,8 @@ class Model(object):
     
     def build_mat_func(self):
         rates = set([t.rate for t in self.transitions])
-        yields = (t.qu_yield for t in self.transitions if not isinstance(t.qu_yield, numbers.Number))
-        print(rates, yields)
+        yields = (t.qu_yield for t in self.transitions 
+                  if not isinstance(t.qu_yield, numbers.Number))        
         params = list(rates) + list(yields)
         K = self.build_matrix()
         K_func = sympy.lambdify(params, K)
