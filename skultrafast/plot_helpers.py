@@ -300,7 +300,7 @@ def plot_trans(tup, wls, symlog=True, norm=False, marker=None, ax=None, **kwargs
     ax.set_ylabel(sig_label)
     #plt.ylim(llim, ulim)
     if symlog:
-        ax.set_xscale('symlog', linthreshx=1)
+        ax.set_xscale('symlog', linthresh=1)
         ax.axvline(1, c='k', lw=0.5, zorder=1.9)
         symticks(ax)
     ax.axhline(0, color='k', lw=0.5, zorder=1.9)
@@ -443,7 +443,7 @@ def nice_map(wl,
     cb.set_label(sig_label)
     plt.contour(wl, t, d, lvls, norm=norm, colors='black', lw=.5, linestyles='solid')
 
-    plt.yscale('symlog', linthreshy=1, linscaley=linscaley, suby=[2, 3, 4, 5, 6, 7, 8, 9])
+    plt.yscale('symlog', linthresh=1, linscale=linscaley, suby=[2, 3, 4, 5, 6, 7, 8, 9])
     plt.ylim(-.5, )
     plt.xlabel(freq_label)
     plt.ylabel(time_label)
