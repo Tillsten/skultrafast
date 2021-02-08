@@ -476,27 +476,3 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
 
 def make_fi(data_to_search):
     return lambda x: fi(data_to_search, x)
-#if __name__=='__main__':
-#    import numpy as np
-#    ss = apply_spline(t, d[..., 0], s=9)
-#    plot(ss[:, 18])
-#    t, p, n, pn, total = calc_ratios(g)
-#    m,yf = exp_fit(t, pn, [1, 11])
-#    plot(t, pn)
-#    plot(t, yf)
-    #figure(1)
-    #clf()
-    #imshow(a-u.dot(v.T).T)
-    #o = efa(a, 10)
-    #o2 = efa(a,10,True)
-    #plot(t,log(o),'k')
-    #plot(t,log(o2[::-1,:]),'r')
-    #u, s, v = np.linalg.svd(a[:,:].T)
-    #o = moving_efa(a[:,:].T, 5, 8, 'pca')
-    #lo = log(o)#/log(o[:,0:1])
-    ##hlines(log(s[:8])/log(s[0]), wl.min(), wl.max())
-    #plot(wl, lo)
-    #show()
-
-
-
