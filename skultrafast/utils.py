@@ -103,12 +103,6 @@ def gauss_step(x, amp: float, center: float, sigma: float):
     """
     return amp * 0.5 * (1 + erf((x-center) / sigma / np.sqrt(2)))
 
-
-import numba
-
-cm2THz = numba.jit(cm2THz)
-
-@numba.jit(fastmath=True)
 def pfid_r4(T, om, om_10, T_2):
     """
     Calculates the PFID contribution for pure bleaching.
@@ -143,7 +137,6 @@ def pfid_r4(T, om, om_10, T_2):
     num = (1/T_2) * np.cos(dom * T) - dom * np.sin(dom * T)
     return np.exp(-T / T_2) * num / (dom**2 + (1 / T_2**2))
 
-@numba.jit(fastmath=True)
 def pfid_r6(T, om, om_10, om_21, T_2):
     """
     Calculates the PFID contribution for the shifted frequecy.
@@ -185,7 +178,7 @@ def pfid_r6(T, om, om_10, om_21, T_2):
     num = (1/T_2) * np.cos(dom * T) - dom2 * np.sin(dom * T)
     return np.exp(-T / T_2) * num / (dom2**2 + (1 / T_2**2))
 
-@numba.jit(fastmath=True)
+
 def pfid(T, om, om_10, fac, om_21, T_2):
     om = cm2THz(om) * 2 * np.pi
     om_10 = cm2THz(np.asarray(om_10)) * 2 * np.pi
@@ -211,3 +204,29 @@ def pfid(T, om, om_10, fac, om_21, T_2):
     r6 = dec * num / (dom2**2 + (1 / T_2**2))
     return r4 + fac*r6
 
+def linreg_std_errors(A, y):
+    """
+    Calculates the solution and error terms in a linear regression.
+
+    Parameters
+    ----------
+    A : ndarray
+        Basis matrix
+    y : ndarray
+        Data
+    Returns
+    -------
+    (ndarray, ndarray, ndarray,)
+        Tuple of three arrays: standard error, variance matrix, r2
+    """
+    x = np.linalg.lstsq(A, y, rcond=None)
+    fit = A @ x[0] 
+    resi = y - fit
+    r2 = 1 - x[1] / (y.shape[0] * y.var(0))
+    vcv = A.T @ A
+    epsvar = np.var(resi, axis=0, ddof=2)
+    bvar = np.linalg.inv(vcv) * epsvar[:, None, None]
+    bstd = np.zeros_like(x[0])
+    for i in range(bstd.shape[1]):
+        bstd[:, i] = np.sqrt(np.diag(bvar[i]))
+    return bstd, bvar, r2
