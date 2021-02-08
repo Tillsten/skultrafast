@@ -57,8 +57,7 @@ class Model(object):
         comp = get_comparments(self.transitions)
         idx_dict = dict(enumerate(comp))
         inv_idx = dict(zip(idx_dict.values(), idx_dict.keys()))
-        mat = sympy.zeros(len(comp))
-        #for i, comp in idx_dict.iteritems():
+        mat = sympy.zeros(len(comp))       
         for t in self.transitions:
             i = inv_idx[t.from_comp]
             mat[i, i] = mat[i, i] - t.rate * t.qu_yield
@@ -69,7 +68,8 @@ class Model(object):
         return mat
     
     def build_mat_func(self):
-        rates = set([t.rate for t in self.transitions])
+        # Use dict as an ordered set
+        rates = {t.rate: None for t in self.transitions}.keys()
         yields = (t.qu_yield for t in self.transitions 
                   if not isinstance(t.qu_yield, numbers.Number))        
         params = list(rates) + list(yields)
@@ -90,27 +90,6 @@ class Model(object):
         for i, row in enumerate(A):
             eqs.append(sympy.Eq(sympy.diff(funcs[i]), row.sum()))
         print(eqs)
-
-    def get_func(self, y0=None):
-        """
-        Gives back a function (compiled with cython)
-        """
-
-        A = self.build_matrix()
-        if y0 is None:
-            y0 = sympy.zeros(A.shape[0])
-            y0[0] = 1
-
-        ts = sympy.Symbol('ts', real=True, positive=True)
-        (P, J) = (A * ts).jordan_form()
-        out = sympy.zeros(P.cols)
-        for i in range(P.cols):
-            out[i, i] = sympy.exp(P[i, i])
-
-        sim_Pinv = sympy.simplify(P.inv('ADJ'))
-        sim_P = sympy.simplify(P)
-        sol = (sim_P*out)*(sim_Pinv * y0)
-        return sol
 
     def get_trans(self, y0, taus, t):
         """

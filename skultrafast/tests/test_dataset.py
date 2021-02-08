@@ -18,12 +18,8 @@ def test_methods():
     assert(np.all(np.isfinite(bds2.data)))
 
     assert (len(bds.wavelengths) == 300)
-    nds = ds.cut_freqs([(400, 600)])
-    assert (np.all(nds.wavelengths > 600))
     nds = ds.cut_freq(400, 600)
     assert (np.all(nds.wavelengths > 600))
-    nds = ds.cut_times([(-100, 1)])
-    assert (np.all(nds.t > .99))
     nds = ds.cut_time(-100, 1)
     assert (np.all(nds.t > .99))
     nds = ds.bin_times(5)
@@ -49,6 +45,23 @@ def test_fitter():
     x0 = [0.1, 0.1, 1, 1000]
     out = ds.fit_exp(x0)
 
+def test_error_calc():
+    ds = TimeResSpec(wl, t, data)
+    x0 = [0.1, 0.1, 1, 1000]
+    out = ds.fit_exp(x0)
+    out.calculate_stats()
+
+def test_sas():
+    from skultrafast.kinetic_model import Model
+    ds = TimeResSpec(wl, t, data)
+    x0 = [0.1, 0.1, 1, 1000]
+    out = ds.fit_exp(x0)
+    m = Model()
+    m.add_transition('S1', 'S1*', 'k1')
+    m.add_transition('S1', 'zero', 'k2')
+    out.make_sas(m, {})
+
+    
 
 def test_merge():
     ds = TimeResSpec(wl, t, data)
@@ -69,7 +82,7 @@ def test_pol_tr():
     print(ps.para.data.mask, ps.para.data.mask[1, ps.para.wl_idx(520)])
 
     assert (ps.para.data.mask[1, ps.para.wl_idx(520)])
-    out = ps.cut_freqs([(400, 550)])
+    out = ps.cut_freq(400, 550)
     assert (np.all(out.para.wavelengths >= 550))
     assert (np.all(out.perp.wavelengths >= 550))
     ps.bin_times(6)

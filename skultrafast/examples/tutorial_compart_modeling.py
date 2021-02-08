@@ -183,3 +183,21 @@ fit - fr.fitter.model
 ((C@A) @ (A_inv @ S.T)) - (C @ S.T)
 
 # %%
+# All steps above are done in the `make_sas` method of the the fitresult, taking
+# a `Model` as a parameter. If yields are required, they also have to be supplied.
+
+sas, ct = fr.make_sas(model, {})
+
+fig, ax = plt.subplots(2, figsize=(3, 4))
+ax[0].plot(fr.fitter.wl, sas.T)
+ax[0].set_title('SAS')
+plot_helpers.lbl_trans(ax[0], use_symlog=False)
+ct = fr.fitter.x_vec[:, :2] @ A
+ax[1].plot(dsb.t, ct)
+ax[1].set_title('Convoluted Concentrations')
+plot_helpers.lbl_trans(ax[1], use_symlog=False)
+
+
+
+
+# %%

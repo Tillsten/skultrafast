@@ -1,6 +1,7 @@
 from collections import namedtuple
 import attr
 import lmfit
+from lmfit.minimizer import MinimizerResult
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
@@ -10,15 +11,15 @@ from matplotlib.cbook import deprecated
 from matplotlib.lines import Line2D
 
 import skultrafast.dv as dv
-from skultrafast.utils import sigma_clip
+from skultrafast.utils import sigma_clip, linreg_std_errors
 import skultrafast.plot_helpers as ph
 from skultrafast import zero_finding, fitter, lifetimemap
 from skultrafast.data_io import save_txt
+from skultrafast.kinetic_model import Model
 from skultrafast import filter
 
-
-from typing import Callable, Optional, Type, Union, Iterable
-ndarray : Type[np.ndarray] = np.ndarray
+from typing import Callable, Optional, Type, Union, Iterable, Dict
+ndarray: Type[np.ndarray] = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
 EstDispResult.__doc__ = """
@@ -34,28 +35,87 @@ polynomial : function
     Function which maps wavenumbers to time-zeros.
 """
 
-FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
+#FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
+
+
+@attr.s(auto_attribs=True)
+class FitExpResult:
+    lmfit_mini: lmfit.Minimizer
+    lmfit_res: MinimizerResult
+    fitter: fitter.Fitter
+    pol_resolved: bool = False
+    std_errs: Optional[np.ndarray] = None
+    var: Optional[np.ndarray] = None
+    r2: Optional[np.ndarray] = None
+
+    def calculate_stats(self):
+        f = self.fitter
+        std_errs, vars, r2s = linreg_std_errors(f.x_vec, f.data)
+        self.std_errs = std_errs
+        self.vars = vars
+        self.r2s = r2s
+
+    def make_sas(self,
+                 model: Model,
+                 QYs: Dict[str, float] = {},
+                 y0: Optional[np.ndarray] = None):
+        """
+        Generate the species associated spectra from a given model using
+        the current das.
+
+        Parameters
+        ----------
+        model : Model
+            Model describing the kinetics. The number of transition rates should
+            be identical to the number of DAS-rates. Currtenly, the function
+            assumes that the transitions are added in a sorted way, e.g. fastest
+            rates first.
+        QYs : dict
+            Values for the yields.
+        y0 : ndarray
+            Starting concentrations. If none, y0 = [1, 0, 0, ...].
+        Returns
+        -------
+        ndarry            
+        """
+        f = self.fitter
+        taus = f.last_para[-f.num_exponentials:]
+        kvals = 1 / taus
+        if y0 is None:
+            y0 = np.zeros(len(taus))
+            y0[0] = 1
+        comps = list(map(str, model.get_compartments()))
+        func = model.build_mat_func()
+        K = func(*kvals, **QYs)
+        vals, vecs = np.linalg.eig(K)
+        if np.any(np.subtract.outer(vals, vals) > 1e10):
+            raise ValueError("Multivalued eigenvalue")
+        vecs = vecs[:, ::-1]
+        A = (vecs @ np.diag(np.linalg.solve(vecs, y0))).T
+        sas = np.linalg.solve(A, f.c[:, :f.num_exponentials].T)
+        ct = f.x_vec[:, :f.num_exponentials] @ A
+        return sas, ct
 
 
 @attr.s(eq=False)
 class LDMResult:
     skmodel: object = attr.ib()
-    coefs: ndarray = attr.ib()
-    fit: ndarray = attr.ib()
-    alpha: ndarray = attr.ib()
+    coefs: np.ndarray = attr.ib()
+    fit: np.ndarray = attr.ib()
+    alpha: np.ndarray = attr.ib()
 
 
 class TimeResSpec:
     def __init__(
-            self,
-            wl,
-            t,
-            data,
-            err=None,
-            name=None,
-            freq_unit="nm",
-            disp_freq_unit=None,
-            auto_plot=True,
+        self,
+        wl,
+        t,
+        data,
+        err=None,
+        name=None,
+        freq_unit="nm",
+        disp_freq_unit=None,
+        auto_plot=True,
     ):
         """
         Class for working with time-resolved spectra. If offers methods for
@@ -100,7 +160,9 @@ class TimeResSpec:
             When True, some function will display their result automatically.            
         """
 
-        assert (t.shape[0], wl.shape[0]) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
+        assert (
+            t.shape[0], wl.shape[0]
+        ) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
         t = t.copy()
         wl = wl.copy()
         data = data.copy()
@@ -282,7 +344,9 @@ class TimeResSpec:
             save_txt(str(fname) + '.stderr', wl, self.t, self.err)
 
     @deprecated("cut_freqs is deprecated, use cut_freq instead")
-    def cut_freqs(self, freq_ranges=None, invert_sel=False,
+    def cut_freqs(self,
+                  freq_ranges=None,
+                  invert_sel=False,
                   freq_unit=None) -> "TimeResSpec":
         """
         Removes channels inside (or outside ) of given frequency ranges.
@@ -323,7 +387,10 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
-    def cut_freq(self, lower=-np.inf, upper=np.inf, invert_sel=False,
+    def cut_freq(self,
+                 lower=-np.inf,
+                 upper=np.inf,
+                 invert_sel=False,
                  freq_unit=None) -> "TimeResSpec":
         """
         Removes channels inside (or outside ) of given frequency ranges.
@@ -487,7 +554,9 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
-    def scale_and_shift(self, scale: float = 1, t_shift: float = 0,
+    def scale_and_shift(self,
+                        scale: float = 1,
+                        t_shift: float = 0,
                         wl_shift: float = 0) -> "TimeResSpec":
         """
         Return a dataset which is scaled and/or has shifted times
@@ -727,16 +796,16 @@ class TimeResSpec:
         return c
 
     def fit_exp(
-            self,
-            x0,
-            fix_sigma=True,
-            fix_t0=True,
-            fix_last_decay=True,
-            model_coh=False,
-            lower_bound=0.1,
-            verbose=True,
-            use_error=False,
-            fixed_names=None,
+        self,
+        x0,
+        fix_sigma=True,
+        fix_t0=True,
+        fix_last_decay=True,
+        model_coh=False,
+        lower_bound=0.1,
+        verbose=True,
+        use_error=False,
+        fixed_names=None,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -867,7 +936,8 @@ class TimeResSpec:
             disp_freq_unit=self.disp_freq_unit,
         )
 
-    def merge_nearby_channels(self, distance: float = 8,
+    def merge_nearby_channels(self,
+                              distance: float = 8,
                               use_err: bool = False) -> "TimeResSpec":
         """Merges sequetential channels together if their distance
         is smaller than given.
@@ -1025,16 +1095,16 @@ class PolTRSpec:
         return self.para.T[:, idx], self.perp.T[:, idx]
 
     def fit_exp(
-            self,
-            x0,
-            fix_sigma=True,
-            fix_t0=True,
-            fix_last_decay=True,
-            from_t=None,
-            model_coh=False,
-            lower_bound=0.1,
-            use_error=False,
-            fixed_names=None,
+        self,
+        x0,
+        fix_sigma=True,
+        fix_t0=True,
+        fix_last_decay=True,
+        from_t=None,
+        model_coh=False,
+        lower_bound=0.1,
+        use_error=False,
+        fixed_names=None,
     ) -> FitExpResult:
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -1279,7 +1349,7 @@ class TimeResSpecPlotter(PlotterMixin):
             vmin, vmax = ds.data.max(), ds.data.min()
         mesh = ax.pcolormesh(x, ds.t, ds.data, vmin=vmin, vmax=vmax, cmap=cmap, **kwargs)
         if symlog:
-            ax.set_yscale("symlog", linthreshy=1)
+            ax.set_yscale("symlog", linthresh=1)
             ph.symticks(ax, axis="y")
             ax.set_ylim(-0.5)
         plt.colorbar(mesh, ax=ax)
@@ -1405,7 +1475,11 @@ class TimeResSpecPlotter(PlotterMixin):
             ax.set_xlim(x.max(), x.min())
         return li
 
-    def trans_integrals(self, *args, symlog: bool = True, norm=False, ax=None,
+    def trans_integrals(self,
+                        *args,
+                        symlog: bool = True,
+                        norm=False,
+                        ax=None,
                         **kwargs) -> typing.List[plt.Line2D]:
         """
         Plot the transients of integrated region. The integration will use np.trapz in
@@ -1450,7 +1524,7 @@ class TimeResSpecPlotter(PlotterMixin):
             lines.extend(ax.plot(ds.t, dat, label=f"{a: .0f} cm-1 to {b: .0f}", **kwargs))
 
         if symlog:
-            ax.set_xscale("symlog", linthreshx=1.0)
+            ax.set_xscale("symlog", linthresh=1.0)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
         ax.legend(loc="best", ncol=2)
         ax.set_xlim(right=ds.t.max())
@@ -1527,7 +1601,7 @@ class TimeResSpecPlotter(PlotterMixin):
             l.extend(ax.plot(t, dat, label="%.0f %s" % (x[idx], ph.freq_unit), **kwargs))
 
         if symlog:
-            ax.set_xscale("symlog", linthreshx=1.0, linscalex=linscale)
+            ax.set_xscale("symlog", linthresh=1.0, linscale=linscale)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
         ax.legend(loc="best", ncol=max(1, len(l) // 3))
         ax.set_xlim(right=t.max())
@@ -2004,7 +2078,7 @@ class PolTRSpecPlotter(PlotterMixin):
         ax.set_xlim(-1)
         return l
 
-    
+
 class DataSetInteractiveViewer:
     def __init__(self, dataset, fig_kws=None):
         """
@@ -2018,7 +2092,7 @@ class DataSetInteractiveViewer:
         self.figure, axs = plt.subplots(3, 1, **fig_kws)
         self.ax_img, self.ax_trans, self.ax_spec = axs
         self.ax_img.pcolormesh(dataset.wl, dataset.t, dataset.data)
-        self.ax_img.set_yscale("symlog", linscaley=1)
+        self.ax_img.set_yscale("symlog", linscale=1)
 
         self.trans_line = self.ax_trans.plot()
         self.spec_line = self.ax_spec.plot()
