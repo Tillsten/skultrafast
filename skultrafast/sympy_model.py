@@ -1,7 +1,5 @@
-# %%
 import matplotlib.pyplot as plt
 
-# %%
 import numpy as np
 from skultrafast import unit_conversions
 from lmfit import model
@@ -10,48 +8,55 @@ import inspect
 import sympy
 
 
-
 def cosd(deg):
-    return sympy.cos(deg/180*sympy.pi)
+    return sympy.cos(deg / 180 * sympy.pi)
+
 
 def angle_to_dichro(deg):
     return (1 + 2 * cosd(deg)**2) / (2 - cosd(deg)**2)
 
-def make_pol(func):    
-    def wrapper(*args):        
+
+def make_pol(func):
+    def wrapper(*args):
         angle = args[-1]
         print(angle)
         perp = func(*args[:-1])
-        para = perp * angle_to_dichro(angle)        
+        para = perp * angle_to_dichro(angle)
         return perp, para
+
     return wrapper
+
 
 @make_pol
 def lorentz(wl, t, A, Ac, xc, w, tau):
-    x  = (wl-xc)/w
+    x = (wl-xc) / w
     return (A * sympy.exp(-t / tau) + Ac) * 1 / (1 + x**2)
+
 
 @make_pol
 def gauss(wl, t, A, Ac, xc, w, tau):
-    x  = (wl-xc)/w
+    x = (wl-xc) / w
     return (A * sympy.exp(-t / tau) + Ac) * np.exp(-.5 * x**2)
+
 
 @make_pol
 def gauss_const(wl, t, A, xc, w):
-    x  = (wl-xc)/w
+    x = (wl-xc) / w
     return A * np.exp(-.5 * x**2)
+
 
 @make_pol
 def lorentz_const(wl, t, A, xc, w):
-    x  = (wl-xc)/w
+    x = (wl-xc) / w
     return A / (1 + x**2)
+
 
 class ModelBuilder:
     def __init__(self, wl: np.ndarray, t: np.ndarray):
         self.funcs = []
         self.args = []
         self.values = {}
-        self.n = 0    
+        self.n = 0
         self.t, self.wl = sympy.symbols('t wl')
         self.t_arr = t
         self.wl_arr = wl
@@ -68,10 +73,10 @@ class ModelBuilder:
         names = "A Ac xc w tau angle"
         all_sym = [self.wl, self.t]
         for name in names.split(' '):
-            sym = '%s_%d'%(name, self.n)
+            sym = '%s_%d' % (name, self.n)
             all_sym.append(sympy.Symbol(sym))
             self.values[sym] = locals()[name]
-                      
+
         if peak_type == 'lor':
             self.funcs.append(lorentz(*all_sym))
         elif peak_type == 'gauss':
@@ -80,14 +85,14 @@ class ModelBuilder:
         self.args += all_sym[2:]
         return len(self.funcs)
 
-    def add_constant(self, A, xc, w, angle, peak_type='lor'):  #        
+    def add_constant(self, A, xc, w, angle, peak_type='lor'):  #
         names = 'A xc w angle'
         all_sym = [self.wl, self.t]
         for name in names.split(' '):
-            sym = '%s_%d'%(name, self.n)
+            sym = '%s_%d' % (name, self.n)
             all_sym.append(sympy.Symbol(sym))
             self.values[sym] = locals()[name]
-                      
+
         if peak_type == 'lor':
             self.funcs.append(lorentz_const(*all_sym))
         elif peak_type == 'gauss':
@@ -96,7 +101,7 @@ class ModelBuilder:
         self.args += all_sym[2:]
         return len(self.funcs)
 
-    def make_model(self):        
+    def make_model(self):
         para = []
         perp = []
         for i in range(0, self.n):
@@ -109,10 +114,10 @@ class ModelBuilder:
     def make_params(self):
         pa, pe = self.make_model()
         expr = sympy.Tuple(pa, pe)
-        #print(sympy.cse(expr))
+
         free = expr.free_symbols
         func = sympy.lambdify(list(free), expr)
-        #print(list(free))
+
         mod = lmfit.Model(func, ['wl', 't'])
         params = mod.make_params()
         for pn in params:
@@ -124,42 +129,22 @@ class ModelBuilder:
             elif pn.startswith('w'):
                 p.min = 2
         y = mod.eval(wl=self.wl_arr[:, None], t=self.t_arr, **params)
-        #plt.plot(y[0][ :, 0])
+
         return params, mod
-        
+
     def plot_peaks(self, params=None):
         if params is None:
             params, mod = self.make_params()
 
         para = sympy.Tuple(*(i[1] for i in self.funcs))
         perp = sympy.Tuple(*(i[0] for i in self.funcs))
-        
-        print(para.free_symbols)
-        
+
         pa_func = sympy.lambdify(self.coords + list(params.keys()), para)
         pe_func = sympy.lambdify(self.coords + list(params.keys()), perp)
-        
+
         pa = pa_func(t=self.t_arr, wl=self.wl_arr[:, None], **params)
         pe = pe_func(t=self.t_arr, wl=self.wl_arr[:, None], **params)
-        for a,b in zip(pa, pe):
-            l1, = plt.plot(a[:, 0], lw=2)        
+        for a, b in zip(pa, pe):
+            l1, = plt.plot(a[:, 0], lw=2)
             plt.plot(b[:, 0], c=l1.get_color())
         y = mod.eval(wl=self.wl_arr[:, None], t=self.t_arr, **params)
-
-
-if __name__ == "__main__":
-    wl = np.linspace(-100, 100, 300)
-    t = np.linspace(0, 10, 50)
-    mb = ModelBuilder(wl, t)
-    mb.add_decaying(1, 0.2, -50, 30, 10, 90)
-    mb.add_decaying(-1, 0.2, 30, 30, 10, 0)
-    #mb.add_constant(0.3, 0, 10, 10)
-    
-    mb.plot_peaks()
-
-
-
-# %%
-
-
-# %%
