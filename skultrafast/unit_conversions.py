@@ -7,7 +7,7 @@ from scipy.constants import physical_constants, c
 c_cm = c * 100
 names = dict(cm="wavenumbers in 1/cm",
              fs="period in femotoseconds",
-             nm="wavelengths in nanometer",
+             nm="wavelength in nanometers",
              eV="energy in electron Volt",
              THz="frequency in THz",
              dichro="Dichroic ratio (para/perp)",

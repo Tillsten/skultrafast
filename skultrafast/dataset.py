@@ -18,7 +18,7 @@ from skultrafast.data_io import save_txt
 from skultrafast.kinetic_model import Model
 from skultrafast import filter
 
-from typing import Callable, Optional, Type, Union, Iterable, Dict
+from typing import Callable, List, Optional, Type, Union, Iterable, Dict
 ndarray: Type[np.ndarray] = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
@@ -863,6 +863,7 @@ class TimeResSpec:
         fitter.alpha = ridge_alpha
         result = lm_model.leastsq()
         result_tuple = FitExpResult(lm_model, result, f)
+        result_tuple.calculate_stats()
         self.fit_exp_result_ = result_tuple
         if verbose:
             lmfit.fit_report(result)
@@ -1170,6 +1171,7 @@ class PolTRSpec:
         result = lm_model.leastsq()
 
         self.fit_exp_result_ = FitExpResult(lm_model, result, f)
+        self.fit_exp_result_.calculate_stats()
         return self.fit_exp_result_
 
     def save_txt(self, fname, freq_unit="wl"):
@@ -1708,6 +1710,54 @@ class TimeResSpecPlotter(PlotterMixin):
         ph.lbl_spec(ax)
         return l1
 
+    def edas(self, ax=None, legend=True, **kwargs):
+        """
+        Plot a EDAS, if expontial fit is available.
+
+        Parameters
+        ----------
+        ax : plt.Axes or None
+            Axes to plot.
+        kwargs : dict
+            Keyword args given to the plot function
+
+        Returns
+        -------
+        Tuple of (List of Lines2D)
+        """
+        ds = self.dataset
+        if not hasattr(ds, "fit_exp_result_"):
+            raise ValueError("The PolTRSpec must have successfully fit the " "data first")
+        if ax is None:
+            ax = plt.gca()
+        is_nm = self.freq_unit == "nm"
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        f = ds.fit_exp_result_.fitter
+        num_exp = f.num_exponentials
+        taus = f.last_para[-num_exp:]
+        das = f.c[:, :num_exp]
+        print(np.diff(taus))
+        if np.any(np.diff(taus)<0):
+            raise ValueError("EADS expected sorted time-constants")
+
+        leg_text = [ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]]
+        if max(f.last_para) > 5 * f.t.max():
+            leg_text[-1] = "const."
+        edas = np.cumsum(das[:, ::-1], axis=1)
+        l1 = ax.plot(self.x, edas[:, ::-1], **kwargs)
+        
+        for i, l in enumerate(l1):
+            l.set_label(leg_text[i])
+        if legend:
+            ax.legend(title="Species")
+        ph.lbl_spec(ax)
+        return l1
+
+        
+
     def interactive(self):
         """
         Generates a jupyter widgets UI for exploring a spectra.
@@ -1974,7 +2024,7 @@ class PolTRSpecPlotter(PlotterMixin):
         ax.legend(title="Decay\nConstants", ncol=ncol)
         return palines, pelines
 
-    def sas(self, ax=None, *, add_legend=True, **kwargs):
+    def edas(self, ax=None, *, add_legend=True, **kwargs):
         """
         Plots a SAS (also called EDAS), if available.
 
@@ -2013,20 +2063,21 @@ class PolTRSpecPlotter(PlotterMixin):
         if any(np.diff(taus) < 0):
             raise ValueError("SAS assumes sorted taus")
 
-        sas_pa = np.cumsum(f.c[:n, ::-1])
-        sas_pe = np.cumsum(f.c[n:, ::-1])
+        das = f.c[:, :num_exp]
+        edas_pa = np.cumsum(das[:n, ::-1], axis=1)[:, ::-1]
+        edas_pe = np.cumsum(das[n:, ::-1], axis=1)[:, ::-1]
 
         palines = []
         pelines = []
 
         for c, i in enumerate(range(start, num_exp)):
             l1 = ax.plot(x,
-                         sas_pa[i],
+                         edas_pa.T[i],
                          **kwargs,
                          **self.para_ls,
                          label=leg_text[i],
                          color='C%d' % c)
-            l2 = ax.plot(x, sas_pe[i], **kwargs, **self.perp_ls)
+            l2 = ax.plot(x, edas_pe.T[i], **kwargs, **self.perp_ls)
             dv.equal_color(l1, l2)
             palines += l1
             pelines += l2
@@ -2088,21 +2139,59 @@ class DataSetInteractiveViewer:
         if fig_kws is None:
             fig_kws = {}
 
-        self.dataset = dataset
+        self.dataset = ds = dataset
         self.figure, axs = plt.subplots(3, 1, **fig_kws)
         self.ax_img, self.ax_trans, self.ax_spec = axs
-        self.ax_img.pcolormesh(dataset.wl, dataset.t, dataset.data)
+        self.ax_img.pcolormesh(dataset.wn, dataset.t, dataset.data)
         self.ax_img.set_yscale("symlog", linscale=1)
+        ph.lbl_spec(self.ax_spec)
+        ph.lbl_trans(self.ax_trans)
+        self.ax_trans.set_xscale('symlog', linthresh=1)
+        
+        self.trans_line = self.ax_trans.plot([])[0]
+        self.spec_line = self.ax_spec.plot([])[0]
+        self.ax_trans.set_xlim(-1, ds.t.max())
+        self.ax_trans.set_ylim(ds.data.min(), ds.data.max())
+        self.ax_spec.set_ylim(ds.data.min(), ds.data.max())
+        self.ax_spec.set_xlim(ds.wn.max(), ds.wn.min())
+        
+        self._events = []
+        self.init_events()
 
-        self.trans_line = self.ax_trans.plot()
-        self.spec_line = self.ax_spec.plot()
-
-    def init_event(self):
+    
+    def init_events(self):
         """Connect mpl events"""
+        
         connect = self.figure.canvas.mpl_connect
-        connect("motion_notify_event", self.update_lines)
+        self._events.append(connect("motion_notify_event", self.update_lines))
 
     def update_lines(self, event):
         """If the mouse cursor is over the 2D image, update
         the dynamic transient and spectrum"""
-        pass
+        print(event.inaxes)
+        self.ax_img.set_title(self.ax_spec)
+        if event.inaxes is self.ax_img:
+            ds = self.dataset
+            print(event)
+            wn_idx = ds.wn_idx(event.xdata)
+            t_idx = ds.t_idx(event.ydata)
+            spec = ds.data[t_idx, :]
+            trans = ds.data[:, wn_idx]
+            self.ax_trans.set_title('%.1f'%ds.wn[wn_idx])
+            self.ax_trans.set_ylim(trans.min(), trans.max())
+            self.ax_spec.set_title('%.1f'%ds.t[t_idx])
+            self.ax_spec.set_ylim(spec.min(), spec.max())
+            
+            self.trans_line.set_data(ds.t, ds.data[:, wn_idx])        
+            self.spec_line.set_data(ds.wn, ds.data[t_idx, :])
+                        
+            self.figure.canvas.draw()
+
+@attr.s(auto_attribs=True)
+class SasViewer:
+    fit_result : FitExpResult
+    model : Model 
+    fig : plt.Figure
+    lines : List[Line2D]
+
+    

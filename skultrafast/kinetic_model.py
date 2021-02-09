@@ -105,14 +105,6 @@ class Model(object):
         return o
 
 
-
-def _make_appy_sym(sym):
-    l = []
-    for i, s in enumerate(sym):
-        l.append(str(s) + '= 1/p[{}]\n'.format(i))
-    return ''.join(l)
-
-
 def get_comparments(list_trans):
     """
     Getting a list of transtions, return the compartments

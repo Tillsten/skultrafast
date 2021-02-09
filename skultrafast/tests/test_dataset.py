@@ -51,6 +51,27 @@ def test_error_calc():
     out = ds.fit_exp(x0)
     out.calculate_stats()
 
+def test_das_plots():
+    ds = TimeResSpec(wl, t, data)
+    x0 = [0.1, 0.1, 1, 1000]
+    out = ds.fit_exp(x0)
+    
+    ds.plot.das()
+    
+    ds.plot.edas()
+
+
+def test_das_pol_plots():
+    ds = TimeResSpec(wl, t, data)
+    pds = PolTRSpec(ds, ds) # fake pol
+    x0 = [0.1, 0.1, 1, 1000]
+    out = pds.fit_exp(x0)
+
+    pds.plot.das()
+    pds.plot.edas()
+
+
+
 def test_sas():
     from skultrafast.kinetic_model import Model
     ds = TimeResSpec(wl, t, data)
