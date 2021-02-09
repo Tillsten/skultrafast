@@ -20,7 +20,11 @@ class Transition(object):
             self.rate = sympy.Symbol(rate, real=True, positive=True)
         self.from_comp = from_comp
         self.to_comp = to_comp
-        self.qu_yield = qy or 1.
+        if qy is None:
+            qy = 1
+        if isinstance(qy, str):
+            qy = sympy.Symbol(qy, real=True, positive=True)
+        self.qu_yield = qy
 
 
 class Model(object):

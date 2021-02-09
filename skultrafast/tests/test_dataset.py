@@ -54,10 +54,8 @@ def test_error_calc():
 def test_das_plots():
     ds = TimeResSpec(wl, t, data)
     x0 = [0.1, 0.1, 1, 1000]
-    out = ds.fit_exp(x0)
-    
-    ds.plot.das()
-    
+    out = ds.fit_exp(x0)    
+    ds.plot.das()    
     ds.plot.edas()
 
 
@@ -69,6 +67,18 @@ def test_das_pol_plots():
 
     pds.plot.das()
     pds.plot.edas()
+
+def test_sas_pol_plots():
+    from skultrafast.kinetic_model import Model
+    ds = TimeResSpec(wl, t, data)
+    pds = PolTRSpec(ds, ds) # fake pol
+    x0 = [0.1, 0.1, 1, 1000]
+    out = pds.fit_exp(x0)
+    m = Model()
+    m.add_transition('S1', 'S1*', 'k1')
+    m.add_transition('S1', 'zero', 'k2')
+
+    pds.plot.sas(m)
 
 
 
@@ -82,6 +92,11 @@ def test_sas():
     m.add_transition('S1', 'zero', 'k2')
     out.make_sas(m, {})
 
+
+    m2 = Model()
+    m2.add_transition('S1', 'S1*', 'k1', 'qy1')
+    m2.add_transition('S1', 'zero', 'k2')
+    out.make_sas(m2, {'qy1': 0.5})
     
 
 def test_merge():

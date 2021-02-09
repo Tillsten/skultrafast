@@ -102,7 +102,7 @@ cds.plot.trans(*wls, ax=ax)
 # glyphs. But it looks quite unique and hence conflicts with the rest of
 # document. Therefore I strongly advocate to change the font. Most journals have
 # their own preference. If the journal does not propose a font, I suggest to use
-# *Arial, Helvetica* or *TeX Gyre Heros*. While this may look boring figure, it
+# *Arial, Helvetica* or *TeX Gyre Heros*. While this may look boring, it
 # also looks professional. 
 
 plt.rcParams['font.family'] = ["Arial", "Helvetica", "TeX Gyre Heros"]
@@ -168,7 +168,7 @@ ax.text(0, -50, r"$A = \sum_{i=1}^n sin\left(-\frac{t}{\tau_i}\right)$")
 # mind.
 #
 # The color cycle is set via the axes cycler. See the `matplotlib documentation
-# <https://https://matplotlib.org/3.2.1/tutorials/intermediate/color_cycle.html>`__.
+# <https://matplotlib.org/3.2.1/tutorials/intermediate/color_cycle.html>`__.
 # Note that matploblib also supports xkcd ans CSS `color names
 # <https://matplotlib.org/3.2.1/tutorials/colors/colors.html>`__.
 #

@@ -1742,7 +1742,7 @@ class TimeResSpecPlotter(PlotterMixin):
         taus = f.last_para[-num_exp:]
         das = f.c[:, :num_exp]
         print(np.diff(taus))
-        if np.any(np.diff(taus)<0):
+        if np.any(np.diff(taus) < 0):
             raise ValueError("EADS expected sorted time-constants")
 
         leg_text = [ph.nsf(i) + " " + ph.time_unit for i in f.last_para[-num_exp:]]
@@ -1750,15 +1750,13 @@ class TimeResSpecPlotter(PlotterMixin):
             leg_text[-1] = "const."
         edas = np.cumsum(das[:, ::-1], axis=1)
         l1 = ax.plot(self.x, edas[:, ::-1], **kwargs)
-        
+
         for i, l in enumerate(l1):
             l.set_label(leg_text[i])
         if legend:
             ax.legend(title="Species")
         ph.lbl_spec(ax)
         return l1
-
-        
 
     def interactive(self):
         """
@@ -2086,6 +2084,77 @@ class PolTRSpecPlotter(PlotterMixin):
         ph.lbl_spec(ax=ax)
         ncol = max(num_exp // 3, 1)
         if add_legend:
+            ax.legend(title="EDAS\nConstants", ncol=ncol)
+        return palines, pelines
+
+    def sas(self,
+            model: Model,
+            QYs: Dict[str, float] = {},
+            y0: Optional[np.ndarray] = None,
+            ax=None,
+            *,
+            add_legend=True,
+            **kwargs):
+        """
+        Plots a SAS (also called EDAS), if available.
+
+        Parameters
+        ----------
+        mode: Model
+            Kinetic model
+        yield: 
+            Dict with the yields
+        ax : plt.Axes or None
+            Axes to plot.
+        kwargs : dict
+            Keyword args given to the plot function
+
+        Returns
+        -------
+        Tuple of (List of Lines2D)
+        """
+        ds = self.pol_ds
+        if not hasattr(self.pol_ds, "fit_exp_result_"):
+            raise ValueError("The PolTRSpec must have successfully fit the " "data")
+        if ax is None:
+            ax = plt.gca()
+        is_nm = self.freq_unit == "nm"
+
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+        f = ds.fit_exp_result_.fitter
+        num_exp = f.num_exponentials
+        taus = f.last_para[-num_exp:]
+        if any(np.diff(taus) < 0):
+            raise ValueError("SAS assumes sorted taus")
+        
+        n = ds.para.wavelengths.size
+        sas, _ = ds.fit_exp_result_.make_sas(model, QYs, y0)
+        sas_pa = sas[:, :n]
+        sas_pe = sas[:, n:]
+        leg_text = list(map(str, model.get_compartments()))
+        n = ds.para.wavelengths.size
+        x = ds.para.wavelengths if is_nm else ds.para.wavenumbers
+
+        palines = []
+        pelines = []
+
+        for c, i in enumerate(range(num_exp)):
+            l1 = ax.plot(x,
+                         sas_pa[i],
+                         **kwargs,
+                         **self.para_ls,
+                         label=leg_text[i],
+                         color='C%d' % c)
+            l2 = ax.plot(x, sas_pe[i], **kwargs, **self.perp_ls)
+            dv.equal_color(l1, l2)
+            palines += l1
+            pelines += l2
+        ph.lbl_spec(ax=ax)
+        ncol = max(num_exp // 3, 1)
+        if add_legend:
             ax.legend(title="SAS\nConstants", ncol=ncol)
         return palines, pelines
 
@@ -2149,21 +2218,20 @@ class DataSetInteractiveViewer:
         ph.lbl_spec(self.ax_spec)
         ph.lbl_trans(self.ax_trans)
         self.ax_trans.set_xscale('symlog', linthresh=1)
-        
+
         self.trans_line = self.ax_trans.plot([])[0]
         self.spec_line = self.ax_spec.plot([])[0]
         self.ax_trans.set_xlim(-1, ds.t.max())
         self.ax_trans.set_ylim(ds.data.min(), ds.data.max())
         self.ax_spec.set_ylim(ds.data.min(), ds.data.max())
         self.ax_spec.set_xlim(ds.wn.max(), ds.wn.min())
-        
+
         self._events = []
         self.init_events()
 
-    
     def init_events(self):
         """Connect mpl events"""
-        
+
         connect = self.figure.canvas.mpl_connect
         self._events.append(connect("motion_notify_event", self.update_lines))
 
@@ -2179,21 +2247,20 @@ class DataSetInteractiveViewer:
             t_idx = ds.t_idx(event.ydata)
             spec = ds.data[t_idx, :]
             trans = ds.data[:, wn_idx]
-            self.ax_trans.set_title('%.1f'%ds.wn[wn_idx])
+            self.ax_trans.set_title('%.1f' % ds.wn[wn_idx])
             self.ax_trans.set_ylim(trans.min(), trans.max())
-            self.ax_spec.set_title('%.1f'%ds.t[t_idx])
+            self.ax_spec.set_title('%.1f' % ds.t[t_idx])
             self.ax_spec.set_ylim(spec.min(), spec.max())
-            
-            self.trans_line.set_data(ds.t, ds.data[:, wn_idx])        
+
+            self.trans_line.set_data(ds.t, ds.data[:, wn_idx])
             self.spec_line.set_data(ds.wn, ds.data[t_idx, :])
-                        
+
             self.figure.canvas.draw()
+
 
 @attr.s(auto_attribs=True)
 class SasViewer:
-    fit_result : FitExpResult
-    model : Model 
-    fig : plt.Figure
-    lines : List[Line2D]
-
-    
+    fit_result: FitExpResult
+    model: Model
+    fig: plt.Figure
+    lines: List[Line2D]

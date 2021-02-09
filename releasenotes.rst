@@ -1,6 +1,12 @@
 skultrafast Release notes
 ========================
 
+3.0.1 2021-02-9
+---------------
+
+- plot sas function
+- doc fixes
+  
 3.0 2021-02-9
 -------------
 
