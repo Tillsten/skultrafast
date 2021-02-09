@@ -80,6 +80,8 @@ class FitExpResult:
         """
         f = self.fitter
         taus = f.last_para[-f.num_exponentials:]
+        idx = np.argsort(taus)
+        taus = taus[idx]
         kvals = 1 / taus
         if y0 is None:
             y0 = np.zeros(len(taus))
@@ -92,7 +94,7 @@ class FitExpResult:
             raise ValueError("Multivalued eigenvalue")
         vecs = vecs[:, ::-1]
         A = (vecs @ np.diag(np.linalg.solve(vecs, y0))).T
-        sas = np.linalg.solve(A, f.c[:, :f.num_exponentials].T)
+        sas = np.linalg.solve(A, f.c[:, idx].T)
         ct = f.x_vec[:, :f.num_exponentials] @ A
         return sas, ct
 
