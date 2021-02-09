@@ -15,10 +15,10 @@ Contents:
    :maxdepth: 2
 
    introduction
+   releasenotes
    install
    auto_examples/tutorial_start
-   data_io
-   auto_examples/tutorial_messpy
+   data_io   
    api
    development
    zero-finding
