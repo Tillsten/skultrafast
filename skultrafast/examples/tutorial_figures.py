@@ -76,13 +76,14 @@ fig, ax = plt.subplots(figsize=(3.5, 3.5*(3/4)), dpi=144) # Figure with the same
 cds.plot.trans(*wls, ax=ax)
 
 # %%
-# Still the figure looks a little bit toy-like. This is that the default
-# font-size of matplotlib is to large for most publications. Before we continue
-# we save what we found so far as default and change the default font size. Most
-# journals have guidelines for the font size in figures, use them by directly
-# adjusting the rcParams. For additional fine adjustment try to use relative
-# font sizes. The suggested font-sizes for figures are generally between 7 and
-# 9. We also use the constrainted layout for a better figure layout.
+# Still the figure looks a little bit toy-like. This is partly caused by the
+# default font-size of matplotlib, which is to large for most publications.
+# Before we continue, we save the changes we did so far as a default and also
+# change the default font size. Most journals have guidelines for the font size
+# in figures, apply them by directly adjusting the rcParams. For additional fine
+# adjustment try to use relative font sizes. The suggested font-sizes for
+# figures are generally between 7 and 9. We also use the constrainted layout for
+# a better figure layout.
 
 plt.rcParams['figure.figsize'] = (3.5, 3.5*(3/4))
 plt.rcParams['figure.dpi'] = 144
@@ -92,6 +93,7 @@ plt.rcParams['font.size'] = 8
 fig, ax = plt.subplots() # Figure uses rcParams as  defaults
 cds.plot.trans(*wls, ax=ax)
 
+# %%
 # Font selection
 # --------------
 # **Select a font identical or similar to the font of the publication. When in
@@ -100,10 +102,10 @@ cds.plot.trans(*wls, ax=ax)
 # glyphs. But it looks quite unique and hence conflicts with the rest of
 # document. Therefore I strongly advocate to change the font. Most journals have
 # their own preference. If the journal does not propose a font, I suggest to use
-# *Arial, Helvetica* or *TeX Gyre Heros*. While this may lead to an boring
-# figure, it also looks professional. 
+# *Arial, Helvetica* or *TeX Gyre Heros*. While this may look boring figure, it
+# also looks professional. 
 
-plt.rcParams['font.family'] = "Arial"
+plt.rcParams['font.family'] = ["Arial", "Helvetica", "TeX Gyre Heros"]
 fig, ax = plt.subplots() # Figure uses rcParams as  defaults
 cds.plot.trans(*wls, ax=ax)
 
