@@ -1,4 +1,4 @@
-skultrfast Release notes
+skultrafast Release notes
 ========================
 
 3.0 2021-02-9
