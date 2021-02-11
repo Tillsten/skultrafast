@@ -1189,9 +1189,9 @@ class PolTRSpec:
             Which frequency unit is used.
         """
         fname = Path(fname)
-        self.para.save_txt(fname.with_suffix('.para.txt'), freq_unit)
-        self.perp.save_txt(fname.with_suffix('.perp.txt'), freq_unit)
-        self.iso.save_txt(fname.with_suffix('.iso.txt'), freq_unit)
+        self.para.save_txt(fname.with_suffix(fname.suffix + '.para.txt'), freq_unit)
+        self.perp.save_txt(fname.with_suffix(fname.suffix + '.perp.txt'), freq_unit)
+        self.iso.save_txt(fname.with_suffix(fname.suffix + '.iso.txt'), freq_unit)
 
 
 import functools
