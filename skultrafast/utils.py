@@ -222,7 +222,8 @@ def linreg_std_errors(A, y):
     x = np.linalg.lstsq(A, y, rcond=None)
     fit = A @ x[0] 
     resi = y - fit
-    r2 = 1 - x[1] / (y.shape[0] * y.var(0))
+    
+    r2 = 1 - (resi*resi).sum(0) / (y.shape[0] * y.var(0))
     vcv = A.T @ A
     epsvar = np.var(resi, axis=0, ddof=2)
     bvar = np.linalg.inv(vcv) * epsvar[:, None, None]
