@@ -177,6 +177,7 @@ class TimeResSpec:
             self._wavelengths = 1e7 / wl
             self._wavenumbers = wl
 
+        
         self.wn = self.wavenumbers
         self.wl = self.wavelengths
 
@@ -578,6 +579,8 @@ class TimeResSpec:
         """
         cpy = self.copy()
         cpy.data *= scale
+        if cpy.err is not None:
+            cpy.err *= scale
         cpy.t += t_shift
         cpy.wavelengths += wl_shift
         cpy.wavenumbers = 1e7 / cpy.wavelengths
