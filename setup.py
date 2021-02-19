@@ -14,8 +14,7 @@ with open('doc_requirements.txt') as f:
 
 class CleanCommand(Command):
     """Custom clean command to tidy up the project root."""
-    CLEAN_FILES = './build ./dist ./*.pyc ./*.tgz ./*.egg-info ./__pycache__'.split(
-        ' ')
+    CLEAN_FILES = './build ./dist ./*.pyc ./*.tgz ./*.egg-info ./__pycache__'.split(' ')
 
     user_options = []
 
@@ -34,14 +33,17 @@ class CleanCommand(Command):
             for path in [str(p) for p in abs_paths]:
                 if not path.startswith(here):
                     # Die if path in CLEAN_FILES is absolute + outside this directory
-                    raise ValueError("%s is not a path inside %s" %
-                                     (path, here))
+                    raise ValueError("%s is not a path inside %s" % (path, here))
                 print('removing %s' % os.path.relpath(path))
                 shutil.rmtree(path)
 
 
 cmdclass = {'clean': CleanCommand}
 cmdclass.update(versioneer.get_cmdclass())
+
+import pathlib
+
+examples = pathlib.Path(__file__) / 'skultrafast/examples/'
 
 setup(
     cmdclass=cmdclass,
@@ -51,7 +53,9 @@ setup(
     author_email='tillsten@zedat.fu-berlin.de',
     url='http://github.com/tillsten/skultrafast',
     packages=['skultrafast', 'skultrafast.base_funcs'],
-    package_data={'skultrafast': ['examples/data/test.npz', 'examples/data/messpyv1_data.npz', 'examples/data/germanium.npz']},
+    package_data={
+        'skultrafast': list(examples.glob('*'))
+    },
     license='LICENSE.txt',
     description='Python package for analyzing time-resolved spectra.',
     long_description=open('README.rst').read(),
