@@ -139,6 +139,21 @@ def test_plot():
     ds.plot.svd()
 
 
+def test_concat():
+    ds = TimeResSpec(wl, t, data)
+    ds = ds.bin_freqs(50)
+    n = ds.wavelengths.size //2
+    ds1 = ds.cut_freq(ds.wavelengths[n], np.inf)
+    ds2 = ds.cut_freq(-np.inf, ds.wavelengths[n])    
+    dsc = ds1.concat_datasets(ds2)    
+    assert(np.allclose(dsc.data, ds.data))
+    pol_ds = PolTRSpec(ds, ds)
+    a = PolTRSpec(ds1, ds1)
+    b = PolTRSpec(ds2, ds2)
+    pol_dsc = a.concat_datasets(b)
+    for p in 'para', 'perp', 'iso':
+        assert(np.allclose(getattr(pol_dsc, p).data, getattr(pol_ds, p).data))
+
 def test_pol_plot():
     ds = TimeResSpec(wl, t, data)
     ds = ds.bin_freqs(50)

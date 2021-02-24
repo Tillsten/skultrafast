@@ -31,6 +31,7 @@ which are automatically installed when using pip:
 * lmfit
 * matplotlib
 * sklearn
+* sympy
 
 To build the docs, more packages are necessary.
 

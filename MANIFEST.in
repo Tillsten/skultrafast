@@ -1,6 +1,6 @@
 include versioneer.py
 include skultrafast/_version.py
-include skultrfast/examples/*
+include skultrafast/examples/*
 include skultrafast/examples/data/*
 # added by check_manifest.py
 include *.txt

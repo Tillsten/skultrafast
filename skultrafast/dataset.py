@@ -369,7 +369,7 @@ class TimeResSpec:
         : TimeResSpec
             TimeResSpec containing only the listed regions.
         """
-        idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        idx = np.zeros_like(self.wavelengths, dtype=bool)
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
@@ -414,12 +414,12 @@ class TimeResSpec:
         : TimeResSpec
             TimeResSpec containing only the listed regions.
         """
-        idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        idx = np.zeros_like(self.wavelengths, dtype=bool)
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
 
-        idx ^= np.logical_and(arr > lower, arr < upper)
+        idx ^= np.logical_and(lower <= arr, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
@@ -469,7 +469,7 @@ class TimeResSpec:
         -------
         : None
         """
-        idx = np.zeros_like(self.wavelengths, dtype=np.bool)
+        idx = np.zeros_like(self.wavelengths, dtype=bool)
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
@@ -500,7 +500,7 @@ class TimeResSpec:
         : TimeResSpec
             TimeResSpec containing only the requested regions.
         """
-        idx = np.zeros_like(self.t, dtype=np.bool)
+        idx = np.zeros_like(self.t, dtype=bool)
         arr = self.t
         for (lower, upper) in time_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
@@ -537,7 +537,7 @@ class TimeResSpec:
         : TimeResSpec
             TimeResSpec containing only the requested regions.
         """
-        idx = np.zeros_like(self.t, dtype=np.bool)
+        idx = np.zeros_like(self.t, dtype=bool)
         arr = self.t
 
         idx ^= np.logical_and(arr > lower, arr < upper)
@@ -601,7 +601,7 @@ class TimeResSpec:
         -------
         : None
         """
-        idx = np.zeros_like(self.t, dtype=np.bool)
+        idx = np.zeros_like(self.t, dtype=bool)
         arr = self.t
         for (lower, upper) in time_ranges:
             idx ^= np.logical_and(arr > lower, arr < upper)
@@ -1196,6 +1196,13 @@ class PolTRSpec:
         self.perp.save_txt(fname.with_suffix(fname.suffix + '.perp.txt'), freq_unit)
         self.iso.save_txt(fname.with_suffix(fname.suffix + '.iso.txt'), freq_unit)
 
+    def concat_datasets(self, other_ds: 'PolTRSpec'):
+        new_ds = self.copy()
+        for i in ['para', 'perp', 'iso']:
+            o = getattr(other_ds, i)
+            setattr(new_ds, i, getattr(self, i).concat_datasets(o))
+        new_ds.wavelengths = new_ds.para.wavelengths
+        return new_ds
 
 import functools
 import typing
