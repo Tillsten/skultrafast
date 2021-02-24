@@ -1,7 +1,7 @@
 skultrafast Release notes
 =========================
 
-3.0.2 2021-02-24
+3.1.0 2021-02-24
 ----------------
 
 - allow PolTRSpec to be concacted
