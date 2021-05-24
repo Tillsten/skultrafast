@@ -105,9 +105,9 @@ def make_dual_axis(ax: plt.Axes = None, axis='x', unit='nm', minor_ticks=True):
     if minor_ticks:
         ax.minorticks_on()
         # pseudo_ax.minorticks_on()
-    if unit is 'nm':
+    if unit == 'nm':
         sub_axis.set_label('Wavelengths [nm]')
-    elif unit is 'cm':
+    elif unit == 'cm':
         sub_axis.set_label('Wavenumber [1/cm]')
 
 
