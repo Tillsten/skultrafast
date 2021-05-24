@@ -177,7 +177,6 @@ class TimeResSpec:
             self._wavelengths = 1e7 / wl
             self._wavenumbers = wl
 
-        
         self.wn = self.wavenumbers
         self.wl = self.wavelengths
 
@@ -849,7 +848,7 @@ class TimeResSpec:
         """
         if from_t is None:
             ds = self
-        else: 
+        else:
             ds = self.cut_time(upper=from_t)
         f = fitter.Fitter(ds, model_coh=model_coh, model_disp=1)
         if use_error:
@@ -1210,6 +1209,7 @@ class PolTRSpec:
         new_ds.wavelengths = new_ds.para.wavelengths
         return new_ds
 
+
 import functools
 import typing
 
@@ -1368,7 +1368,14 @@ class TimeResSpecPlotter(PlotterMixin):
             vmin, vmax = -m, m
         else:
             vmin, vmax = ds.data.max(), ds.data.min()
-        mesh = ax.pcolormesh(x, ds.t, ds.data, vmin=vmin, vmax=vmax, cmap=cmap, **kwargs)
+        mesh = ax.pcolormesh(x,
+                             ds.t,
+                             ds.data,
+                             shading='auto',
+                             vmin=vmin,
+                             vmax=vmax,
+                             cmap=cmap,
+                             **kwargs)
         if symlog:
             ax.set_yscale("symlog", linthresh=1)
             ph.symticks(ax, axis="y")
@@ -1863,8 +1870,7 @@ class PolTRSpecPlotter(PlotterMixin):
     def _get_wn(self):
         return self.pol_ds.para.wavenumbers
 
-    def spec(self, *times, norm=False, ax=None, n_average=0, add_legend=True,
-             **kwargs):
+    def spec(self, *times, norm=False, ax=None, n_average=0, add_legend=True, **kwargs):
         """
         Plot spectra at given times.
 
@@ -2159,7 +2165,7 @@ class PolTRSpecPlotter(PlotterMixin):
         taus = f.last_para[-num_exp:]
         if any(np.diff(taus) < 0):
             raise ValueError("SAS assumes sorted taus")
-        
+
         n = ds.para.wavelengths.size
         sas, _ = ds.fit_exp_result_.make_sas(model, QYs, y0)
         sas_pa = sas[:, :n]
