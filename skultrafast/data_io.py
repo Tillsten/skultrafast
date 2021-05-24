@@ -235,7 +235,7 @@ def get_example_path(kind):
 
     Parameters
     ----------
-    kind : ('sys_response', 'messpy', 'vapor', 'ir_polyfilm')
+    kind : ('sys_response', 'messpy', 'vapor', 'ir_polyfilm', 'quickcontrol')
         Which path to return.
     """
     import skultrafast
@@ -244,6 +244,7 @@ def get_example_path(kind):
         "messpy": 'messpyv1_data.npz',
         "sys_response": 'germanium.npz',
         "vapor": 'ir_waterabs.npy',
-        "ir_polyfilm": "PolystyreneFilm_spectrum.npz"
+        "ir_polyfilm": "PolystyreneFilm_spectrum.npz",
+        "quickcontrol": "quickcontrol.zip"
     }
     return root + file_dict[kind]

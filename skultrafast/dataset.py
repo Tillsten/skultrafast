@@ -811,6 +811,7 @@ class TimeResSpec:
         verbose=True,
         use_error=False,
         fixed_names=None,
+        from_t=None,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -843,9 +844,14 @@ class TimeResSpec:
             If the errors are used in the fit.
         fixed_names : list of str
             Can be used to fix time-constants
+        from_t: float or None
+            Can be used to cut of early times.
         """
-
-        f = fitter.Fitter(self, model_coh=model_coh, model_disp=1)
+        if from_t is None:
+            ds = self
+        else: 
+            ds = self.cut_time(upper=from_t)
+        f = fitter.Fitter(ds, model_coh=model_coh, model_disp=1)
         if use_error:
             f.weights = 1 / self.err
         f.res(x0)
@@ -1251,14 +1257,15 @@ class PlotterMixin:
         else:
             return self._get_wl()
 
-    def lbl_spec(self, ax=None):
+    def lbl_spec(self, ax=None, add_legend=True):
         if ax is None:
             ax = plt.gca()
         ax.set_xlabel(ph.freq_label)
         ax.set_ylabel(ph.sig_label)
         ax.autoscale(1, "x", 1)
         ax.axhline(0, color="k", lw=0.5, zorder=1.9)
-        ax.legend(loc='best', ncol=2, title='Delay time')
+        if add_legend:
+            ax.legend(loc='best', ncol=2, title='Delay time')
         ax.minorticks_on()
 
     def upsample_spec(self, y, kind='cubic', factor=4):
@@ -1411,6 +1418,7 @@ class TimeResSpecPlotter(PlotterMixin):
              upsample=1,
              use_weights=False,
              offset=0.,
+             add_legend=False,
              **kwargs):
         """
         Plot spectra at given times.
@@ -1437,7 +1445,8 @@ class TimeResSpecPlotter(PlotterMixin):
         offset: float or 'auto'
             If non-zero, each spectrum will be shifted by 'offset' relatively to the last one.
             'auto' is not yet implemented.
-
+        add_offset : bool
+            Weather to add an legend
         Returns
         -------
         list of `Lines2D`
@@ -1484,7 +1493,7 @@ class TimeResSpecPlotter(PlotterMixin):
 
             li += ax.plot(x, dat + cur_offset, markevery=markevery, label=label, **kwargs)
             cur_offset += offset
-        self.lbl_spec(ax)
+        self.lbl_spec(ax, add_legend)
         if not is_nm:
             ax.set_xlim(x.max(), x.min())
         return li
@@ -1552,6 +1561,7 @@ class TimeResSpecPlotter(PlotterMixin):
               ax=None,
               freq_unit="auto",
               linscale=1,
+              add_legend=True,
               **kwargs):
         """
         Plot the nearest transients for given frequencies.
@@ -1617,7 +1627,8 @@ class TimeResSpecPlotter(PlotterMixin):
         if symlog:
             ax.set_xscale("symlog", linthresh=1.0, linscale=linscale)
         ph.lbl_trans(ax=ax, use_symlog=symlog)
-        ax.legend(loc="best", ncol=max(1, len(l) // 3))
+        if add_legend:
+            ax.legend(loc="best", ncol=max(1, len(l) // 3))
         ax.set_xlim(right=t.max())
         ax.yaxis.set_tick_params(which="minor", left=True)
         return l
@@ -1680,7 +1691,7 @@ class TimeResSpecPlotter(PlotterMixin):
         ph.lbl_trans(axs[1], use_symlog=True)
         self.lbl_spec(axs[2])
 
-    def das(self, first_comp=0, ax=None, **kwargs):
+    def das(self, first_comp=0, ax=None, add_legend=True, **kwargs):
         """
         Plot a DAS, if available.
 
@@ -1694,7 +1705,8 @@ class TimeResSpecPlotter(PlotterMixin):
             Axes to plot.
         kwargs : dict
             Keyword args given to the plot function
-
+        add_legend: bool
+            If true, add legend automatically.
         Returns
         -------
         Tuple of (List of Lines2D)
@@ -1718,7 +1730,8 @@ class TimeResSpecPlotter(PlotterMixin):
         l1 = ax.plot(self.x, f.c[:, first_comp:num_exp], **kwargs)
         for i, l in enumerate(l1):
             l.set_label(leg_text[i + first_comp])
-        ax.legend(title="Decay\nConstants")
+        if add_legend:
+            ax.legend(title="Decay\nConstants")
         ph.lbl_spec(ax)
         return l1
 
@@ -1850,7 +1863,8 @@ class PolTRSpecPlotter(PlotterMixin):
     def _get_wn(self):
         return self.pol_ds.para.wavenumbers
 
-    def spec(self, *times, norm=False, ax=None, n_average=0, **kwargs):
+    def spec(self, *times, norm=False, ax=None, n_average=0, add_legend=True,
+             **kwargs):
         """
         Plot spectra at given times.
 
@@ -1869,7 +1883,8 @@ class PolTRSpecPlotter(PlotterMixin):
             around the specific time-points.
         upsample : int
             If >1, upsample the spectrum using cubic interpolation.
-
+        add_legend : bool
+            Add legend automatically
         Returns
         -------
         tuple of (List of `Lines2D`)
@@ -1900,11 +1915,12 @@ class PolTRSpecPlotter(PlotterMixin):
             Line2D([0], [0], color='0.3', label=r'$\perp$-pol.', **self.perp_ls)
         ]
         all_lines = colored_lines + pol_lines
-        self.lbl_spec(ax)
-        ax.legend(all_lines, [l.get_label() for l in all_lines])
+        self.lbl_spec(ax, add_legend=False)
+        if add_legend:
+            ax.legend(all_lines, [l.get_label() for l in all_lines])
         return l1, l2
 
-    def trans(self, *args, symlog=True, norm=False, ax=None, **kwargs):
+    def trans(self, *args, symlog=True, norm=False, ax=None, add_legend=True, **kwargs):
         """
         Plot the nearest transients for given frequencies.
 
@@ -1922,6 +1938,8 @@ class PolTRSpecPlotter(PlotterMixin):
         ax : plt.Axes or None
             Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
             current axes. The lines are plotted in this axis.
+        add_legend: bool
+            If true, it will add the legend automatically.
 
         All other kwargs are forwarded to the plot function.
 
@@ -1953,12 +1971,14 @@ class PolTRSpecPlotter(PlotterMixin):
                            symlog=symlog,
                            norm=norm,
                            ax=ax,
+                           add_legend=False,
                            **kwargs,
                            **self.para_ls)
         l2 = pe.plot.trans(*args,
                            symlog=symlog,
                            norm=norm,
                            ax=ax,
+                           add_legend=False,
                            **kwargs,
                            **self.perp_ls)
 
@@ -1974,8 +1994,8 @@ class PolTRSpecPlotter(PlotterMixin):
             Line2D([0], [0], color='0.3', label=r'$\perp$-pol.', **self.perp_ls)
         ]
         all_lines = colored_lines + pol_lines
-
-        ax.legend(all_lines, [l.get_label() for l in all_lines])
+        if add_legend:
+            ax.legend(all_lines, [l.get_label() for l in all_lines])
 
         return l1, l2
 
