@@ -21,6 +21,19 @@ dataset
     PolTRSpecPlotter
 
 
+messpy
+------
+
+.. automodule:: messpy
+    :members:
+
+quickcontrol
+------------
+    
+.. automodule:: quickcontrol
+    :members:
+    
+
 
 zero_finding
 ------------
