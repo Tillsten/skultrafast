@@ -31,14 +31,14 @@ list(Path(tmpdir.name).glob('*.*'))
 #
 # Lets load the info file for a 1D transient absorption experiment.
 
-from skultrafast.quickcontrol import QCTimeRes
+from skultrafast.quickcontrol import QC1DSpec, QCTimeRes
 from skultrafast.dataset import PolTRSpec, TimeResSpec
 from skultrafast import plot_helpers
 
 plot_helpers.enable_style()
 
-qc_file = QCTimeRes(tmpdir.name + '/20201029#07.info')
-qc_file = QCTimeRes(r'C:\Users\tills\OneDrive\Potsdam\data\20210521#135\20210521#135.info')
+qc_file = QC1DSpec(tmpdir.name + '/20201029#07.info')
+qc_file = QC1DSpec(r'C:\Users\tills\OneDrive\Potsdam\data\20210521#135\20210521#135.info')
 
 # %%
 # The `qc_file` object contains all the content from file in python readable
@@ -59,14 +59,7 @@ ds_pol = ds_pol.scale_and_shift(t_shift=-0.15)
 
 ds_pol.perp.data[:, :-2] = ds_pol.perp.data[:, 2:]
 
-def bg_correct(ds: 'TimeResSpec', left=30, right=30, deg=1):
-    dsc = ds.copy()
-    x = np.hstack((ds.wavelengths[:left], ds.wavelengths[-right:]))    
-    y = np.hstack((ds.data[:, :left], ds.data[:, -right:]))
-    coef = np.polynomial.polynomial.polyfit(x, y.T, deg=deg)    
-    back = np.polynomial.polynomial.polyval(ds.wavelengths, coef)    
-    dsc.data -=  back
-    return dsc
+
 
 para_bg = bg_correct(ds_pol.para, deg=2)
 perp_bg = bg_correct(ds_pol.perp, deg=2)
