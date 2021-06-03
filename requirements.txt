@@ -8,3 +8,4 @@ matplotlib
 pytest
 sympy
 wrapt
+proplot

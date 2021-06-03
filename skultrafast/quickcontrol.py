@@ -12,6 +12,18 @@ from skultrafast.dataset import PolTRSpec, TimeResSpec
 
 
 def parse_str(s: str):
+    """
+    Parse entry of info file
+
+    Parameters
+    ----------
+    s : str
+        Value
+    Returns
+    -------
+    obj
+        Corresponding python type
+    """
     if s.isnumeric():
         return int(s)
     elif set(s) - set('-.0123456789E') == set():
@@ -28,6 +40,36 @@ def parse_str(s: str):
         return False
     else:
         return s
+
+
+def bg_correct(wavelengths, data, left=30, right=30, deg=1):
+    """
+    Fit and subtract baseline from given data
+
+    Parameters
+    ----------
+    wavelengths : np.ndarry
+        Shared x-values
+    data : np.ndarray
+        Dataarray
+    left : int, optional
+        left points to use, by default 30
+    right : int, optional
+        right points to use, by default 30
+    deg : int, optional
+        Degree of the polynomial fit, by default 1 (linear)
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
+    x = np.hstack((wavelengths[:left], wavelengths[-right:]))    
+    y = np.hstack((data[:, :left], data[:, -right:]))
+    coef = np.polynomial.polynomial.polyfit(x, y.T, deg=deg)    
+    back = np.polynomial.polynomial.polyval(wavelengths, coef)    
+    data -=  back
+    return data
 
 
 @attr.s(auto_attribs=True)
@@ -70,7 +112,7 @@ class QCFile:
 class QCTimeRes(QCFile):
     t: Iterable[float] = attr.ib()
     wavelength: np.ndarray = attr.ib()
-
+    
     @t.default
     def _t_default(self):
         t_list = self.info['Delays']
@@ -86,6 +128,9 @@ class QCTimeRes(QCFile):
         self.wavelength = wls
         return wls
 
+    @property
+    def wavenumbers(self):
+        return 1e7/self.wavelength
 
 @attr.s(auto_attribs=True)
 class QC1DSpec(QCTimeRes):
@@ -112,12 +157,13 @@ class QC1DSpec(QCTimeRes):
 
 @attr.s(auto_attribs=True)
 class QC2DSpec(QCTimeRes):
-    t1: np.ndarray = attr.ib()
+    t1: np.ndarray = attr.ib()    
     par_data: Dict = attr.ib()
     per_data: Dict = attr.ib()
     per_spec: Optional[Dict] = None
     par_spec: Optional[Dict] = None
     pump_freq: np.ndarray = attr.ib()
+    upsampling : int = 2
 
     @t1.default
     def _load_t1(self):
@@ -144,8 +190,8 @@ class QC2DSpec(QCTimeRes):
             d = self.par_data[t].mean(0)
             d = d[:-1, 1:]
             d[0, :] *= 0.5
-            win = np.hamming(2 * len(self.t1))
-            spec = np.fft.rfft(d * win[len(self.t1):, None], axis=0, n=2 * len(self.t1))
+            win = np.hamming(self.upsampling * len(self.t1))
+            spec = np.fft.rfft(d * win[len(self.t1):, None], axis=0, n=self.upsampling * len(self.t1))
             spec_dict[t] = spec.real
         return spec_dict
 
@@ -159,6 +205,6 @@ class QC2DSpec(QCTimeRes):
 
     @pump_freq.default
     def _calc_freqs(self):
-        freqs = np.fft.rfftfreq(2 * len(self.t1), self.t1[1] - self.t1[0])
+        freqs = np.fft.rfftfreq(self.upsampling * len(self.t1), self.t1[1] - self.t1[0])
         cm = 0.01 / ((1/freqs) * 1e-15 * speed_of_light)
         return cm
