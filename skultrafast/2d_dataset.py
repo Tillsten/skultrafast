@@ -1,10 +1,12 @@
-from typing import Dict, Iterable, Tuple, Union
+from sys import prefix
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 import numpy as np
 from scipy.stats import linregress
 from pathlib import Path
 import attr
 import matplotlib.pyplot as plt
 import proplot
+import lmfit
 
 from skultrafast import dv
 from skultrafast.dataset import TimeResSpec
@@ -12,6 +14,39 @@ from skultrafast.dataset import TimeResSpec
 
 def inbetween(a, lower, upper):
     return np.logical_and(a >= lower, a <= upper)
+
+
+@attr.s(auto_attribs=True)
+class CLSResult:
+    wt: List[float]
+    slopes: List[float]
+    slope_errors: Optional[List[float]] = None
+    exp_fit_result_: Optional[lmfit.model.ModelResult] = None
+
+    def exp_fit(self, start_taus: List[float], use_const=True):
+        mod = lmfit.models.ConstantModel()
+        vals = {}
+
+        for i, v in enumerate(start_taus):
+            prefix = 'abcdefg'[i] + '_'
+            mod += lmfit.models.ExponentialModel(prefix=prefix)
+            vals[prefix + '_decay'] = v
+            vals[prefix + '_amplitude'] = 0.5 / len(start_taus)
+
+        for p in mod.param_names:
+            if p.endswith('decay'):
+                mod.set_param_hint(p, min=0)
+        if self.slope_errors is not None:
+            weights = 1 / np.array(self.slope_errors)
+        else:
+            weights = None
+        res = mod.fit(self.slopes,
+                      weights=weights,
+                      x=self.wt,
+                      c=np.min(self.slopes),
+                      **vals)
+        self.exp_fit_result_ = res
+        return res
 
 
 @attr.s(auto_attribs=True)
@@ -122,18 +157,18 @@ class TwoDim:
         pu = self.pump_wn
         pr = self.probe_wn
         spec = self.spec2d[self.t_ix(t), :, :]
-        pu_max = pu[np.argmin(np.min(spec, 1))]    
-        pu_idx = (pu<pu_max+pu_range) & (pu>pu_max-pu_range)        
+        pu_max = pu[np.argmin(np.min(spec, 1))]
+        pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
         l = []
 
-        for s in spec:        
+        for s in spec:
             if mode == 'pos':
                 s = -s
-            m = np.argmin(s) 
+            m = np.argmin(s)
             pr_max = pr[m]
-            i = u_idx = (pr<pr_max+pr_range) & (pr>pr_max-pr_range)      
-            cen_of_m = np.average(pr[i], weights=s[i])         
-            l.append(cen_of_m)            
+            i = u_idx = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
+            cen_of_m = np.average(pr[i], weights=s[i])
+            l.append(cen_of_m)
 
         x = pu[pu_idx]
         y = np.array(l)
@@ -145,11 +180,11 @@ class TwoDim:
 class TwoDimPlotter:
     ds: TwoDim
 
-    def contour(self, *times, region=None, ax=None):
+    def contour(self, *times, region=None, ax=None, subplots_kws={}):
         ds = self.ds
         idx = ds.t_idx()
         if ax is None:
-            fig, ax = proplot.subplots(nrows=len(idx))
+            fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws)
 
         m = abs(self.spec2d).max()
         for i, k in enumerate(idx):
@@ -161,7 +196,7 @@ class TwoDimPlotter:
                                symmetric=True,
                                linewidths=[0.7],
                                linestyles=['-'])
-                                       
+
         ax[i].axline((0, 0), slope=1, c='k', lw=0.5)
         if ds.t[k] < 1000:
             title = '%.0f fs' % ds.t[k]
@@ -173,3 +208,14 @@ class TwoDimPlotter:
                   xlim=region,
                   ylim=region)
         return c, ax
+
+    def movie_contour(self, fname, subplots_kw={}):
+        from matplotlib.animation import FuncAnimation
+        fig, ax = plt.subplots()
+
+        frames = self.ds.t
+        ani = FuncAnimation(fig=fig, func=self.contour, frames=frames)
+        ani.save(fname)
+
+    def plot_cls(self):
+        pass
