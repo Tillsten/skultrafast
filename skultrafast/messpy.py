@@ -7,7 +7,7 @@ from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast import plot_helpers as ph
 from skultrafast.utils import sigma_clip, gauss_step
 import matplotlib.pyplot as plt
-from .dv import make_fi, subtract_background
+from skultrafast.dv import make_fi, subtract_background
 
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean

@@ -88,23 +88,13 @@ pstr = r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten
 p = Path(pstr)
 fname =list(p.glob('**/*236.info'))[0]
 two_d = QC2DSpec(fname=fname)
-
-
-# %%
-
 two_dim_ds = two_d.make_ds()
+
 # %%
+ds = two_dim_ds.select_range((2130, 2180), (2100, 2200))
 ds.plot.contour(5)
 x, y, r = two_dim_ds.single_cls(5, 10, 10)
 plt.plot(y, x, lw=1, c='r')
-# %%
-#two_dim_ds.plot.contour(5.5, region=(2200, 2100))
-# %%
-ds = two_dim_ds.select_range((2130, 2180), (2100, 2200))
-# %%
-
-# %%
-ds.single_cls(2, 4, 4)
 # %%
 res = two_dim_ds.cls(pr_range=10, pu_range=10)
 fr = res.exp_fit([1])
@@ -114,8 +104,5 @@ fr
 fig, ax = plt.subplots()
 ax.errorbar(fr.userkws['x'], res.slopes,
  res.slope_errors, lw=0, elinewidth=1, marker='o', ms=2)
-ax.plot(fr.userkws['x'], fr.best_fit, c='k', lw=1)
-
-# %%
-fr
-# %%
+ax.plot(fr.userkws['x'], fr.best_fit, c='red', lw=1)
+ax.set_xscale('log')
