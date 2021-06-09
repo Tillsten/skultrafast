@@ -15,7 +15,7 @@ def weighted_binning(x, arr, bins, weights=None):
     weights_total, _ = np.histogram(x, bins, weights=weights)
     if weights is None:
         weights = 1
-    binned_total, _ = np.histogram(x, bins, weights=arr*weights)
+    binned_total, _ = np.histogram(x, bins, weights=arr * weights)
     return binned_total / weights_total
 
 
@@ -24,8 +24,7 @@ def simulate_binning(wrapped=None, *, fac=5):
     Simulates
     """
     if wrapped is None:
-        return functools.partial(simulate_binning,
-                fac=fac)
+        return functools.partial(simulate_binning, fac=fac)
 
     @wrapt.decorator
     def wrapper(wrapped, instance, args, kwargs):
@@ -33,12 +32,12 @@ def simulate_binning(wrapped=None, *, fac=5):
         n = fac * wl.size
         dx = abs(wl[1] - wl[0])
         mids = (wl[:1] + wl[1:]) / 2.
-        upsampled = np.linspace(wl.min()-dx, wl.max()+dx, n)
+        upsampled = np.linspace(wl.min() - dx, wl.max() + dx, n)
         idx = np.digitize(upsampled, mids)
         kwargs['wl'] = upsampled
         counts = np.bincount(idx)
         result = wrapped(*args, **kwargs)
-        return np.bincount(idx, result)/counts
+        return np.bincount(idx, result) / counts
 
     return wrapper(wrapped)
 
@@ -67,10 +66,10 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1, use_mad=False):
     for _ in range(max_iter):
         median = np.ma.median(data, axis, keepdims=1)
         if use_mad:
-            std = median_abs_deviation(data, axis=1)
+            std = median_absolute_deviation(data, axis=1)
         else:
             std = np.ma.std(data, axis, keepdims=1)
-        
+
         upper, lower = median + sigma*std, median - sigma*std
         data = np.ma.masked_greater(data, upper, copy=False)
         data = np.ma.masked_less(data, lower, copy=False)
@@ -102,6 +101,7 @@ def gauss_step(x, amp: float, center: float, sigma: float):
         The step functions
     """
     return amp * 0.5 * (1 + erf((x-center) / sigma / np.sqrt(2)))
+
 
 def pfid_r4(T, om, om_10, T_2):
     """
@@ -136,6 +136,7 @@ def pfid_r4(T, om, om_10, T_2):
 
     num = (1/T_2) * np.cos(dom * T) - dom * np.sin(dom * T)
     return np.exp(-T / T_2) * num / (dom**2 + (1 / T_2**2))
+
 
 def pfid_r6(T, om, om_10, om_21, T_2):
     """
@@ -196,13 +197,13 @@ def pfid(T, om, om_10, fac, om_21, T_2):
     cos = np.cos(dom * T)
     sin = np.sin(dom * T)
 
+    num = (1/T_2) * cos - dom*sin
+    r4 = dec * num / (dom**2 + (1 / T_2**2))
 
-    num = (1/T_2) * cos - dom * sin
-    r4 = dec * num / (dom**2 + (1 / T_2**2))    
-    
-    num = (1/T_2) * cos - dom2 * sin
+    num = (1/T_2) * cos - dom2*sin
     r6 = dec * num / (dom2**2 + (1 / T_2**2))
     return r4 + fac*r6
+
 
 def linreg_std_errors(A, y):
     """
@@ -220,10 +221,10 @@ def linreg_std_errors(A, y):
         Tuple of three arrays: standard error, variance matrix, r2
     """
     x = np.linalg.lstsq(A, y, rcond=None)
-    fit = A @ x[0] 
+    fit = A @ x[0]
     resi = y - fit
-    
-    r2 = 1 - (resi*resi).sum(0) / (y.shape[0] * y.var(0))
+
+    r2 = 1 - (resi * resi).sum(0) / (y.shape[0] * y.var(0))
     vcv = A.T @ A
     epsvar = np.var(resi, axis=0, ddof=2)
     bvar = np.linalg.inv(vcv) * epsvar[:, None, None]
@@ -231,3 +232,15 @@ def linreg_std_errors(A, y):
     for i in range(bstd.shape[1]):
         bstd[:, i] = np.sqrt(np.diag(bvar[i]))
     return bstd, bvar, r2
+
+
+def ExpDecay(x, A1, tau1, c):
+    return A1 * np.exp(-x / tau1) + c
+
+
+def TwoExpDecay(x, A1, tau1, A2, tau2, c):
+    return A2 * np.exp(-x / tau2) + ExpDecay(x, A1, tau1, c)
+
+
+def ThreeExpDecay(x, A1, tau1, A2, tau2, A3, tau3, c):
+    return A3 * np.exp(-x / tau3) + TwoExpDecay(x, A1, tau1, A2, tau2, c)

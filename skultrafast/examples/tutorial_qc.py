@@ -6,15 +6,18 @@ In this tutorial we will load files recorded with QuickControl software from
 Phasetech. Before starting with the actual import, we extract the example data
 into an temporary directory.
 """
-
 # %%
-from scipy.ndimage.interpolation import shift
-from skultrafast.dataset import PolTRSpec, TimeResSpec
-import numpy as np
-import matplotlib.pyplot as plt
-import zipfile, tempfile
+import tempfile
+import zipfile
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from scipy.ndimage.interpolation import shift
 from skultrafast.data_io import get_example_path
+from skultrafast.dataset import PolTRSpec, TimeResSpec
+
 p = get_example_path('quickcontrol')
 tmpdir = tempfile.TemporaryDirectory()
 zipfile.ZipFile(p).extractall(tmpdir.name)
@@ -31,9 +34,9 @@ list(Path(tmpdir.name).glob('*.*'))
 #
 # Lets load the info file for a 1D transient absorption experiment.
 
-from skultrafast.quickcontrol import QC1DSpec, QCTimeRes
+from skultrafast import plot_helpers, twoD_dataset
 from skultrafast.dataset import PolTRSpec, TimeResSpec
-from skultrafast import plot_helpers
+from skultrafast.quickcontrol import QC1DSpec, QC2DSpec, bg_correct
 
 plot_helpers.enable_style()
 
@@ -44,7 +47,7 @@ qc_file = QC1DSpec(r'C:\Users\tills\OneDrive\Potsdam\data\20210521#135\20210521#
 # The `qc_file` object contains all the content from file in python readable
 # form. We can access the info by just looking at the `info` attribute.
 
-#qc_file.info
+qc_file.info
 
 # %%
 # The data is saved in the `par_data` and `per_data` attributes. The time-delays
@@ -61,33 +64,39 @@ ds_pol.perp.data[:, :-2] = ds_pol.perp.data[:, 2:]
 
 
 
-para_bg = bg_correct(ds_pol.para, deg=2)
-perp_bg = bg_correct(ds_pol.perp, deg=2)
+bg_correct(ds_pol.wn, ds_pol.para.data, deg=2)
+bg_correct(ds_pol.wn, ds_pol.perp.data, deg=2)
+bg_correct(ds_pol.wn, ds_pol.iso.data, deg=2)
 #para_bg.plot.map(con_filter=(3, 3))
 
 # %%
 
-ds_bg = PolTRSpec(para_bg, perp_bg)
-ds_bg.iso.plot.map(con_filter=(3,3))
+ds_pol.iso.plot.map(con_filter=(3,3))
 # %%
 # How to work with the dataset please look at the other tutorials.
 
-ds_bg.iso.plot.spec( 0.5, 1, 20, 50, n_average=1, lw=1, add_legend=True)
+ds_pol.plot.spec( 0.5, 1, 20, 50, n_average=1,  add_legend=True)
 plt.xlim(2100, 2180)
 
 # %%
-fig, ax = plt.subplots()
-ds_bg.plot.trans(2155, 2128, symlog=1)
+# 2D Dataset
+# ----------
+# Now we will see how to load a 2D dataset. Again, the info file
+# is the entry point.
 
-#ax.set_xlim(-0.5, 50)
+pstr = r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten\SCN7'
+p = Path(pstr)
+fname =list(p.glob('**/*236.info'))[0]
+two_d = QC2DSpec(fname=fname)
 
 
 # %%
-ds_bg.iso.fit_exp([0.0, 0.01, 0.3, 50], from_t=0.3, fix_last_decay=False)
-ds_bg.iso.plot.das()
-# %%
 
+two_dim_ds = two_d.make_ds()
 # %%
-ds_pol.plot.trans(2200)
-plt.xlim(-10)
+two_dim_ds.plot.contour(5.5, region=(2200, 2100))
+# %%
+ds = two_dim_ds.select_range((2100, 2200), (2100, 2200))
+# %%
+ds.plot.contour(3)
 # %%

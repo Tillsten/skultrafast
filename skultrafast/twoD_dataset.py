@@ -1,12 +1,13 @@
+from pathlib import Path
 from sys import prefix
 from typing import Dict, Iterable, List, Optional, Tuple, Union
-import numpy as np
-from scipy.stats import linregress
-from pathlib import Path
+
 import attr
-import matplotlib.pyplot as plt
-import proplot
 import lmfit
+import matplotlib.pyplot as plt
+import numpy as np
+import proplot
+from scipy.stats import linregress
 
 from skultrafast import dv
 from skultrafast.dataset import TimeResSpec
@@ -21,6 +22,7 @@ class CLSResult:
     wt: List[float]
     slopes: List[float]
     slope_errors: Optional[List[float]] = None
+    lines: Optional[np.ndarray] = None
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
 
     def exp_fit(self, start_taus: List[float], use_const=True):
@@ -61,7 +63,10 @@ class TwoDim:
     "Array with the data"
     info: Dict = {}
     "Meta Info"
+    cls_result_: Optional[CLSResult] = None
+    "Contains the data from a CLS analysis"
     plot: 'TwoDimPlotter' = attr.ib()
+    "Plot object offering plotting methods"
 
     @plot.default
     def _plot_default(self):
@@ -74,14 +79,16 @@ class TwoDim:
                              f"{self.spec2d.shape} != {n, m, k}")
 
         self.spec2d = self.spec2d.copy()
-        self.probe_wn = self.spec2d.copy()
-        self.probe_wn = self.spec2d.copy()
+        self.probe_wn = self.probe_wn.copy()
+        self.pump_wn = self.pump_wn.copy()
 
         i1 = np.argsort(self.pump_wn)
         i2 = np.argsort(self.probe_wn)
 
     def copy(self) -> 'TwoDim':
-        return attr.evolve(self)
+        cpy = attr.evolve(self)
+        cpy.plot = TwoDimPlotter(cpy)
+        return cpy
 
     def t_idx(self, t: Union[float, Iterable[float]]) -> int:
         "Return nearest idx to nearest time value"
@@ -95,7 +102,7 @@ class TwoDim:
         "Return nearest idx to nearest pump_wn value"
         return dv.fi(self.pump_wn, wn)
 
-    def select_pump(self, pump_range, probe_range, invert=False) -> 'TwoDim':
+    def select_range(self, pump_range, probe_range, invert=False) -> 'TwoDim':
         """
         Return a dataset containing only the selected region.               
         """
@@ -132,7 +139,7 @@ class TwoDim:
         data = np.trapz(self.spec2d[:, :, pu_idx], self.pump_wn[pu_idx], axis=-1)
         return TimeResSpec(self.probe_wn, self.t, data, freq_unit='cm')
 
-    def cls(self, t, pr_range=9, pu_range=7, mode='neg'):
+    def single_cls(self, t, pr_range=9, pu_range=7, mode='neg'):
         """
         Calculate the CLS for single 2D spectrum.
 
@@ -175,6 +182,18 @@ class TwoDim:
         r = linregress(x, y)
         return x, y, r
 
+    def cls(self, **cls_args):
+        slopes, slope_errs = [], []
+        lines = []
+        for d in self.t:
+            x, y, r = self.single_cls(d, **cls_args)
+            slopes.append(r.slope)
+            slope_errs.append(r.stderr)
+            lines.append(np.column_stack((x, y)))
+        res = CLSResult(self.t, slopes=slopes, slope_errs=slope_errs, lines=lines)
+        self.cls_result_ = res
+        return res
+
 
 @attr.define(auto_attribs=True)
 class TwoDimPlotter:
@@ -182,14 +201,14 @@ class TwoDimPlotter:
 
     def contour(self, *times, region=None, ax=None, subplots_kws={}):
         ds = self.ds
-        idx = ds.t_idx()
+        idx = [ds.t_idx(i) for i in times]
         if ax is None:
             fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws)
 
-        m = abs(self.spec2d).max()
+        m = abs(ds.spec2d).max()
         for i, k in enumerate(idx):
-            c = ax[i].contourf(ds.probe_wn,
-                               ds.pump_wn,
+            c = ax[i].contourf(ds.pump_wn,
+                               ds.probe_wn,
                                ds.spec2d[k],
                                N=np.linspace(-m, m, 21),
                                cmap='Div',
@@ -197,12 +216,15 @@ class TwoDimPlotter:
                                linewidths=[0.7],
                                linestyles=['-'])
 
-        ax[i].axline((0, 0), slope=1, c='k', lw=0.5)
-        if ds.t[k] < 1000:
-            title = '%.0f fs' % ds.t[k]
-        else:
-            title = '%.1f ps' % (ds.t[k] / 1000)
-        ax[i].format(title=title, titleloc='ul', titleweight='bold')
+            ax[i].axline((0, 0), slope=1, c='k', lw=0.5)
+            if ds.t[k] < 1:
+                title = '%.0f fs' % (ds.t[k] * 1000)
+            else:
+                title = '%.1f ps' % (ds.t[k])
+            ax[i].format(title=title, titleloc='ul', titleweight='bold')
+        if region is None:
+            region = (max(ds.pump_wn.min(), ds.probe_wn.min()),
+                      min(ds.pump_wn.max(), ds.probe_wn.max()))
         ax.format(xlabel='Probe Freq. / cm$^{-1}$',
                   ylabel='Pump Freq. / cm$^{-1}$',
                   xlim=region,
