@@ -3,7 +3,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from skultrafast.quickcontrol import parse_str, QCFile, QCTimeRes
+from skultrafast.quickcontrol import QC1DSpec, parse_str, QCFile
 from skultrafast.data_io import get_example_path
 
 def test_parse():
@@ -31,7 +31,7 @@ def test_info(datadir):
         
 
 def test_1d(datadir):
-    qc = QCTimeRes(fname = datadir / '20201029#07')
+    qc = QC1DSpec(fname = datadir / '20201029#07')
     assert(qc.par_data.shape == qc.per_data.shape)
     assert(qc.par_data.shape[1] == len(qc.t))
     assert(qc.par_data.shape[2] == 128)
