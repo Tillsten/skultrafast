@@ -37,7 +37,8 @@ sphinx_gallery_conf = {
   'examples_dirs': ['../skultrafast/examples', ],
   'gallery_dirs': ['auto_examples', ],
   'filename_pattern': r'tutorial',
-  'ignore_pattern': r'convo'
+  'ignore_pattern': r'convo',
+  'abort_on_example_error': False,
 }
 
 # Add any paths that contain templates here, relative to this directory.
