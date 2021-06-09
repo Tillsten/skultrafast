@@ -32,8 +32,8 @@ class CLSResult:
         for i, v in enumerate(start_taus):
             prefix = 'abcdefg'[i] + '_'
             mod += lmfit.models.ExponentialModel(prefix=prefix)
-            vals[prefix + '_decay'] = v
-            vals[prefix + '_amplitude'] = 0.5 / len(start_taus)
+            vals[prefix + 'decay'] = v
+            vals[prefix + 'amplitude'] = 0.5 / len(start_taus)
 
         for p in mod.param_names:
             if p.endswith('decay'):
@@ -163,14 +163,17 @@ class TwoDim:
         """
         pu = self.pump_wn
         pr = self.probe_wn
-        spec = self.spec2d[self.t_ix(t), :, :]
+        spec = self.spec2d[self.t_idx(t), :, :].T
+        if mode == 'pos':
+            spec = -spec
+        print(spec.shape)
         pu_max = pu[np.argmin(np.min(spec, 1))]
         pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
+        spec = spec[pu_idx, :]
         l = []
 
         for s in spec:
-            if mode == 'pos':
-                s = -s
+
             m = np.argmin(s)
             pr_max = pr[m]
             i = u_idx = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
@@ -190,7 +193,7 @@ class TwoDim:
             slopes.append(r.slope)
             slope_errs.append(r.stderr)
             lines.append(np.column_stack((x, y)))
-        res = CLSResult(self.t, slopes=slopes, slope_errs=slope_errs, lines=lines)
+        res = CLSResult(self.t, slopes=slopes, slope_errors=slope_errs, lines=lines)
         self.cls_result_ = res
         return res
 
@@ -203,28 +206,27 @@ class TwoDimPlotter:
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
-            fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws)
+            aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
+            fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws, aspect=aspect)
 
         m = abs(ds.spec2d).max()
         for i, k in enumerate(idx):
-            c = ax[i].contourf(ds.pump_wn,
-                               ds.probe_wn,
-                               ds.spec2d[k],
+            c = ax[i].contourf(ds.probe_wn,
+                               ds.pump_wn,
+                               ds.spec2d[k].T,
                                N=np.linspace(-m, m, 21),
                                cmap='Div',
                                symmetric=True,
                                linewidths=[0.7],
                                linestyles=['-'])
-
-            ax[i].axline((0, 0), slope=1, c='k', lw=0.5)
+            start = max(ds.probe_wn.min(), ds.pump_wn.min())
+            ax[i].axline((start, start), slope=1, c='k', lw=0.5)
             if ds.t[k] < 1:
                 title = '%.0f fs' % (ds.t[k] * 1000)
             else:
                 title = '%.1f ps' % (ds.t[k])
             ax[i].format(title=title, titleloc='ul', titleweight='bold')
-        if region is None:
-            region = (max(ds.pump_wn.min(), ds.probe_wn.min()),
-                      min(ds.pump_wn.max(), ds.probe_wn.max()))
+
         ax.format(xlabel='Probe Freq. / cm$^{-1}$',
                   ylabel='Pump Freq. / cm$^{-1}$',
                   xlim=region,

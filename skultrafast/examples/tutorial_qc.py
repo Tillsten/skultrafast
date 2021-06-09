@@ -16,7 +16,7 @@ import numpy as np
 
 from scipy.ndimage.interpolation import shift
 from skultrafast.data_io import get_example_path
-from skultrafast.dataset import PolTRSpec, TimeResSpec
+from skultrafast.dataset import PolTRSpec, PolTRSpecPlotter, TimeResSpec
 
 p = get_example_path('quickcontrol')
 tmpdir = tempfile.TemporaryDirectory()
@@ -94,9 +94,28 @@ two_d = QC2DSpec(fname=fname)
 
 two_dim_ds = two_d.make_ds()
 # %%
-two_dim_ds.plot.contour(5.5, region=(2200, 2100))
+ds.plot.contour(5)
+x, y, r = two_dim_ds.single_cls(5, 10, 10)
+plt.plot(y, x, lw=1, c='r')
 # %%
-ds = two_dim_ds.select_range((2100, 2200), (2100, 2200))
+#two_dim_ds.plot.contour(5.5, region=(2200, 2100))
 # %%
-ds.plot.contour(3)
+ds = two_dim_ds.select_range((2130, 2180), (2100, 2200))
+# %%
+
+# %%
+ds.single_cls(2, 4, 4)
+# %%
+res = two_dim_ds.cls(pr_range=10, pu_range=10)
+fr = res.exp_fit([1])
+# %%
+fr
+# %%
+fig, ax = plt.subplots()
+ax.errorbar(fr.userkws['x'], res.slopes,
+ res.slope_errors, lw=0, elinewidth=1, marker='o', ms=2)
+ax.plot(fr.userkws['x'], fr.best_fit, c='k', lw=1)
+
+# %%
+fr
 # %%
