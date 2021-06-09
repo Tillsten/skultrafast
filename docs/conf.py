@@ -39,6 +39,7 @@ sphinx_gallery_conf = {
   'filename_pattern': r'tutorial',
   'ignore_pattern': r'convo',
   'abort_on_example_error': False,
+  'only_warn_on_example_error': True
 }
 
 # Add any paths that contain templates here, relative to this directory.
