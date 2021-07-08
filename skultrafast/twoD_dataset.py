@@ -6,7 +6,6 @@ import attr
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-import proplot
 from scipy.stats import linregress
 
 from skultrafast import dv
@@ -51,6 +50,53 @@ class CLSResult:
         return res
 
 
+@attr.define(auto_attribs=True)
+class TwoDimPlotter:
+    ds: 'TwoDim'
+
+    def contour(self, *times, region=None, ax=None, subplots_kws={}):
+        ds = self.ds
+        idx = [ds.t_idx(i) for i in times]
+        if ax is None:
+            aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
+            fig, ax = plt.subplots(nrows=len(idx), **subplots_kws,
+                             aspect=aspect)
+
+        m = abs(ds.spec2d).max()
+        for i, k in enumerate(idx):
+            c = ax[i].contourf(ds.probe_wn,
+                               ds.pump_wn,
+                               ds.spec2d[k].T,
+                               N=np.linspace(-m, m, 21),
+                               cmap='Div',
+                               symmetric=True,
+                               linewidths=[0.7],
+                               linestyles=['-'])
+            start = max(ds.probe_wn.min(), ds.pump_wn.min())
+            ax[i].axline((start, start), slope=1, c='k', lw=0.5)
+            if ds.t[k] < 1:
+                title = '%.0f fs' % (ds.t[k] * 1000)
+            else:
+                title = '%.1f ps' % (ds.t[k])
+            ax[i].format(title=title, titleloc='ul', titleweight='bold')
+
+        ax.format(xlabel='Probe Freq. / cm$^{-1}$',
+                  ylabel='Pump Freq. / cm$^{-1}$',
+                  xlim=region,
+                  ylim=region)
+        return c, ax
+
+    def movie_contour(self, fname, subplots_kw={}):
+        from matplotlib.animation import FuncAnimation
+        fig, ax = plt.subplots()
+
+        frames = self.ds.t
+        ani = FuncAnimation(fig=fig, func=self.contour, frames=frames)
+        ani.save(fname)
+
+    def plot_cls(self):
+        pass
+
 @attr.s(auto_attribs=True)
 class TwoDim:
     t: np.ndarray
@@ -65,12 +111,9 @@ class TwoDim:
     "Meta Info"
     cls_result_: Optional[CLSResult] = None
     "Contains the data from a CLS analysis"
-    plot: 'TwoDimPlotter' = attr.ib()
+    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True)
     "Plot object offering plotting methods"
 
-    @plot.default
-    def _plot_default(self):
-        return TwoDimPlotter(self)
 
     def __attrs_post_init__(self):
         n, m, k = self.t.size, self.probe_wn.size, self.pump_wn.size
@@ -87,7 +130,7 @@ class TwoDim:
 
     def copy(self) -> 'TwoDim':
         cpy = attr.evolve(self)
-        cpy.plot = TwoDimPlotter(cpy)
+        cpy.plot = TwoDimPlotter(ds=cpy) #typing: ignore
         return cpy
 
     def t_idx(self, t: Union[float, Iterable[float]]) -> int:
@@ -196,50 +239,3 @@ class TwoDim:
         res = CLSResult(self.t, slopes=slopes, slope_errors=slope_errs, lines=lines)
         self.cls_result_ = res
         return res
-
-
-@attr.define(auto_attribs=True)
-class TwoDimPlotter:
-    ds: TwoDim
-
-    def contour(self, *times, region=None, ax=None, subplots_kws={}):
-        ds = self.ds
-        idx = [ds.t_idx(i) for i in times]
-        if ax is None:
-            aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
-            fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws, aspect=aspect)
-
-        m = abs(ds.spec2d).max()
-        for i, k in enumerate(idx):
-            c = ax[i].contourf(ds.probe_wn,
-                               ds.pump_wn,
-                               ds.spec2d[k].T,
-                               N=np.linspace(-m, m, 21),
-                               cmap='Div',
-                               symmetric=True,
-                               linewidths=[0.7],
-                               linestyles=['-'])
-            start = max(ds.probe_wn.min(), ds.pump_wn.min())
-            ax[i].axline((start, start), slope=1, c='k', lw=0.5)
-            if ds.t[k] < 1:
-                title = '%.0f fs' % (ds.t[k] * 1000)
-            else:
-                title = '%.1f ps' % (ds.t[k])
-            ax[i].format(title=title, titleloc='ul', titleweight='bold')
-
-        ax.format(xlabel='Probe Freq. / cm$^{-1}$',
-                  ylabel='Pump Freq. / cm$^{-1}$',
-                  xlim=region,
-                  ylim=region)
-        return c, ax
-
-    def movie_contour(self, fname, subplots_kw={}):
-        from matplotlib.animation import FuncAnimation
-        fig, ax = plt.subplots()
-
-        frames = self.ds.t
-        ani = FuncAnimation(fig=fig, func=self.contour, frames=frames)
-        ani.save(fname)
-
-    def plot_cls(self):
-        pass

@@ -18,7 +18,7 @@ from skultrafast.data_io import save_txt
 from skultrafast.kinetic_model import Model
 from skultrafast import filter
 
-from typing import Callable, List, Optional, Type, Union, Iterable, Dict
+from typing import Callable, List, Optional, Type, Union, Iterable, Dict, cast
 ndarray: Type[np.ndarray] = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
@@ -205,6 +205,10 @@ class TimeResSpec:
         else:
             self.disp_freq_unit = disp_freq_unit
         self.plot.freq_unit = self.disp_freq_unit
+
+        self.trans = self.plot.trans
+        self.spec = self.plot.spec
+        self.map = self.plot.map
 
     @property
     def wavelengths(self):
@@ -1088,7 +1092,7 @@ class PolTRSpec:
         self.wl_idx = para.wl_idx
 
     def copy(self) -> 'PolTRSpec':
-        new_ds: PolTRSpec = self._copy()
+        new_ds = cast(PolTRSpec, self._copy(), )
         new_ds.plot.para_ls = self.plot.para_ls
         new_ds.plot.perp_ls = self.plot.perp_ls
         return new_ds
@@ -1233,17 +1237,22 @@ def delegator(pol_tr: PolTRSpec,
         do_return = hints["return"] == TimeResSpec
     else:
         do_return = False
+    
 
-    @functools.wraps(method)
-    def func(*args, **kwargs) -> Optional[PolTRSpec]:
-        para = method(pol_tr.para, *args, **kwargs)
-        perp = method(pol_tr.perp, *args, **kwargs)
-        iso = method(pol_tr.iso, *args, **kwargs)
-        if do_return:
+    if do_return:
+        @functools.wraps(method)
+        def func(*args, **kwargs) -> PolTRSpec:
+            para = method(pol_tr.para, *args, **kwargs)
+            perp = method(pol_tr.perp, *args, **kwargs)
+            iso = method(pol_tr.iso, *args, **kwargs)
             return PolTRSpec(para, perp, iso=iso)
-        else:
-            return None
-
+    else:
+        @functools.wraps(method)
+        def func(*args, **kwargs) -> None:
+            para = method(pol_tr.para, *args, **kwargs)
+            perp = method(pol_tr.perp, *args, **kwargs)
+            iso = method(pol_tr.iso, *args, **kwargs)
+            
     func.__doc__ = method.__doc__
     func.__name__ = name
     return func
@@ -1303,10 +1312,6 @@ class TimeResSpecPlotter(PlotterMixin):
             the unit afterwards, set the attribute directly.
         """
         self.dataset = dataset
-        self.dataset.trans = self.trans
-        self.dataset.spec = self.spec
-        self.dataset.map = self.map
-
         self.freq_unit = disp_freq_unit
 
     def _get_wl(self):

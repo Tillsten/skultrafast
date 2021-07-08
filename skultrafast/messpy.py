@@ -459,8 +459,8 @@ class TzResult:
     sigma: float
     fwhm: float
     fit_result: lmfit.model.ModelResult
-    data: Tuple[np.array, np.ndarray]
-    fig: Optional[any] = None
+    data: Tuple[np.ndarray, np.ndarray]
+    fig: Optional[plt.Figure] = None
 
 
 def get_t0(fname: str,
