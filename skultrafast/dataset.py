@@ -76,7 +76,7 @@ class FitExpResult:
             Starting concentrations. If none, y0 = [1, 0, 0, ...].
         Returns
         -------
-        ndarry            
+        ndarry
         """
         f = self.fitter
         taus = f.last_para[-f.num_exponentials:]
@@ -159,7 +159,7 @@ class TimeResSpec:
             given wavelength.
 
         auto_plot : bool
-            When True, some function will display their result automatically.            
+            When True, some function will display their result automatically.
         """
 
         assert (
@@ -349,50 +349,6 @@ class TimeResSpec:
         if self.err is not None:
             save_txt(str(fname) + '.stderr', wl, self.t, self.err)
 
-    @deprecated("cut_freqs is deprecated, use cut_freq instead")
-    def cut_freqs(self,
-                  freq_ranges=None,
-                  invert_sel=False,
-                  freq_unit=None) -> "TimeResSpec":
-        """
-        Removes channels inside (or outside ) of given frequency ranges.
-
-        Parameters
-        ----------
-        freq_ranges : list of (float, float)
-            List containing the edges (lower, upper) of the
-            frequencies to keep.
-        invert_sel : bool
-            Invert the final selection.
-        freq_unit : 'nm', 'cm' or None
-            Unit of the given edges.
-
-        Returns
-        -------
-        : TimeResSpec
-            TimeResSpec containing only the listed regions.
-        """
-        idx = np.zeros_like(self.wavelengths, dtype=bool)
-        if freq_unit is None:
-            freq_unit = self.disp_freq_unit
-        arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
-        for (lower, upper) in freq_ranges:
-            idx ^= np.logical_and(arr > lower, arr < upper)
-        if not invert_sel:
-            idx = ~idx
-        if self.err is not None:
-            err = self.err[:, idx]
-        else:
-            err = None
-        return TimeResSpec(
-            self.wavelengths[idx],
-            self.t,
-            self.data[:, idx],
-            err,
-            "nm",
-            disp_freq_unit=self.disp_freq_unit,
-        )
-
     def cut_freq(self,
                  lower=-np.inf,
                  upper=np.inf,
@@ -487,42 +443,6 @@ class TimeResSpec:
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
 
-    @deprecated("Use cut_time instead.")
-    def cut_times(self, time_ranges, invert_sel=False) -> "TimeResSpec":
-        """
-        Remove spectra inside (or outside) of given time-ranges.
-
-        Parameters
-        ----------
-        time_ranges : list of (float, float)
-            List containing the edges of the time-regions to keep.
-        invert_sel : bool
-            Inverts the final selection.
-        Returns
-        -------
-        : TimeResSpec
-            TimeResSpec containing only the requested regions.
-        """
-        idx = np.zeros_like(self.t, dtype=bool)
-        arr = self.t
-        for (lower, upper) in time_ranges:
-            idx ^= np.logical_and(arr > lower, arr < upper)
-        if not invert_sel:
-            idx = ~idx
-        if self.err is not None:
-            err = self.err[idx, :]
-        else:
-            err = None
-
-        return TimeResSpec(
-            self.wavelengths,
-            self.t[idx],
-            self.data[idx, :],
-            err,
-            "nm",
-            disp_freq_unit=self.disp_freq_unit,
-        )
-
     def cut_time(self, lower=-np.inf, upper=np.inf, invert_sel=False) -> "TimeResSpec":
         """
         Remove spectra inside (or outside) of given time-ranges.
@@ -574,7 +494,7 @@ class TimeResSpec:
             Shifts the time-axis of an dataset.
         wl_shift : float
             Shifts the wavelengths axis and updates the wavenumbers too.
-        
+
         Returns
         -------
         TimeResSpec
@@ -1015,8 +935,8 @@ class TimeResSpec:
         Returns
         -------
         kind: callable or in ('svd', 'uniform', 'gaussian')
-            What kind of filter to use. Either a string 
-            indicating a inbuild filter or a callable.            
+            What kind of filter to use. Either a string
+            indicating a inbuild filter or a callable.
         args: any
             Argument to the filter. Depends on the kind.
         """
@@ -1076,10 +996,8 @@ class PolTRSpec:
         self._copy = delegator(self, trs.copy)
         self.bin_times = delegator(self, trs.bin_times)
         self.bin_freqs = delegator(self, trs.bin_freqs)
-        self.cut_times = delegator(self, trs.cut_times)
         self.cut_time = delegator(self, trs.cut_time)
         self.scale_and_shift = delegator(self, trs.scale_and_shift)
-        self.cut_freqs = delegator(self, trs.cut_freqs)
         self.cut_freq = delegator(self, trs.cut_freq)
         self.mask_freqs = delegator(self, trs.mask_freqs)
         self.mask_times = delegator(self, trs.mask_times)
@@ -1092,7 +1010,10 @@ class PolTRSpec:
         self.wl_idx = para.wl_idx
 
     def copy(self) -> 'PolTRSpec':
-        new_ds = cast(PolTRSpec, self._copy(), )
+        new_ds = cast(
+            PolTRSpec,
+            self._copy(),
+        )
         new_ds.plot.para_ls = self.plot.para_ls
         new_ds.plot.perp_ls = self.plot.perp_ls
         return new_ds
@@ -1237,9 +1158,9 @@ def delegator(pol_tr: PolTRSpec,
         do_return = hints["return"] == TimeResSpec
     else:
         do_return = False
-    
 
     if do_return:
+
         @functools.wraps(method)
         def func(*args, **kwargs) -> PolTRSpec:
             para = method(pol_tr.para, *args, **kwargs)
@@ -1247,12 +1168,13 @@ def delegator(pol_tr: PolTRSpec,
             iso = method(pol_tr.iso, *args, **kwargs)
             return PolTRSpec(para, perp, iso=iso)
     else:
+
         @functools.wraps(method)
         def func(*args, **kwargs) -> None:
             para = method(pol_tr.para, *args, **kwargs)
             perp = method(pol_tr.perp, *args, **kwargs)
             iso = method(pol_tr.iso, *args, **kwargs)
-            
+
     func.__doc__ = method.__doc__
     func.__name__ = name
     return func
@@ -1710,7 +1632,7 @@ class TimeResSpecPlotter(PlotterMixin):
         Parameters
         ----------
         fist_comp : int
-            Index of the first shown component, useful if 
+            Index of the first shown component, useful if
             fast components model coherent artefact and should
             not be shown
         ax : plt.Axes or None
@@ -2143,7 +2065,7 @@ class PolTRSpecPlotter(PlotterMixin):
         ----------
         mode: Model
             Kinetic model
-        yield: 
+        yield:
             Dict with the yields
         ax : plt.Axes or None
             Axes to plot.

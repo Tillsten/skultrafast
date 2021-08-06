@@ -1,5 +1,5 @@
 """
-QuickControl 
+QuickControl
 ============
 
 In this tutorial we will load files recorded with QuickControl software from
@@ -59,10 +59,7 @@ ds_pol = qc_file.make_pol_ds()
 ds_pol = ds_pol.apply_filter('uniform', (1, 2))
 ds_pol = ds_pol.scale_and_shift(t_shift=-0.15)
 
-
 ds_pol.perp.data[:, :-2] = ds_pol.perp.data[:, 2:]
-
-
 
 bg_correct(ds_pol.wn, ds_pol.para.data, deg=2)
 bg_correct(ds_pol.wn, ds_pol.perp.data, deg=2)
@@ -71,11 +68,11 @@ bg_correct(ds_pol.wn, ds_pol.iso.data, deg=2)
 
 # %%
 
-ds_pol.iso.plot.map(con_filter=(3,3))
+ds_pol.iso.plot.map(con_filter=(3, 3))
 # %%
 # How to work with the dataset please look at the other tutorials.
 
-ds_pol.plot.spec( 0.5, 1, 20, 50, n_average=1,  add_legend=True)
+ds_pol.plot.spec(0.5, 1, 20, 50, n_average=1, add_legend=True)
 plt.xlim(2100, 2180)
 
 # %%
@@ -84,25 +81,65 @@ plt.xlim(2100, 2180)
 # Now we will see how to load a 2D dataset. Again, the info file
 # is the entry point.
 
-pstr = r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten\SCN7'
+pstr = r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten\MeSCN'
 p = Path(pstr)
-fname =list(p.glob('**/*236.info'))[0]
-two_d = QC2DSpec(fname=fname)
+fname = list(p.glob('**/*320.info'))[0]
+print(fname)
+two_d = QC2DSpec(fname=fname, upsampling=4, bg_correct=(30, 30))
 two_dim_ds = two_d.make_ds()
 
 # %%
-ds = two_dim_ds.select_range((2130, 2180), (2100, 2200))
-ds.plot.contour(5)
-x, y, r = two_dim_ds.single_cls(5, 10, 10)
+# First we select the range containing the data and show the spectrum
+# at 0, 0.5, 1 and 4 ps.
+ds = two_dim_ds.select_range((2130, 2180), (2115, 2185))
+ds.plot.contour(0, 0.5, 1, 4)
+
+# %%
+# Lets calculate the the raw center line slope at 5 ps
+# and plot it into the contour plot.
+x, y, r = ds.single_cls(0.5, pr_range=10, pu_range=7)
+
+ds.plot.contour(0.5)
 plt.plot(y, x, lw=1, c='r')
+
+
 # %%
-res = two_dim_ds.cls(pr_range=10, pu_range=10)
-fr = res.exp_fit([1])
+# There is also an method to calculate the cls for every time point.
+cls_result = ds.cls(pr_range=10, pu_range=7, mode='neg')
+
+
+# We can directly fit the resulting cls-decay with an exponential model
+fr = cls_result.exp_fit([2])
+
 # %%
-fr
-# %%
+# Lets plot the result and look at the paramenters.
 fig, ax = plt.subplots()
-ax.errorbar(fr.userkws['x'], res.slopes,
- res.slope_errors, lw=0, elinewidth=1, marker='o', ms=2)
+
+ax.errorbar(fr.userkws['x'],
+            cls_result.slopes,
+            cls_result.slope_errors,
+            lw=0,
+            elinewidth=1,
+            marker='o',
+            ms=2)
 ax.plot(fr.userkws['x'], fr.best_fit, c='red', lw=1)
 ax.set_xscale('log')
+
+fr
+
+
+# %%
+p = Path(r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten\SCN7\20210527#233')
+files = list(p.glob('*#236*'))
+
+out = {}
+for f in files:
+    try:
+        out[f.name] = np.loadtxt(f).astype(np.float32)
+    except:
+        print(f.name)
+
+np.savez_compressed('2D_Set.npz', **out, )
+# %%
+
+# %%

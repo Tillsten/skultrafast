@@ -7,6 +7,7 @@ import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
+import proplot
 
 from skultrafast import dv
 from skultrafast.dataset import TimeResSpec
@@ -24,7 +25,7 @@ class CLSResult:
     lines: Optional[np.ndarray] = None
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
 
-    def exp_fit(self, start_taus: List[float], use_const=True):
+    def exp_fit(self, start_taus: List[float], use_const=True, use_weights=True):
         mod = lmfit.models.ConstantModel()
         vals = {}
 
@@ -37,29 +38,33 @@ class CLSResult:
         for p in mod.param_names:
             if p.endswith('decay'):
                 mod.set_param_hint(p, min=0)
-        if self.slope_errors is not None:
+            if p[:3] == 'amp':
+                mod.set_param_hint(p, min=0)
+        mod.set_param_hint('c', min=0)
+
+        if self.slope_errors is not None and use_weights:
             weights = 1 / np.array(self.slope_errors)
         else:
             weights = None
         res = mod.fit(self.slopes,
                       weights=weights,
                       x=self.wt,
-                      c=np.min(self.slopes),
+                      c=max(np.min(self.slopes), 0),
                       **vals)
         self.exp_fit_result_ = res
         return res
 
 
-@attr.define(auto_attribs=True)
+@attr.s(auto_attribs=True)
 class TwoDimPlotter:
-    ds: 'TwoDim'
+    ds: 'TwoDim' = attr.ib()
 
     def contour(self, *times, region=None, ax=None, subplots_kws={}):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
             aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
-            fig, ax = plt.subplots(nrows=len(idx), **subplots_kws,
+            fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws,
                              aspect=aspect)
 
         m = abs(ds.spec2d).max()
@@ -111,7 +116,7 @@ class TwoDim:
     "Meta Info"
     cls_result_: Optional[CLSResult] = None
     "Contains the data from a CLS analysis"
-    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True)
+    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True) #typing: Ignore
     "Plot object offering plotting methods"
 
 
@@ -130,7 +135,7 @@ class TwoDim:
 
     def copy(self) -> 'TwoDim':
         cpy = attr.evolve(self)
-        cpy.plot = TwoDimPlotter(ds=cpy) #typing: ignore
+        cpy.plot = TwoDimPlotter(cpy) #typing: ignore
         return cpy
 
     def t_idx(self, t: Union[float, Iterable[float]]) -> int:
@@ -147,7 +152,7 @@ class TwoDim:
 
     def select_range(self, pump_range, probe_range, invert=False) -> 'TwoDim':
         """
-        Return a dataset containing only the selected region.               
+        Return a dataset containing only the selected region.
         """
         pu_idx = inbetween(self.pump_wn, min(pump_range), max(pump_range))
         pr_idx = inbetween(self.probe_wn, min(probe_range), max(probe_range))
@@ -209,14 +214,12 @@ class TwoDim:
         spec = self.spec2d[self.t_idx(t), :, :].T
         if mode == 'pos':
             spec = -spec
-        print(spec.shape)
         pu_max = pu[np.argmin(np.min(spec, 1))]
         pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
         spec = spec[pu_idx, :]
         l = []
 
         for s in spec:
-
             m = np.argmin(s)
             pr_max = pr[m]
             i = u_idx = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
