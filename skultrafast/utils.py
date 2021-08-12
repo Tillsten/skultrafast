@@ -114,7 +114,7 @@ def pfid_r4(T, om, om_10, T_2):
     Parameters
     ----------
     T : 1D-ndarry
-        Delays between pump and probe. The formula assume a postive 
+        Delays between pump and probe. The formula assume a postive
         delays.
     om : 1D-ndarray
         Array of frequencies given in wavenumbers (cm-1).
@@ -125,7 +125,7 @@ def pfid_r4(T, om, om_10, T_2):
 
     Returns
     -------
-    ndarry        
+    ndarry
     """
     om = cm2THz(om) * 2 * np.pi
     om_10 = cm2THz(np.asarray(om_10)) * 2 * np.pi
@@ -150,7 +150,7 @@ def pfid_r6(T, om, om_10, om_21, T_2):
     Parameters
     ----------
     T : 1D-ndarry
-        Delays between pump and probe. The formula assume a postive 
+        Delays between pump and probe. The formula assume a postive
         delays.
     om : 1D-ndarray
         Array of frequencies given in wavenumbers (cm-1).
@@ -163,7 +163,7 @@ def pfid_r6(T, om, om_10, om_21, T_2):
 
     Returns
     -------
-    ndarry        
+    ndarry
     """
 
     om = cm2THz(om) * 2 * np.pi
@@ -221,7 +221,8 @@ def linreg_std_errors(A, y):
         Tuple of three arrays: standard error, variance matrix, r2
     """
     x = np.linalg.lstsq(A, y, rcond=None)
-    fit = A @ x[0]
+
+    fit = np.ma.dot(A, x[0])
     resi = y - fit
 
     r2 = 1 - (resi * resi).sum(0) / (y.shape[0] * y.var(0))

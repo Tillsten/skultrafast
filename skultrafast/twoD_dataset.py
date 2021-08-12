@@ -7,6 +7,8 @@ import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
+from scipy.ndimage import  map_coordinates
+from scipy.interpolate import RegularGridInterpolator
 import proplot
 
 from skultrafast import dv
@@ -59,11 +61,12 @@ class CLSResult:
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times, region=None, ax=None, subplots_kws={}):
+    def contour(self, *times, region=None, ax=None, subplots_kws={}, aspect=None):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
-            aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
+            if aspect is None:
+                aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
             fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws,
                              aspect=aspect)
 
@@ -102,6 +105,12 @@ class TwoDimPlotter:
     def plot_cls(self):
         pass
 
+    def pump_slice_amps(self, ax=None):
+        if ax is None:
+            ax = plt.gca()
+        ax.plot(self.ds.pump_wn, self.ds.pump_slice_amp())
+
+
 @attr.s(auto_attribs=True)
 class TwoDim:
     t: np.ndarray
@@ -118,7 +127,10 @@ class TwoDim:
     "Contains the data from a CLS analysis"
     plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True) #typing: Ignore
     "Plot object offering plotting methods"
+    interpolator_: Optional[RegularGridInterpolator] = None #typing: Ignore
 
+    def _make_int(self, ):
+        RegularGridInterpolator((self.t, self.probe_wn, self.pump_wn), self.spec2d, bounds_error=False)
 
     def __attrs_post_init__(self):
         n, m, k = self.t.size, self.probe_wn.size, self.pump_wn.size
@@ -131,7 +143,9 @@ class TwoDim:
         self.pump_wn = self.pump_wn.copy()
 
         i1 = np.argsort(self.pump_wn)
+        self.pump_wn = self.pump_wn[i1]
         i2 = np.argsort(self.probe_wn)
+        self.probe_wn = self.probe_wn[i2]
 
     def copy(self) -> 'TwoDim':
         cpy = attr.evolve(self)
@@ -242,3 +256,13 @@ class TwoDim:
         res = CLSResult(self.t, slopes=slopes, slope_errors=slope_errs, lines=lines)
         self.cls_result_ = res
         return res
+
+    def extract_line_spec(self, offset):
+        if not self.interpolator_:
+            self.interpolator_ = self._make_int()
+
+
+
+    def pump_slice_amp(self, method='minmax'):
+        sla = np.ptp(self.spec2d, 0)
+        return sla

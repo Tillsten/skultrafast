@@ -373,12 +373,12 @@ class TimeResSpec:
         : TimeResSpec
             TimeResSpec containing only the listed regions.
         """
-        idx = np.zeros_like(self.wavelengths, dtype=bool)
+
         if freq_unit is None:
             freq_unit = self.disp_freq_unit
         arr = self.wavelengths if freq_unit == "nm" else self.wavenumbers
 
-        idx ^= np.logical_and(lower <= arr, arr < upper)
+        idx = np.logical_and(lower <= arr, arr < upper)
         if not invert_sel:
             idx = ~idx
         if self.err is not None:
@@ -1076,8 +1076,8 @@ class PolTRSpec:
         """
         pa, pe = self.para, self.perp
         if not from_t is None:
-            pa = pa.cut_times([(-np.inf, from_t)])
-            pe = pe.cut_times([(-np.inf, from_t)])
+            pa = pa.cut_time(-np.inf, from_t)
+            pe = pe.cut_time(-np.inf, from_t)
         all_data = np.hstack((pa.data, pe.data))
         all_wls = np.hstack((pa.wavelengths, pe.wavelengths))
         all_tup = dv.tup(all_wls, pa.t, all_data)

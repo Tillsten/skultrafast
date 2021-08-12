@@ -5,8 +5,11 @@ QuickControl
 In this tutorial we will load files recorded with QuickControl software from
 Phasetech. Before starting with the actual import, we extract the example data
 into an temporary directory.
+
+Weill st
 """
 # %%
+#
 import tempfile
 import zipfile
 from pathlib import Path
@@ -14,9 +17,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scipy.ndimage.interpolation import shift
 from skultrafast.data_io import get_example_path
-from skultrafast.dataset import PolTRSpec, PolTRSpecPlotter, TimeResSpec
 
 p = get_example_path('quickcontrol')
 tmpdir = tempfile.TemporaryDirectory()
@@ -28,54 +29,6 @@ zipfile.ZipFile(p).extractall(tmpdir.name)
 list(Path(tmpdir.name).glob('*.*'))
 
 # %%
-# All datasets from QC contain a `.info` file, which contains the meta
-# information and the type of experiment. All skultrafast methods take the this
-# file as the starting point, since all other file names can be infered from it.
-#
-# Lets load the info file for a 1D transient absorption experiment.
-
-from skultrafast import plot_helpers, twoD_dataset
-from skultrafast.dataset import PolTRSpec, TimeResSpec
-from skultrafast.quickcontrol import QC1DSpec, QC2DSpec, bg_correct
-
-plot_helpers.enable_style()
-
-qc_file = QC1DSpec(tmpdir.name + '/20201029#07.info')
-qc_file = QC1DSpec(r'C:\Users\tills\OneDrive\Potsdam\data\20210521#135\20210521#135.info')
-
-# %%
-# The `qc_file` object contains all the content from file in python readable
-# form. We can access the info by just looking at the `info` attribute.
-
-qc_file.info
-
-# %%
-# The data is saved in the `par_data` and `per_data` attributes. The time-delays
-# are in `qc_file.t`. The wavelengths are not saved by QC and are calculated
-# from the given monochromator parameters. It may be necessary to recalculate
-# the wavelengths. To get an skultrafast dataset we call:
-
-ds_pol = qc_file.make_pol_ds()
-ds_pol = ds_pol.apply_filter('uniform', (1, 2))
-ds_pol = ds_pol.scale_and_shift(t_shift=-0.15)
-
-ds_pol.perp.data[:, :-2] = ds_pol.perp.data[:, 2:]
-
-bg_correct(ds_pol.wn, ds_pol.para.data, deg=2)
-bg_correct(ds_pol.wn, ds_pol.perp.data, deg=2)
-bg_correct(ds_pol.wn, ds_pol.iso.data, deg=2)
-#para_bg.plot.map(con_filter=(3, 3))
-
-# %%
-
-ds_pol.iso.plot.map(con_filter=(3, 3))
-# %%
-# How to work with the dataset please look at the other tutorials.
-
-ds_pol.plot.spec(0.5, 1, 20, 50, n_average=1, add_legend=True)
-plt.xlim(2100, 2180)
-
-# %%
 # 2D Dataset
 # ----------
 # Now we will see how to load a 2D dataset. Again, the info file
@@ -85,7 +38,7 @@ pstr = r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten
 p = Path(pstr)
 fname = list(p.glob('**/*320.info'))[0]
 print(fname)
-two_d = QC2DSpec(fname=fname, upsampling=4, bg_correct=(30, 30))
+two_d = QC2DSpec(fname=fname, upsampling=4, bg_correct=(30, 30), probe_filter=2)
 two_dim_ds = two_d.make_ds()
 
 # %%
@@ -97,16 +50,20 @@ ds.plot.contour(0, 0.5, 1, 4)
 # %%
 # Lets calculate the the raw center line slope at 5 ps
 # and plot it into the contour plot.
-x, y, r = ds.single_cls(0.5, pr_range=10, pu_range=7)
+x, y, r = ds.single_cls(0, pr_range=10, pu_range=7)
 
-ds.plot.contour(0.5)
-plt.plot(y, x, lw=1, c='r')
+import proplot
 
+fig, ax = proplot.subplots(dpi=120, axwidth="4cm")
+ds.plot.contour(0.1, ax=ax)
+ax.plot(y, x, lw=0, c='r', marker='o', ms=3)
+m, n = r.slope, r.intercept
+
+ax.plot([m * x.min() + n, m * x.max() + n], [x.min(), x.max()], c='w', lw=1)
 
 # %%
 # There is also an method to calculate the cls for every time point.
 cls_result = ds.cls(pr_range=10, pu_range=7, mode='neg')
-
 
 # We can directly fit the resulting cls-decay with an exponential model
 fr = cls_result.exp_fit([2])
@@ -127,19 +84,23 @@ ax.set_xscale('log')
 
 fr
 
-
 # %%
-p = Path(r'D:\boxup\AG Mueller-Werkmeister\Sweet Project\2D-IR raw data\2DIR-Daten\SCN7\20210527#233')
-files = list(p.glob('*#236*'))
-
-out = {}
-for f in files:
-    try:
-        out[f.name] = np.loadtxt(f).astype(np.float32)
-    except:
-        print(f.name)
-
-np.savez_compressed('2D_Set.npz', **out, )
+ds.plot.pump_slice_amps()
 # %%
+x, y = ds.pump_wn, ds.spec2d[2].ptp(axis=0).T
+#plt.plot(x, y)
+import lmfit
 
+mod = (lmfit.models.GaussianModel() + lmfit.models.PolynomialModel(0))
+res = mod.fit(y, x=x, center=2160, b_center=2150, c0=0)
+
+xu = np.linspace(ds.pump_wn.min(), ds.pump_wn.max())
+plt.plot(x, y, marker='s', ms=2, lw=0)
+plt.plot(xu, res.eval(x=xu))
+
+for c in res.eval_components(x=xu).values():
+    plt.plot(xu, c, lw=0.5)
+#
+# %%
+res
 # %%
