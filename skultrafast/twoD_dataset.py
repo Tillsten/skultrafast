@@ -164,6 +164,7 @@ class TwoDim:
         self.pump_wn = self.pump_wn[i1]
         i2 = np.argsort(self.probe_wn)
         self.probe_wn = self.probe_wn[i2]
+        self.spec2d = self.spec2d[:, :, i1][:, i2, :]
 
     def copy(self) -> 'TwoDim':
         cpy = attr.evolve(self)
@@ -281,5 +282,5 @@ class TwoDim:
 
 
 
-    def pump_slice_amp(self, method='minmax'):
-        sla = np.ptp(self.spec2d, 0)
+    #def pump_slice_amp(self, method='minmax'):
+    #    sla = np.ptp(self.s
