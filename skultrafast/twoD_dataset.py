@@ -11,7 +11,7 @@ from scipy.ndimage import  map_coordinates
 from scipy.interpolate import RegularGridInterpolator
 import proplot
 
-from skultrafast import dv
+from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
 
 
@@ -55,6 +55,22 @@ class CLSResult:
                       **vals)
         self.exp_fit_result_ = res
         return res
+
+
+    def plot_cls(self, ax=None, model_style: Dict=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+        ec = ax.errorbar(self.wt, self.slopes, self.slope_errors, **kwargs)
+        plot_helpers.lbl_trans(ax=ax)
+        ax.set(xlabel=plot_helpers.time_label, ylabel='Slope')
+        m_line = None
+        if self.exp_fit_result_:
+            xu = np.linspace(min(self.wt), max(self.wt), 300)
+            yu = self.exp_fit_result_.eval(x=xu)
+            style=dict(c='k', zorder=1.8)
+            if model_style: style.update(model_style)
+            ax.plot(xu, yu, color='k', zorder=1.8)
+        return ec, m_line
 
 
 @attr.s(auto_attribs=True)
@@ -109,6 +125,8 @@ class TwoDimPlotter:
         if ax is None:
             ax = plt.gca()
         ax.plot(self.ds.pump_wn, self.ds.pump_slice_amp())
+        plot_helpers.ir_mode()
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Slice Amp. [mOD]')
 
 
 @attr.s(auto_attribs=True)
@@ -265,4 +283,3 @@ class TwoDim:
 
     def pump_slice_amp(self, method='minmax'):
         sla = np.ptp(self.spec2d, 0)
-        return sla

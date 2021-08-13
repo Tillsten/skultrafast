@@ -17,10 +17,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from skultrafast import plot_helpers
-from skultrafast.quickcontrol import QC1DSpec, QC2DSpec, bg_correct
+from skultrafast.quickcontrol import QC2DSpec
+from skultrafast.twoD_dataset import TwoDim
 
 from skultrafast.data_io import get_twodim_dataset
-import zipfile_deflate64
 
 p = get_twodim_dataset()
 
@@ -32,20 +32,32 @@ infos
 
 
 # %%
-# Two info files are in the directory, the first contains
+# Two info files are in the directory, the first contains the 1D data and the
+# second the 2d data. Here we will work with the 2D data, hence we select latter
+# file and open it via an quickcontrol 2dspec. We use 4 times upsampling of pump
+# axis and use 10 pixel left and right to calculate and subtract a background.
+#
+# To create the dataset to work with form raw data we call the make_ds methods,
+# which returns a `TwoDim` object to work with.
 
 plot_helpers.enable_style()
 
 qc_file = QC2DSpec(infos[1], bg_correct=(10, 10), upsampling=4)
 ds_all = qc_file.make_ds()
 
+# %%
+# First, lets get an overview and plot a contour plot at 0.5, 1 and 3 ps.
+
+ds_all.plot.contour(0.5, 1, 3)
 
 # %%
-ds_all.plot.contour(1)
-# %%
+# We are only interested in the region of the signal, hence we select a range.
+# The methods gives us a new, smaller `TwoDim` dataset.
 
 ds = ds_all.select_range((2140, 2180), (2120, 2180))
-c, ax = ds.plot.contour(1, aspect=1)
+c, ax = ds.plot.contour(0.5, 1, 3)
 ax.set_aspect(1)
 
+
 # %%
+# To get an normal
