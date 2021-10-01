@@ -180,7 +180,7 @@ class QC2DSpec(QCTimeRes):
     def _load_t1(self):
         end = self.info['Final Delay (fs)']
         step = self.info['Step Size (fs)']
-        return np.arange(0.0, end+1, step)/1000.
+        return np.arange(0.0, end + 1, step) / 1000.
 
     def _loader(self, which: str):
         data_dict: Dict[int, np.ndarray] = {}
@@ -190,14 +190,15 @@ class QC2DSpec(QCTimeRes):
             pol_scans = self.path.glob(self.prefix + T + f'_{which}*.scan')
             data = []
             for s in pol_scans:
+
                 d = np.loadtxt(s)
                 self.t2 = d[1:, 0]
                 data.append(d)
-            if len(data)>0:
+            if len(data) > 0:
                 d = np.array(data)
                 data_dict[t] = d
             else:
-                self.t = self.t[:t+1]
+                self.t = self.t[:t + 1]
                 break
         return data_dict
 
@@ -216,8 +217,8 @@ class QC2DSpec(QCTimeRes):
                 d[0, :] *= 0.5
                 win = win_fcn(2 * len(self.t1))
                 spec = np.fft.rfft(d * win[len(self.t1):, None],
-                                axis=0,
-                                n=self.upsampling * len(self.t1))
+                                   axis=0,
+                                   n=self.upsampling * len(self.t1))
                 (par_dict, perp_dict)[i][t] = spec.real
         return par_dict, perp_dict
 
@@ -236,10 +237,27 @@ class QC2DSpec(QCTimeRes):
         cm = 0.01 / ((1/freqs) * 1e-12 * speed_of_light) + om0
         return cm
 
-    def make_ds(self):
+    def make_ds(self, which='iso'):
         par, perp = self.calc_spec()
         par_arr = np.dstack(list(par.values())).T
         per_arr = np.dstack(list(perp.values())).T
-        iso_arr = (2*per_arr + par_arr)
-        return TwoDim(t=self.t, pump_wn=self.pump_freq, probe_wn=self.wavenumbers,
-                      spec2d=iso_arr)
+        iso = (2*per_arr + par_arr) / 3
+
+        d = {
+            'para':
+            TwoDim(t=self.t,
+                   pump_wn=self.pump_freq,
+                   probe_wn=self.wavenumbers,
+                   spec2d=par_arr),
+            'perp':
+            TwoDim(t=self.t,
+                   pump_wn=self.pump_freq,
+                   probe_wn=self.wavenumbers,
+                   spec2d=per_arr),
+            'iso':
+            TwoDim(t=self.t,
+                   pump_wn=self.pump_freq,
+                   probe_wn=self.wavenumbers,
+                   spec2d=iso)
+        }
+        return d

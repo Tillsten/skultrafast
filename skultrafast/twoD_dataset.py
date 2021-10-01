@@ -6,6 +6,7 @@ import attr
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
+from proplot.axes.plot import Index
 from scipy.stats import linregress
 from scipy.ndimage import  map_coordinates
 from scipy.interpolate import RegularGridInterpolator
@@ -77,13 +78,19 @@ class CLSResult:
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times, region=None, ax=None, subplots_kws={}, aspect=None):
+    def contour(self, *times, region=None, ax=None, subplots_kws={}, aspect=None, direction='vertical'):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
             if aspect is None:
                 aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
-            fig, ax = proplot.subplots(nrows=len(idx), **subplots_kws,
+            if direction[:1] == 'v':
+                nrows = len(idx)
+                ncols = 1
+            else:
+                nrows = 1
+                ncols = len(idx)
+            fig, ax = proplot.subplots(nrows=nrows, ncols=ncols, **subplots_kws,
                              aspect=aspect)
 
         m = abs(ds.spec2d).max()
@@ -280,7 +287,5 @@ class TwoDim:
         if not self.interpolator_:
             self.interpolator_ = self._make_int()
 
-
-
-    #def pump_slice_amp(self, method='minmax'):
-    #    sla = np.ptp(self.s
+    def pump_slice_amp(self, method='minmax'):
+        return np.ptp(self.spec2d, )
