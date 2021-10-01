@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from proplot.axes.plot import Index
 from scipy.stats import linregress
-from scipy.ndimage import  map_coordinates
+from scipy.ndimage import  map_coordinates, uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
 import proplot
 
@@ -78,7 +78,8 @@ class CLSResult:
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times, region=None, ax=None, subplots_kws={}, aspect=None, direction='vertical'):
+    def contour(self, *times, region=None, ax=None, subplots_kws={}, aspect=None,
+                direction='vertical', scale="firstmax", average=None):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
@@ -92,12 +93,22 @@ class TwoDimPlotter:
                 ncols = len(idx)
             fig, ax = proplot.subplots(nrows=nrows, ncols=ncols, **subplots_kws,
                              aspect=aspect)
+        if scale == 'fullmax':
+            m = abs(ds.spec2d).max()
+        elif scale == 'firstmax':
+            m = abs(ds.spec2d[idx[0], ...]).max()
+        else:
+            raise ValueError("scale must be either fullmax or firstmax")
 
-        m = abs(ds.spec2d).max()
+        if average is not None:
+            s2d = uniform_filter1d(ds.spec2d, average, 0, mode="nearest")
+        else:
+            s2d = ds.spec2d
+
         for i, k in enumerate(idx):
             c = ax[i].contourf(ds.probe_wn,
                                ds.pump_wn,
-                               ds.spec2d[k].T,
+                               s2d[k].T,
                                N=np.linspace(-m, m, 21),
                                cmap='Div',
                                symmetric=True,
@@ -119,10 +130,14 @@ class TwoDimPlotter:
 
     def movie_contour(self, fname, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
-        fig, ax = plt.subplots()
 
+        c, ax = self.contour(0)
+        fig = ax.get_figure()
         frames = self.ds.t
-        ani = FuncAnimation(fig=fig, func=self.contour, frames=frames)
+        def func(x):
+            ax.cla()
+            self.contour(x, ax=ax, scale="fullmax")
+        ani = FuncAnimation(fig=fig, func=func, frames=frames)
         ani.save(fname)
 
     def plot_cls(self):
@@ -287,5 +302,8 @@ class TwoDim:
         if not self.interpolator_:
             self.interpolator_ = self._make_int()
 
-    def pump_slice_amp(self, method='minmax'):
-        return np.ptp(self.spec2d, )
+    def bin_t(self, n: int):
+        pass
+
+
+    #def pump_slice_amp(self,
