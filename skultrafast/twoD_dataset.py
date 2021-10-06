@@ -6,8 +6,9 @@ import attr
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-from proplot.axes.plot import Index
 from scipy.stats import linregress
+
+
 from scipy.ndimage import  map_coordinates, uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
 import proplot
@@ -44,6 +45,11 @@ class CLSResult:
             if p[:3] == 'amp':
                 mod.set_param_hint(p, min=0)
         mod.set_param_hint('c', min=0)
+        if use_const:
+            c = max(np.min(self.slopes), 0)
+        else:
+            c = 0
+            mod.set_param_hint('c', vary=False)
 
         if self.slope_errors is not None and use_weights:
             weights = 1 / np.array(self.slope_errors)
@@ -52,7 +58,7 @@ class CLSResult:
         res = mod.fit(self.slopes,
                       weights=weights,
                       x=self.wt,
-                      c=max(np.min(self.slopes), 0),
+                      c=c,
                       **vals)
         self.exp_fit_result_ = res
         return res
@@ -128,12 +134,13 @@ class TwoDimPlotter:
                   ylim=region)
         return c, ax
 
-    def movie_contour(self, fname, subplots_kw={}):
+    def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
 
         c, ax = self.contour(0)
         fig = ax.get_figure()
         frames = self.ds.t
+        std_kws = {}
         def func(x):
             ax.cla()
             self.contour(x, ax=ax, scale="fullmax")
@@ -306,4 +313,4 @@ class TwoDim:
         pass
 
 
-    #def pump_slice_amp(self,
+    #def pump_slice_amp(sel
