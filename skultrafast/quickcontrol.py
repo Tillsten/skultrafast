@@ -113,6 +113,7 @@ class QCFile:
 @attr.s(auto_attribs=True)
 class QCTimeRes(QCFile):
     wavelength: np.ndarray = attr.ib()
+    """Wavelength data calculated from given grating and mono wavelength"""
 
     @wavelength.default
     def calc_wl(self, disp=None):
@@ -132,8 +133,13 @@ class QCTimeRes(QCFile):
 @attr.s(auto_attribs=True)
 class QC1DSpec(QCTimeRes):
     t: Iterable[float] = attr.ib()
+    """Delay times """
+
     par_data: np.ndarray = attr.ib()
+    """"Contains the data from one channel"""
+
     per_data: np.ndarray = attr.ib()
+    """"Contains the data from one channel"""
 
     @par_data.default
     def _load_par(self):
@@ -161,15 +167,39 @@ class QC1DSpec(QCTimeRes):
 @attr.s(auto_attribs=True)
 class QC2DSpec(QCTimeRes):
     t: np.ndarray = attr.ib()
-    t1: np.ndarray = attr.ib()
+    """Waiting times"""
+
+    t2: np.ndarray = attr.ib()
+    """t2, the inter-pulse delays between pump pulses"""
+
     par_data: Dict = attr.ib()
+    """Data for parallel polarization"""
+
     per_data: Dict = attr.ib()
-    per_spec: Optional[Dict] = None
+    """Data for perpendicular polarization"""
+
     par_spec: Optional[Dict] = None
+    """Resulting 2D spectra for parallel polarization"""
+
+    per_spec: Optional[Dict] = None
+    """Resulting 2D spectra for perpendicular polarization"""
+
     probe_filter: Optional[float] = 1
+    """Size of the filter applied to the spectral axis. 1 is no filtering"""
+
     upsampling: int = 2
+    """Upsamling factor of the pump-axis"""
+
     bg_correct: Optional[Tuple] = None
+    """
+    If given, the size of the left and right region used to calculate the signal background which
+    will be subtracted
+    """
+
     pump_freq: np.ndarray = attr.ib()
+    """
+    Resulting wavenumbers of the pump axis.
+    """
 
     @t.default
     def _t_default(self):
@@ -177,7 +207,7 @@ class QC2DSpec(QCTimeRes):
         return np.array(t_list) / 1000.
 
     @t1.default
-    def _load_t1(self):
+    def _load_t2(self):
         end = self.info['Final Delay (fs)']
         step = self.info['Step Size (fs)']
         return np.arange(0.0, end + 1, step) / 1000.
