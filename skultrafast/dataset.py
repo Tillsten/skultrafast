@@ -1519,6 +1519,8 @@ class TimeResSpecPlotter(PlotterMixin):
             the plotters freq_unit.
         linscale : float
             If symlog is True, determines the ratio of linear to log-space.
+        add_legend: bool
+            If to add the legend automatically.
 
         All other kwargs are forwarded to the plot function.
 
@@ -1566,6 +1568,53 @@ class TimeResSpecPlotter(PlotterMixin):
         ax.set_xlim(right=t.max())
         ax.yaxis.set_tick_params(which="minor", left=True)
         return l
+
+    def trans_fit(self, *args, symlog=True, freq_unit='auto', add_legend=True, ax=None, **kwargs):
+        """
+        Plot the nearest transients for given frequencies.
+
+        Parameters
+        ----------
+        *args : list or ndarray
+            Spectral positions, should be given in the same unit as
+            `self.freq_unit`.
+        symlog : bool
+            Determines if the x-scale is symlog.
+        ax : plt.Axes or None
+            Takes a matplotlib axes. If none, it uses `plt.gca()` to get the
+            current axes. The lines are plotted in this axis.
+        freq_unit : 'auto', 'cm' or 'nm'
+            How to interpret the given frequencies. If 'auto' it defaults to
+            the plotters freq_unit.
+        add_legend: bool
+            If to add the legend automatically.
+
+        """
+        ds = self.dataset
+        if ds.fit_exp_result_ is None:
+            raise ValueError("No fit available")
+        if ax is None:
+            ax = plt.gca()
+
+        tmp = self.freq_unit if freq_unit == "auto" else freq_unit
+        is_nm = tmp == "nm"
+        if is_nm:
+            ph.vis_mode()
+        else:
+            ph.ir_mode()
+
+        x = ds.wavelengths if is_nm else ds.wavenumbers
+        t, mod = ds.fit_exp_result_.fitter.t, ds.fit_exp_result_.fitter.model
+        lines = []
+        for i in args:
+            idx = dv.fi(x, i)
+            lines.append(ax.plot(t, mod[:, idx], **kwargs))
+        if symlog:
+            ax.set_xscale("symlog", linthresh=1.0)
+        ph.lbl_trans(ax=ax, use_symlog=symlog)
+        if add_legend:
+            ax.legend(loc="best", ncol=max(1, len(lines) // 3))
+        return lines
 
     def overview(self):
         """
