@@ -111,7 +111,7 @@ class QCFile:
 
 
 @attr.s(auto_attribs=True)
-class QCTimeRes(QCFile):
+class QCBaserTimeRes(QCFile):
     wavelength: np.ndarray = attr.ib()
     """Wavelength data calculated from given grating and mono wavelength"""
 
@@ -131,7 +131,7 @@ class QCTimeRes(QCFile):
 
 
 @attr.s(auto_attribs=True)
-class QC1DSpec(QCTimeRes):
+class QC1DSpec(QCBaserTimeRes):
     t: Iterable[float] = attr.ib()
     """Delay times """
 
@@ -153,8 +153,10 @@ class QC1DSpec(QCTimeRes):
 
     @t.default
     def _t_default(self):
-        t_list = self.info['Delays']
-        return np.array(t_list) / 1000.
+        t_list = np.array(self.info['Delays'])
+        if self.info['Delay Units'] == 'fs':
+            t_list /= 1000.
+        return t_list
 
     def make_pol_ds(self, sigma=None) -> PolTRSpec:
         para = np.nanmean(self.par_data, axis=0)
@@ -165,7 +167,7 @@ class QC1DSpec(QCTimeRes):
 
 
 @attr.s(auto_attribs=True)
-class QC2DSpec(QCTimeRes):
+class QC2DSpec(QCBaserTimeRes):
     t: np.ndarray = attr.ib()
     """Waiting times"""
 
@@ -203,10 +205,12 @@ class QC2DSpec(QCTimeRes):
 
     @t.default
     def _t_default(self):
-        t_list = self.info['Waiting Time Delays']
-        return np.array(t_list) / 1000.
+        t_list = np.array(self.info['Waiting Time Delays'])
+        if self.info['Waiting Time Delay Units'] == 'fs':
+            t_list /= 1000
+        return t_list
 
-    @t1.default
+    @t2.default
     def _load_t2(self):
         end = self.info['Final Delay (fs)']
         step = self.info['Step Size (fs)']
@@ -232,6 +236,10 @@ class QC2DSpec(QCTimeRes):
                 break
         return data_dict
 
+    def switch_pol(self):
+        self.par_data, self.per_data = self.per_data, self.par_data
+        self.par_spec, self.per_spec = self.per_spec, self.par_spec
+
     def calc_spec(self, win_fcn=np.hamming):
         par_dict: Dict[int, np.ndarray] = {}
         perp_dict: Dict[int, np.ndarray] = {}
@@ -245,10 +253,10 @@ class QC2DSpec(QCTimeRes):
                 if self.bg_correct:
                     bg_correct(self.wavelength, d, self.bg_correct[0], self.bg_correct[1])
                 d[0, :] *= 0.5
-                win = win_fcn(2 * len(self.t1))
-                spec = np.fft.rfft(d * win[len(self.t1):, None],
+                win = win_fcn(2 * len(self.t2))
+                spec = np.fft.rfft(d * win[len(self.t2):, None],
                                    axis=0,
-                                   n=self.upsampling * len(self.t1))
+                                   n=self.upsampling * len(self.t2))
                 (par_dict, perp_dict)[i][t] = spec.real
         return par_dict, perp_dict
 
@@ -262,13 +270,14 @@ class QC2DSpec(QCTimeRes):
 
     @pump_freq.default
     def _calc_freqs(self):
-        freqs = np.fft.rfftfreq(self.upsampling * len(self.t1), self.t1[1] - self.t1[0])
+        freqs = np.fft.rfftfreq(self.upsampling * len(self.t2), self.t2[1] - self.t2[0])
         om0 = self.info['Rotating Frame (Scanned)']
-        cm = 0.01 / ((1/freqs) * 1e-12 * speed_of_light) + om0
+        cm = 10 / ((1/freqs) * 1e-12 * speed_of_light) + om0
         return cm
 
-    def make_ds(self, which='iso'):
+    def make_ds(self):
         par, perp = self.calc_spec()
+        self.pump_freq = self._calc_freqs()
         par_arr = np.dstack(list(par.values())).T
         per_arr = np.dstack(list(perp.values())).T
         iso = (2*per_arr + par_arr) / 3
