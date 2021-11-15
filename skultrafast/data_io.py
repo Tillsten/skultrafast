@@ -280,6 +280,10 @@ def get_twodim_dataset():
             if md5.hexdigest() == 'daa0562d3d0f1518f3e2952d98082591':
                 with (p / 'MeSCN_2D_data.zip').open('wb') as f:
                     f.write(content)
+            else:
+                raise IOError('MD5-hash of download not correct')
+        else:
+            raise IOError("Figshare ans != 200, %s instead" % ans.status)
     if not (p / 'MeSCN_2D_data').exists():
         zipfile.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
-    return (p / 'MeSCN_2D_data')
+    return p / 'MeSCN_2D_data'
