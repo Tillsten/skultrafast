@@ -75,22 +75,22 @@ pr = a['probe']
 
 fig, ax = plt.subplots(figsize=(5, 2.4))
 ax.plot(cwl, pr[:, 64], lw=1)
-ax.secondary_xaxis('top', functions=(lambda x: 1e7 / x, lambda x: 1e7 / x))
+#ax.secondary_xaxis('top', functions=(lambda x: 1e7 / x, lambda x: 1e7 / x))
 plt.setp(ax, xlabel='Wavelength', ylabel='Couts')
 
 # %%
 # The spectrum consists of the probe, with absorption lines showing up as dips.
 # The sharp lines are caused by water-vapor and the wider lines are from a
-# polysterene calibration film.
+# polystyrene calibration film.
 #
-# To extract the real absorption spektrum we can measure the spectrum without
+# To extract the real absorption spectrum we can measure the spectrum without
 # the film and calculate the absorption. It is also possible to subtract the
-# baseline. This approach also allows us to use watervapor lines for
+# baseline. This approach also allows us to use water-vapor lines for
 # calibration. Notice that latter also depend on the humidity and temperature,
 # also the presented baseline approach is just an approximation.
 #
 # We approximate the baseline by taking the local maxima and interpolate
-# inbeween.
+# inbetween.
 
 from scipy.interpolate import interp1d
 for ch in [63, 58]:
@@ -129,12 +129,12 @@ for ch in [63, 58]:
            xlabel='Wavelenght / nm',
            title=f'Channel: {ch}')
     ax.legend(ncol=4)
-    ax.secondary_xaxis('top', functions=(lambda x: 1e7 / x, lambda x: 1e7 / x))
+    #ax.secondary_xaxis('top', functions=(lambda x: 1e7 / x, lambda x: 1e7 / x))
 
 # %%
-# Using the inital channel 63 clearly leads to an offset, indicating the
+# Using the initial channel 63 clearly leads to an offset, indicating the
 # zero-order position was not correct. Using instead 58 as the center channel we
-# get an good greement. The peak at 1601 is isolated from water vapor lines,
+# get an good agreement. The peak at 1601 is isolated from water vapor lines,
 # hence we will use it to calibrate the dispersion. For that we will look at
 # three spectra at once: One where the peak is at the center channel and one for
 # each side. We will try to find a suitable dispersion factor to get some
@@ -152,14 +152,14 @@ ax.plot(new_x + cwl[i + 130], 1.4 * pr[i + 130, :])
 new_wl = disp * (np.arange(128) - 58)[:, None] + cwl[None, :]
 # %%
 # Using that factor we can extract the region around the peak for multiple spectra.
-# In this region, we just look for the minium.
+# In this region, we just look for the minimum.
 
 fig, (ax, ax2) = plt.subplots(2, sharex=True, figsize=(3, 4))
 
 mask = (abs(new_wl - 1e7/1601) < 80).T
 ax.plot(np.arange(128) - 58, cwl[np.argmax(mask, 0)], lw=1, c='k', ls='--')
 ax.plot(np.arange(128) - 58, cwl[800 - np.argmax(mask[::-1], 0)], lw=1, c='k', ls='--')
-ax.pcolormesh(np.arange(128) - 58, cwl, pr, rasterized=True)
+ax.pcolormesh(np.arange(128) - 58, cwl, pr, rasterized=True, shading='auto')
 
 tmp = np.where(mask, pr, np.inf)
 from scipy.stats import linregress
