@@ -14,7 +14,7 @@ import re
 import hashlib
 import zipfile
 import zipfile_deflate64
-import os
+import os, subprocess
 
 def vbload(fname=r'C:\Users\Tillsten\Documents\weisslicht.dat'):
     """
@@ -290,7 +290,8 @@ def get_twodim_dataset():
             # Somehow the file only works under windows
             zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
         else:
-            output = os.popen('unzip %s -o -d %s' %(p / 'MeSCN_2D_data.zip', p / 'MeSCN_2D_data/'))
-    if len(list(data_dir.glob('*.*'))) == 0:
+            cmd = 'unzip %s -d %s' %(p / 'MeSCN_2D_data.zip', p / 'MeSCN_2D_data/')
+            output = os.popen(cmd).read()
+    if len(list(data_dir.glob('*.*'))) != 1106:
         raise IOError("Extract failed")
     return p / 'MeSCN_2D_data'
