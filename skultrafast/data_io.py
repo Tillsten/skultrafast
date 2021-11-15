@@ -285,5 +285,5 @@ def get_twodim_dataset():
         else:
             raise IOError("Figshare ans != 200, %s instead" % ans.status)
     if not (p / 'MeSCN_2D_data').exists():
-        zipfile.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
+        zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
     return p / 'MeSCN_2D_data'
