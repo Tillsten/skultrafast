@@ -8,9 +8,8 @@ the example data, which will be downloaded from figshare if necessary.
 """
 # %%
 
-import tempfile
-import zipfile
 from pathlib import Path
+from re import X
 
 
 import matplotlib.pyplot as plt
@@ -38,26 +37,99 @@ infos
 # axis and use 10 pixel left and right to calculate and subtract a background.
 #
 # To create the dataset to work with form raw data we call the make_ds methods,
-# which returns a `TwoDim` object to work with.
+# which returns a dict of `TwoDim` objects to work with. The dict contains
+# parallel (`para`), perpendicular (`perp`) and isotropic (`iso`) datasets. We
+# select the isotropic dataset.
 
 plot_helpers.enable_style()
 
 qc_file = QC2DSpec(infos[1], bg_correct=(10, 10), upsampling=4)
 ds_all = qc_file.make_ds()
+ds_iso = ds_all['iso']
 
 # %%
 # First, lets get an overview and plot a contour plot at 0.5, 1 and 3 ps.
 
-ds_all.plot.contour(0.5, 1, 3)
+ds_iso.plot.contour(0.5, 1, 7, aspect=1)
 
 # %%
 # We are only interested in the region of the signal, hence we select a range.
 # The methods gives us a new, smaller `TwoDim` dataset.
 
-ds = ds_all.select_range((2140, 2180), (2120, 2180))
-c, ax = ds.plot.contour(0.5, 1, 3)
-ax.set_aspect(1)
+ds = ds_iso.select_range((2140, 2180), (2120, 2180))
+c, ax = ds.plot.contour(0.5, 1, 7, aspect=1)
 
 
 # %%
-# To get an normal
+# By integrating over the pump axis we can get a normal 1D-dataset. This is done
+# by the `integrate_method`, which returns a skultrafast `TimeResSpec`. Here we
+# integrate over the whole range. It is possible to integrate over a sub-range
+# by supplying arguments to the function.
+
+ds1d = ds.intregrate_pump() 
+
+fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4))
+ds1d.plot.spec(0.5, 1, 7, add_legend=True, ax=ax0)
+ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
+fig.tight_layout()
+
+# %%
+# One of the most common ways to analyze the a two dimensional dataset is to
+# extract the frequency-frequency correlation fucntion (FFCF). The most common
+# ways is to determine the center line slope, which under certain assumptions is
+# propotional to the normlized FFCF.
+
+# To extract the cls for a single time-points, we can use the
+# `single_cls`-method. Lets determine the cls for 1 ps. We use an window of 10
+# cm-1 in both pump and probe axis around the maximum for determination.
+# The algorithm currently uses the center-of-mass.
+
+y_cls, x_cls, lin_fit = ds.single_cls(1, pr_range=10, pu_range=10)
+
+# Plot the result
+plt.figure()
+_, ax = ds.plot.contour(1, aspect=1)
+
+# First plot the maxima
+ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
+
+# Plot the resulting fit. Since the slope is a function of the pump frequencies,
+# we have to use y-values for the slope.
+ax.plot(y_cls*lin_fit.slope+lin_fit.intercept, y_cls, color='w')
+
+# %%
+# To determine the full CLS-decay, we can use the the `cls`-method. It takes the
+# same arguments as `single_cls`, except the single waiting time. The
+# information of each single cls is accessable in the cls result.
+
+cls_result = ds.cls(pr_range=10, pu_range=10)
+
+ti = ds.t_idx(1)
+_, ax = ds.plot.contour(1, aspect=1)
+x_cls, y_cls = cls_result.lines[ti][:, 1], cls_result.lines[ti][:, 0]
+ax.plot(x_cls, y_cls,
+        marker='o', markersize=3, lw=0, color='yellow',)
+ax.plot(cls_result.slopes[ti]*y_cls+cls_result.intercepts[ti], y_cls, c='w')
+
+# %%
+# Lets look at the time-dependence of the slope.
+
+fig, ax = plt.subplots()
+ax.plot(cls_result.wt, cls_result.slopes) 
+ax.set(xlabel='Waiting Time', ylabel='Slope')
+
+# %%
+# The ClsResult class also offers a conivce funtion to the fit cls with
+# exponential functions.
+
+tau_estimate = [5]
+fr = cls_result.exp_fit(tau_estimate,  use_const=True, use_weights=True)
+
+fig, ax = plt.subplots()
+cls_result.plot_cls(ax=ax, symlog=True)
+text = '(%.1f ± %.1f) ps'%(fr.params['a_decay'].value, fr.params['a_decay'].stderr)
+ax.annotate(text, (0.98, 0.98), xycoords='axes fraction', ha='right', va='top',
+            fontsize='large')
+
+
+# %%

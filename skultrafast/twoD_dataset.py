@@ -1,5 +1,3 @@
-from pathlib import Path
-from sys import prefix
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import attr
@@ -25,6 +23,8 @@ def inbetween(a, lower, upper):
 class CLSResult:
     wt: List[float]
     slopes: List[float]
+    intercepts: List[float]
+    intercept_errors: Optional[List[float]] = None
     slope_errors: Optional[List[float]] = None
     lines: Optional[np.ndarray] = None
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
@@ -44,7 +44,7 @@ class CLSResult:
                 mod.set_param_hint(p, min=0)
             if p[:3] == 'amp':
                 mod.set_param_hint(p, min=0)
-        mod.set_param_hint('c', min=0)
+        #mod.set_param_hint('c', min=-0)
         if use_const:
             c = max(np.min(self.slopes), 0)
         else:
@@ -64,18 +64,22 @@ class CLSResult:
         return res
 
 
-    def plot_cls(self, ax=None, model_style: Dict=None, **kwargs):
+    def plot_cls(self, ax=None, model_style: Dict=None, symlog=False, **kwargs):
         if ax is None:
             ax = plt.gca()
         ec = ax.errorbar(self.wt, self.slopes, self.slope_errors, **kwargs)
-        plot_helpers.lbl_trans(ax=ax)
+        if symlog:
+           ax.set_xscale('symlog', linthreshx=1)
+        plot_helpers.lbl_trans(ax=ax, use_symlog=symlog)
+
         ax.set(xlabel=plot_helpers.time_label, ylabel='Slope')
         m_line = None
         if self.exp_fit_result_:
             xu = np.linspace(min(self.wt), max(self.wt), 300)
             yu = self.exp_fit_result_.eval(x=xu)
-            style=dict(c='k', zorder=1.8)
-            if model_style: style.update(model_style)
+            style = dict(c='k', zorder=1.8)
+            if model_style:
+                style.update(model_style)
             ax.plot(xu, yu, color='k', zorder=1.8)
         return ec, m_line
 
@@ -117,7 +121,6 @@ class TwoDimPlotter:
                                s2d[k].T,
                                N=np.linspace(-m, m, 21),
                                cmap='Div',
-                               symmetric=True,
                                linewidths=[0.7],
                                linestyles=['-'])
             start = max(ds.probe_wn.min(), ds.pump_wn.min())
@@ -197,7 +200,7 @@ class TwoDim:
 
     def copy(self) -> 'TwoDim':
         cpy = attr.evolve(self)
-        cpy.plot = TwoDimPlotter(cpy) #typing: ignore
+        cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
 
     def t_idx(self, t: Union[float, Iterable[float]]) -> int:
@@ -229,7 +232,17 @@ class TwoDim:
         ds.probe_wn = ds.probe_wn[pr_idx]
         return ds
 
-    def intregrate_pump(self, lower: float, upper: float) -> TimeResSpec:
+    def select_t_range(self, t_min: float= -np.inf, t_max: float=np.inf) -> 'TwoDim':
+        """"
+        Returns a dataset only containing the data within given time limits.
+        """
+        idx = inbetween(self.t, t_min, t_max)
+        ds = self.copy()
+        ds.t = ds.t[idx]
+        ds.spec2d = ds.spec2d[idx, :, :]
+        return ds
+
+    def intregrate_pump(self, lower: float = -np.inf, upper: float = np.inf) -> TimeResSpec:
         """
         Calculate and return 1D Time-resolved spectra for given range.
 
@@ -249,7 +262,7 @@ class TwoDim:
         data = np.trapz(self.spec2d[:, :, pu_idx], self.pump_wn[pu_idx], axis=-1)
         return TimeResSpec(self.probe_wn, self.t, data, freq_unit='cm')
 
-    def single_cls(self, t, pr_range=9, pu_range=7, mode='neg'):
+    def single_cls(self, t, pr_range=9, pu_range=7, mode='neg') -> Tuple[np.ndarray, np.ndarray, object]:
         """
         Calculate the CLS for single 2D spectrum.
 
@@ -296,12 +309,17 @@ class TwoDim:
     def cls(self, **cls_args):
         slopes, slope_errs = [], []
         lines = []
+        intercept = []
+        intercept_errs = []
         for d in self.t:
             x, y, r = self.single_cls(d, **cls_args)
             slopes.append(r.slope)
             slope_errs.append(r.stderr)
             lines.append(np.column_stack((x, y)))
-        res = CLSResult(self.t, slopes=slopes, slope_errors=slope_errs, lines=lines)
+            intercept.append(r.intercept)
+            intercept_errs.append(r.intercept_stderr)
+        res = CLSResult(self.t, slopes=slopes, slope_errors=slope_errs,
+                        lines=lines, intercepts=intercept, intercept_errors=intercept_errs)
         self.cls_result_ = res
         return res
 
