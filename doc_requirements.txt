@@ -1,3 +1,4 @@
 sphinx > 1.8
 sphinx-gallery
 pytest
+docutils<0.18
