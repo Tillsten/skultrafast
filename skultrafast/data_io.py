@@ -284,11 +284,13 @@ def get_twodim_dataset():
                 raise IOError('MD5-hash of download not correct')
         else:
             raise IOError("Figshare ans != 200, %s instead" % ans.status)
-    if not (p / 'MeSCN_2D_data').exists():
+    data_dir =  (p / 'MeSCN_2D_data')
+    if not data_dir.exists():
         if os.name == 'nt':
             # Somehow the file only works under windows
             zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
         else:
-            output = os.popen('unzip MeSCN_2D_data.zip -o -d %s' %(p / 'MeSCN_2D_data'))
-            print(output)
+            output = os.popen('unzip %s -o -d %s' %(p / 'MeSCN_2D_data.zip', p / 'MeSCN_2D_data/'))
+    if len(list(data_dir.glob('*.*'))) == 0:
+        raise IOError("Extract failed")
     return p / 'MeSCN_2D_data'
