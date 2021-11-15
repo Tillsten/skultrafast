@@ -27,10 +27,12 @@ def datadir(tmp_path_factory):
     zipfile.ZipFile(p).extractall(tmp)
     return tmp
 
+
 @pytest.fixture(scope='session')
 def datadir2d(tmp_path_factory):
     p = get_twodim_dataset()
     return p
+
 
 def test_info(datadir):
     qc = QCFile(fname=datadir / '20201029#07')
