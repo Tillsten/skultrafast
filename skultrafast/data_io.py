@@ -14,7 +14,7 @@ import re
 import hashlib
 import zipfile
 import zipfile_deflate64
-
+import os
 
 def vbload(fname=r'C:\Users\Tillsten\Documents\weisslicht.dat'):
     """
@@ -265,6 +265,7 @@ def get_twodim_dataset():
         p.mkdir()
     if len(list(p.glob('MeSCN_2D_data.zip'))) == 0:
         article_id = 15156528
+
         ans = urllib.request.urlopen(
             f'https://api.figshare.com/v2/articles/{article_id}/files')
         if ans.status == 200:
@@ -285,5 +286,11 @@ def get_twodim_dataset():
         else:
             raise IOError("Figshare ans != 200, %s instead" % ans.status)
     if not (p / 'MeSCN_2D_data').exists():
-        zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
+        if os.name == 'nt':
+            # Somehow the file only works under windows
+            zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
+
+        else:
+            output = os.open('unzip MeSCN_2D_data.zip -o -d %s' %(p / 'MeSCN_2D_data'))
+            print(output)
     return p / 'MeSCN_2D_data'
