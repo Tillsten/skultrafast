@@ -291,6 +291,6 @@ def get_twodim_dataset():
             zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
 
         else:
-            output = os.open('unzip MeSCN_2D_data.zip -o -d %s' %(p / 'MeSCN_2D_data'))
+            output = os.popen('unzip MeSCN_2D_data.zip -o -d %s' %(p / 'MeSCN_2D_data'))
             print(output)
     return p / 'MeSCN_2D_data'
