@@ -12,3 +12,13 @@ def test_path_loader():
     assert Path(p).exists()
     p = data_io.get_example_path('messpy')
     assert Path(p).exists()
+
+
+def test_2d_load():
+    p = data_io.get_example_path('quickcontrol')
+    assert Path(p).exists()
+
+
+def test_2d_webload():
+    a = data_io.get_twodim_dataset()
+

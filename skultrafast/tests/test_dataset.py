@@ -6,16 +6,18 @@ from numpy.testing import assert_almost_equal
 
 wl, t, data = load_example()
 
+
 def test_integrate():
     ds = TimeResSpec(wl, t, data)
     ds.wn_i(15000, 20000)
 
+
 def test_methods():
     ds = TimeResSpec(wl, t, data)
     bds = ds.bin_freqs(300)
-    ds2 = TimeResSpec(1e7/wl, t, data, freq_unit='cm', disp_freq_unit='cm')
+    ds2 = TimeResSpec(1e7 / wl, t, data, freq_unit='cm', disp_freq_unit='cm')
     bds2 = ds2.bin_freqs(50)
-    assert(np.all(np.isfinite(bds2.data)))
+    assert (np.all(np.isfinite(bds2.data)))
 
     assert (len(bds.wavelengths) == 300)
     nds = ds.cut_freq(400, 600)
@@ -27,10 +29,10 @@ def test_methods():
     ds.mask_freqs([(400, 600)])
     assert (np.all(ds.data.mask[:, ds.wl_idx(550)]))
     ds2 = ds.scale_and_shift(2, t_shift=1, wl_shift=10)
-    assert_almost_equal(2*ds.data, ds2.data)
-    assert_almost_equal(ds.t+1, ds2.t)
-    assert_almost_equal(ds.wavelengths+10, ds2.wavelengths)
-    assert_almost_equal(1e7/ds2.wavelengths, ds2.wavenumbers)
+    assert_almost_equal(2 * ds.data, ds2.data)
+    assert_almost_equal(ds.t + 1, ds2.t)
+    assert_almost_equal(ds.wavelengths + 10, ds2.wavelengths)
+    assert_almost_equal(1e7 / ds2.wavelengths, ds2.wavenumbers)
 
 
 def test_est_disp():
@@ -45,33 +47,36 @@ def test_fitter():
     x0 = [0.1, 0.1, 1, 1000]
     out = ds.fit_exp(x0)
 
+
 def test_error_calc():
     ds = TimeResSpec(wl, t, data)
     x0 = [0.1, 0.1, 1, 1000]
     out = ds.fit_exp(x0)
     out.calculate_stats()
 
+
 def test_das_plots():
     ds = TimeResSpec(wl, t, data)
     x0 = [0.1, 0.1, 1, 1000]
-    out = ds.fit_exp(x0)    
-    ds.plot.das()    
+    out = ds.fit_exp(x0)
+    ds.plot.das()
     ds.plot.edas()
 
 
 def test_das_pol_plots():
     ds = TimeResSpec(wl, t, data)
-    pds = PolTRSpec(ds, ds) # fake pol
+    pds = PolTRSpec(ds, ds)  # fake pol
     x0 = [0.1, 0.1, 1, 1000]
     out = pds.fit_exp(x0)
 
     pds.plot.das()
     pds.plot.edas()
 
+
 def test_sas_pol_plots():
     from skultrafast.kinetic_model import Model
     ds = TimeResSpec(wl, t, data)
-    pds = PolTRSpec(ds, ds) # fake pol
+    pds = PolTRSpec(ds, ds)  # fake pol
     x0 = [0.1, 0.1, 1, 1000]
     out = pds.fit_exp(x0)
     m = Model()
@@ -79,7 +84,6 @@ def test_sas_pol_plots():
     m.add_transition('S1', 'zero', 'k2')
 
     pds.plot.sas(m)
-
 
 
 def test_sas():
@@ -92,12 +96,11 @@ def test_sas():
     m.add_transition('S1', 'zero', 'k2')
     out.make_sas(m, {})
 
-
     m2 = Model()
     m2.add_transition('S1', 'S1*', 'k1', 'qy1')
     m2.add_transition('S1', 'zero', 'k2')
     out.make_sas(m2, {'qy1': 0.5})
-    
+
 
 def test_merge():
     ds = TimeResSpec(wl, t, data)
@@ -115,7 +118,6 @@ def test_pol_tr():
     assert_almost_equal(out.perp.data, out.para.data)
     ps.subtract_background()
     ps.mask_freqs([(400, 550)])
-    print(ps.para.data.mask, ps.para.data.mask[1, ps.para.wl_idx(520)])
 
     assert (ps.para.data.mask[1, ps.para.wl_idx(520)])
     out = ps.cut_freq(400, 550)
@@ -142,17 +144,18 @@ def test_plot():
 def test_concat():
     ds = TimeResSpec(wl, t, data)
     ds = ds.bin_freqs(50)
-    n = ds.wavelengths.size //2
+    n = ds.wavelengths.size // 2
     ds1 = ds.cut_freq(ds.wavelengths[n], np.inf)
-    ds2 = ds.cut_freq(-np.inf, ds.wavelengths[n])    
-    dsc = ds1.concat_datasets(ds2)    
-    assert(np.allclose(dsc.data, ds.data))
+    ds2 = ds.cut_freq(-np.inf, ds.wavelengths[n])
+    dsc = ds1.concat_datasets(ds2)
+    assert (np.allclose(dsc.data, ds.data))
     pol_ds = PolTRSpec(ds, ds)
     a = PolTRSpec(ds1, ds1)
     b = PolTRSpec(ds2, ds2)
     pol_dsc = a.concat_datasets(b)
     for p in 'para', 'perp', 'iso':
-        assert(np.allclose(getattr(pol_dsc, p).data, getattr(pol_ds, p).data))
+        assert (np.allclose(getattr(pol_dsc, p).data, getattr(pol_ds, p).data))
+
 
 def test_pol_plot():
     ds = TimeResSpec(wl, t, data)
