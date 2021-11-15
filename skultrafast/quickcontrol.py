@@ -275,7 +275,7 @@ class QC2DSpec(QCBaserTimeRes):
         cm = 10 / ((1/freqs) * 1e-12 * speed_of_light) + om0
         return cm
 
-    def make_ds(self):
+    def make_ds(self) -> Dict[str, TwoDim]:
         par, perp = self.calc_spec()
         self.pump_freq = self._calc_freqs()
         par_arr = np.dstack(list(par.values())).T
