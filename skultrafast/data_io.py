@@ -265,7 +265,6 @@ def get_twodim_dataset():
         p.mkdir()
     if len(list(p.glob('MeSCN_2D_data.zip'))) == 0:
         article_id = 15156528
-
         ans = urllib.request.urlopen(
             f'https://api.figshare.com/v2/articles/{article_id}/files')
         if ans.status == 200:
