@@ -140,7 +140,7 @@ class TwoDimPlotter:
     def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
 
-        c, ax = self.contour(ds.t[0], **subplots_kw)
+        c, ax = self.contour(self.ds.t[0], **subplots_kw)
         fig = ax.get_figure()
         frames = self.ds.t
         std_kws = {}
@@ -161,6 +161,7 @@ class TwoDimPlotter:
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Slice Amp. [mOD]')
 
     def elp(self):
+        pass
 
 
 @attr.s(auto_attribs=True)
