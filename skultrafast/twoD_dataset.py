@@ -69,7 +69,7 @@ class CLSResult:
             ax = plt.gca()
         ec = ax.errorbar(self.wt, self.slopes, self.slope_errors, **kwargs)
         if symlog:
-           ax.set_xscale('symlog', linthreshx=1)
+            ax.set_xscale('symlog', linthreshx=1)
         plot_helpers.lbl_trans(ax=ax, use_symlog=symlog)
 
         ax.set(xlabel=plot_helpers.time_label, ylabel='Slope')
@@ -140,13 +140,13 @@ class TwoDimPlotter:
     def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
 
-        c, ax = self.contour(0)
+        c, ax = self.contour(ds.t[0], **subplots_kw)
         fig = ax.get_figure()
         frames = self.ds.t
         std_kws = {}
         def func(x):
             ax.cla()
-            self.contour(x, ax=ax, scale="fullmax")
+            self.contour(x, ax=ax, scale="fullmax", **subplots_kw)
         ani = FuncAnimation(fig=fig, func=func, frames=frames)
         ani.save(fname)
 
@@ -159,6 +159,8 @@ class TwoDimPlotter:
         ax.plot(self.ds.pump_wn, self.ds.pump_slice_amp())
         plot_helpers.ir_mode()
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Slice Amp. [mOD]')
+
+    def elp(self):
 
 
 @attr.s(auto_attribs=True)
@@ -271,13 +273,13 @@ class TwoDim:
         t : float
             Delay time of the spectrum to analyse
         pr_range : float, optional
-            How many wavenumbers away from the maxium to use for
+            How many wavenumbers away from the maximum to use for
             determining the exact position, by default 9
         pu_range : float, optional
             The range around the pump-maxima used for calculating
             the CLS.
         mode : str, optional
-            negative or positive maxium, by default 'neg'
+            negative or positive maximum, by default 'neg'
 
         Returns
         -------

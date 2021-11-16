@@ -260,7 +260,7 @@ class QC2DSpec(QCBaserTimeRes):
                     bg_correct(self.wavelength, d, self.bg_correct[0], self.bg_correct[1])
                 d[0, :] *= 0.5
                 if self.win_function is not None:
-                    win = self.win_fcn(2 * len(self.t2))
+                    win = self.win_function(2 * len(self.t2))
                 else:
                     win = np.ones(2 * len(self.t2))
                 spec = np.fft.rfft(d * win[len(self.t2):, None],
