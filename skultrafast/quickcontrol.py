@@ -174,11 +174,6 @@ class QC2DSpec(QCBaserTimeRes):
     t2: np.ndarray = attr.ib()
     """t2, the inter-pulse delays between pump pulses"""
 
-    pump_freq: np.ndarray = attr.ib()
-    """
-    Resulting wavenumbers of the pump axis.
-    """
-
     par_data: Dict = attr.ib()
     """Data for parallel polarization"""
 
@@ -196,6 +191,11 @@ class QC2DSpec(QCBaserTimeRes):
 
     upsampling: int = 2
     """Upsamling factor of the pump-axis"""
+
+    pump_freq: np.ndarray = attr.ib()
+    """
+    Resulting wavenumbers of the pump axis.
+    """
 
     bg_correct: Optional[Tuple] = None
     """

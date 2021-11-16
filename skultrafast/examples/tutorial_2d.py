@@ -9,6 +9,7 @@ measured with the quickcontrol-software from phasetech.
 
 First we import the necessary stuff.
 """
+sphinx_gallery_thumbnail_number = 2
 # %%
 from pathlib import Path
 
@@ -167,4 +168,41 @@ ax.annotate(text, (0.98, 0.98), xycoords='axes fraction', ha='right', va='top',
             fontsize='large')
 ax.set_xscale('log')
 
+# %%
+
+from scipy.interpolate import RegularGridInterpolator
+
+def elp(pt, spec_i, offset=None, p=None):
+    fig, (ax, ax1) = plt.subplots(2, figsize=(3, 6), sharex='col')
+    d = pt.spec2d[spec_i].real.copy()[::, ::].T
+    interpol = RegularGridInterpolator((pt.pump_wn, pt.probe_wn, ), d[::, ::], bounds_error=False)
+    m = abs(d).max()
+    ax.pcolormesh(pt.probe_wn, pt.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
+    #
+    ax.set(ylim=(pt.pump_wn.min(), pt.pump_wn.max()), xlim=(pt.probe_wn.min(), pt.probe_wn.max()))
+    ax.set_aspect(1)
+    if offset is None:
+        offset = pt.pump_wn[np.argmin(np.min(d, 1))]-pt.probe_wn[np.argmin(np.min(d, 0))]
+    if p is None:
+        p = pt.probe_wn[np.argmin(np.min(d, 0))]
+    y_diag = pt.probe_wn+offset
+    y_antidiag = -pt.probe_wn+2*p+offset
+    ax.plot(pt.probe_wn, y_diag, lw=1)
+    ax.plot(pt.probe_wn, y_antidiag, lw=1)
+    
+    diag = interpol(np.column_stack((y_diag, pt.probe_wn)))
+    antidiag = interpol(np.column_stack((y_antidiag, pt.probe_wn)))
+    ax1.plot(pt.probe_wn, diag)
+    ax1.plot(pt.probe_wn, antidiag)
+    return
+    def gauss(wn, A, sigma, x0, c):
+        return A*np.exp(-0.5*(wn-x0)**2/sigma**2) + c
+    idx = (pt.probe_wn<2380) & (pt.probe_wn>2130)
+    #idx = (pt.wn_axis<2200) & (pt.wn_axis>1900)
+    mod = lmfit.Model(gauss)
+    diag_result = mod.fit(wn=pt.probe_wn[idx], data=diag[idx], x0=2155, A=-70, sigma=4, c=2)
+    anti_result = mod.fit(wn=pt.probe_wn[idx], data=antidiag[idx], x0=2155, A=-70, sigma=4, c=2)
+    ax1.plot(pt.probe_wn[idx], diag_result.best_fit, c='k', lw=0.3)
+    ax1.plot(pt.probe_wn[idx], anti_result.best_fit, c='black', lw=0.3)
+    return anti_result.params['sigma'], diag_result.params['sigma']
 # %%
