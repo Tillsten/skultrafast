@@ -9,7 +9,8 @@ measured with the quickcontrol-software from phasetech.
 
 First we import the necessary stuff.
 """
-sphinx_gallery_thumbnail_number = 2
+# sphinx_gallery_thumbnail_number = 4
+
 # %%
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from skultrafast.quickcontrol import QC2DSpec
 from skultrafast.twoD_dataset import TwoDim
 
 from skultrafast.data_io import get_twodim_dataset
+
 
 # %%
 # The following line returns a path to a folder containing the sample data. If
@@ -93,13 +95,13 @@ c, ax = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
 # Extracting a transient 1D-spectrum
 # ----------------------------------
 #
-# Using the projection theoreme and integrating over over the pump axis, we can
+# Using the projection theorem and integrating over over the pump axis, we can
 # get a normal trainsient 1D-dataset. This can be done by the
-# `integrate_method`, which returns a skultrafast `TimeResSpec`. Here we
+# `TwoDim.integrate_method`, which returns a skultrafast `TimeResSpec`. Here we
 # integrate over the whole range. It is possible to integrate over a sub-range
 # by supplying arguments to the function.
 
-ds1d = ds.intregrate_pump()
+ds1d = ds.integrate_pump()
 
 fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4))
 ds1d.plot.spec(0.5, 1, 7, add_legend=True, ax=ax0)
@@ -114,16 +116,15 @@ fig.tight_layout()
 # extract the frequency-frequency correlation fucntion (FFCF). The most common
 # ways is to determine the center line slope, which under certain assumptions is
 # propotional to the normlized FFCF.
-
-# To extract the cls for a single time-points, we can use the
-# `single_cls`-method. Lets determine the cls for 1 ps. We use an window of 10
-# cm-1 in both pump and probe axis around the maximum for determination.
-# The algorithm currently uses the center-of-mass.
+#
+# To extract the cls for a single time-point, we use the `single_cls`-method.
+# Lets determine the cls for 1 ps. We use an window of 10 cm-1 in both pump and
+# probe axis around the maximum for determination. The algorithm currently uses
+# the center-of-mass.
 
 y_cls, x_cls, lin_fit = ds.single_cls(1, pr_range=10, pu_range=10)
 
 # Plot the result
-plt.figure()
 _, ax = ds.plot.contour(1, aspect=1)
 
 # First plot the maxima
@@ -172,29 +173,30 @@ ax.set_xscale('log')
 
 from scipy.interpolate import RegularGridInterpolator
 
-def elp(pt, spec_i, offset=None, p=None):
+def elp(self, spec_i, offset=None, p=None):
     fig, (ax, ax1) = plt.subplots(2, figsize=(3, 6), sharex='col')
-    d = pt.spec2d[spec_i].real.copy()[::, ::].T
-    interpol = RegularGridInterpolator((pt.pump_wn, pt.probe_wn, ), d[::, ::], bounds_error=False)
+    d = self.spec2d[spec_i].real.copy()[::, ::].T
+    interpol = RegularGridInterpolator((self.pump_wn, self.probe_wn, ), d[::, ::], bounds_error=False)
     m = abs(d).max()
-    ax.pcolormesh(pt.probe_wn, pt.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
-    #
-    ax.set(ylim=(pt.pump_wn.min(), pt.pump_wn.max()), xlim=(pt.probe_wn.min(), pt.probe_wn.max()))
+    ax.pcolormesh(self.probe_wn, self.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
+    
+    ax.set(ylim=(self.pump_wn.min(), self.pump_wn.max()), xlim=(self.probe_wn.min(), self.probe_wn.max()))
     ax.set_aspect(1)
     if offset is None:
-        offset = pt.pump_wn[np.argmin(np.min(d, 1))]-pt.probe_wn[np.argmin(np.min(d, 0))]
+        offset = self.pump_wn[np.argmin(np.min(d, 1))]-self.probe_wn[np.argmin(np.min(d, 0))]
     if p is None:
-        p = pt.probe_wn[np.argmin(np.min(d, 0))]
-    y_diag = pt.probe_wn+offset
-    y_antidiag = -pt.probe_wn+2*p+offset
-    ax.plot(pt.probe_wn, y_diag, lw=1)
-    ax.plot(pt.probe_wn, y_antidiag, lw=1)
+        p = self.probe_wn[np.argmin(np.min(d, 0))]
+    y_diag = self.probe_wn+offset
+    y_antidiag = -self.probe_wn+2*p+offset
+    ax.plot(self.probe_wn, y_diag, lw=1)
+    ax.plot(self.probe_wn, y_antidiag, lw=1)
     
-    diag = interpol(np.column_stack((y_diag, pt.probe_wn)))
-    antidiag = interpol(np.column_stack((y_antidiag, pt.probe_wn)))
-    ax1.plot(pt.probe_wn, diag)
-    ax1.plot(pt.probe_wn, antidiag)
+    diag = interpol(np.column_stack((y_diag, self.probe_wn)))
+    antidiag = interpol(np.column_stack((y_antidiag, self.probe_wn)))
+    ax1.plot(self.probe_wn, diag)
+    ax1.plot(self.probe_wn, antidiag)
     return
+
     def gauss(wn, A, sigma, x0, c):
         return A*np.exp(-0.5*(wn-x0)**2/sigma**2) + c
     idx = (pt.probe_wn<2380) & (pt.probe_wn>2130)

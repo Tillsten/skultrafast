@@ -160,8 +160,30 @@ class TwoDimPlotter:
         plot_helpers.ir_mode()
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Slice Amp. [mOD]')
 
-    def elp(self):
-        pass
+
+    def elp(self, spec_i, offset=None, p=None):
+        fig, (ax, ax1) = plt.subplots(2, figsize=(3, 6), sharex='col')
+        d = self.spec2d[spec_i].real.copy()[::, ::].T
+        interpol = RegularGridInterpolator((self.pump_wn, self.probe_wn,), d[::, ::], bounds_error=False)
+        m = abs(d).max()
+        ax.pcolormesh(self.probe_wn, self.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
+
+        ax.set(ylim=(self.pump_wn.min(), self.pump_wn.max()), xlim=(self.probe_wn.min(), self.probe_wn.max()))
+        ax.set_aspect(1)
+        if offset is None:
+            offset = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
+        if p is None:
+            p = self.probe_wn[np.argmin(np.min(d, 0))]
+        y_diag = self.probe_wn + offset
+        y_antidiag = -self.probe_wn + 2 * p + offset
+        ax.plot(self.probe_wn, y_diag, lw=1)
+        ax.plot(self.probe_wn, y_antidiag, lw=1)
+
+        diag = interpol(np.column_stack((y_diag, self.probe_wn)))
+        antidiag = interpol(np.column_stack((y_antidiag, self.probe_wn)))
+        ax1.plot(self.probe_wn, diag)
+        ax1.plot(self.probe_wn, antidiag)
+        return
 
 
 @attr.s(auto_attribs=True)
@@ -178,9 +200,9 @@ class TwoDim:
     "Meta Info"
     cls_result_: Optional[CLSResult] = None
     "Contains the data from a CLS analysis"
-    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True) #typing: Ignore
+    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True) # typing: Ignore
     "Plot object offering plotting methods"
-    interpolator_: Optional[RegularGridInterpolator] = None #typing: Ignore
+    interpolator_: Optional[RegularGridInterpolator] = None # typing: Ignore
 
     def _make_int(self, ):
         RegularGridInterpolator((self.t, self.probe_wn, self.pump_wn), self.spec2d, bounds_error=False)
@@ -245,7 +267,7 @@ class TwoDim:
         ds.spec2d = ds.spec2d[idx, :, :]
         return ds
 
-    def intregrate_pump(self, lower: float = -np.inf, upper: float = np.inf) -> TimeResSpec:
+    def integrate_pump(self, lower: float = -np.inf, upper: float = np.inf) -> TimeResSpec:
         """
         Calculate and return 1D Time-resolved spectra for given range.
 
