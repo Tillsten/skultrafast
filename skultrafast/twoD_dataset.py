@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
 
-
-from scipy.ndimage import  map_coordinates, uniform_filter1d
+from scipy.ndimage import map_coordinates, uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
 import proplot
 
@@ -44,7 +43,7 @@ class CLSResult:
                 mod.set_param_hint(p, min=0)
             if p[:3] == 'amp':
                 mod.set_param_hint(p, min=0)
-        #mod.set_param_hint('c', min=-0)
+        # mod.set_param_hint('c', min=-0)
         if use_const:
             c = max(np.min(self.slopes), 0)
         else:
@@ -63,8 +62,7 @@ class CLSResult:
         self.exp_fit_result_ = res
         return res
 
-
-    def plot_cls(self, ax=None, model_style: Dict=None, symlog=False, **kwargs):
+    def plot_cls(self, ax=None, model_style: Dict = None, symlog=False, **kwargs):
         if ax is None:
             ax = plt.gca()
         ec = ax.errorbar(self.wt, self.slopes, self.slope_errors, **kwargs)
@@ -85,6 +83,15 @@ class CLSResult:
 
 
 @attr.s(auto_attribs=True)
+class DiagResult:
+    diag: np.ndarray
+    antidiag: np.ndarray
+    diag_coords: np.ndarray
+    antidiag_coords: np.ndarray
+    offset: float
+    p: float
+
+@attr.s(auto_attribs=True)
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
@@ -102,7 +109,7 @@ class TwoDimPlotter:
                 nrows = 1
                 ncols = len(idx)
             fig, ax = proplot.subplots(nrows=nrows, ncols=ncols, **subplots_kws,
-                             aspect=aspect)
+                                       aspect=aspect)
         if scale == 'fullmax':
             m = abs(ds.spec2d).max()
         elif scale == 'firstmax':
@@ -144,14 +151,30 @@ class TwoDimPlotter:
         fig = ax.get_figure()
         frames = self.ds.t
         std_kws = {}
+
         def func(x):
             ax.cla()
             self.contour(x, ax=ax, scale="fullmax", **subplots_kw)
+
         ani = FuncAnimation(fig=fig, func=func, frames=frames)
         ani.save(fname)
 
     def plot_cls(self):
         pass
+
+    def plot_square(self, probe_range, pump_range=None, use_symlog=True, ax=None):
+        if pump_range is None:
+            pump_range = probe_range
+        pr = inbetween(self.ds.probe_wn, min(probe_range), max(probe_range))
+        reg = self.ds.spec2d[:, pr, :]
+        pu = inbetween(self.ds.pump_wn, min(pump_range), max(pump_range))
+        reg = reg[:, :, pu]
+        s = reg.sum(1).sum(1)
+        if ax is None:
+            ax = plt.gca()
+        l, = ax.plot(self.ds.t, s)
+        plot_helpers.lbl_trans(ax, use_symlog)
+        return l
 
     def pump_slice_amps(self, ax=None):
         if ax is None:
@@ -160,29 +183,31 @@ class TwoDimPlotter:
         plot_helpers.ir_mode()
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Slice Amp. [mOD]')
 
-
-    def elp(self, spec_i, offset=None, p=None):
+    def elp(self, t, offset=None, p=None):
+        ds = self.ds
+        spec_i = ds.t_idx(t)
         fig, (ax, ax1) = plt.subplots(2, figsize=(3, 6), sharex='col')
-        d = self.spec2d[spec_i].real.copy()[::, ::].T
-        interpol = RegularGridInterpolator((self.pump_wn, self.probe_wn,), d[::, ::], bounds_error=False)
-        m = abs(d).max()
-        ax.pcolormesh(self.probe_wn, self.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
 
-        ax.set(ylim=(self.pump_wn.min(), self.pump_wn.max()), xlim=(self.probe_wn.min(), self.probe_wn.max()))
+        d = ds.spec2d[spec_i].real.copy()[::, ::].T
+        interpol = RegularGridInterpolator((ds.pump_wn, ds.probe_wn,), d[::, ::], bounds_error=False)
+        m = abs(d).max()
+        ax.pcolormesh(ds.probe_wn, ds.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
+
+        ax.set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), xlim=(ds.probe_wn.min(), ds.probe_wn.max()))
         ax.set_aspect(1)
         if offset is None:
-            offset = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
+            offset = ds.pump_wn[np.argmin(np.min(d, 1))] - ds.probe_wn[np.argmin(np.min(d, 0))]
         if p is None:
-            p = self.probe_wn[np.argmin(np.min(d, 0))]
-        y_diag = self.probe_wn + offset
-        y_antidiag = -self.probe_wn + 2 * p + offset
-        ax.plot(self.probe_wn, y_diag, lw=1)
-        ax.plot(self.probe_wn, y_antidiag, lw=1)
+            p = ds.probe_wn[np.argmin(np.min(d, 0))]
+        y_diag = ds.probe_wn + offset
+        y_antidiag = -ds.probe_wn + 2 * p + offset
+        ax.plot(ds.probe_wn, y_diag, lw=1)
+        ax.plot(ds.probe_wn, y_antidiag, lw=1)
 
-        diag = interpol(np.column_stack((y_diag, self.probe_wn)))
-        antidiag = interpol(np.column_stack((y_antidiag, self.probe_wn)))
-        ax1.plot(self.probe_wn, diag)
-        ax1.plot(self.probe_wn, antidiag)
+        diag = interpol(np.column_stack((y_diag, ds.probe_wn)))
+        antidiag = interpol(np.column_stack((y_antidiag, ds.probe_wn)))
+        ax1.plot(ds.probe_wn, diag)
+        ax1.plot(ds.probe_wn, antidiag)
         return
 
 
@@ -200,12 +225,15 @@ class TwoDim:
     "Meta Info"
     cls_result_: Optional[CLSResult] = None
     "Contains the data from a CLS analysis"
-    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True) # typing: Ignore
+    plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True)  # typing: Ignore
     "Plot object offering plotting methods"
-    interpolator_: Optional[RegularGridInterpolator] = None # typing: Ignore
+    interpolator_: Optional[RegularGridInterpolator] = None  # typing: Ignore
 
-    def _make_int(self, ):
-        RegularGridInterpolator((self.t, self.probe_wn, self.pump_wn), self.spec2d, bounds_error=False)
+    def _make_int(self):
+        intp = RegularGridInterpolator((self.t, self.probe_wn, self.pump_wn),
+                                       self.spec2d,
+                                       bounds_error=False)
+        return intp
 
     def __attrs_post_init__(self):
         n, m, k = self.t.size, self.probe_wn.size, self.pump_wn.size
@@ -224,6 +252,9 @@ class TwoDim:
         self.spec2d = self.spec2d[:, :, i1][:, i2, :]
 
     def copy(self) -> 'TwoDim':
+        """
+        Makes a copy of the dataset.
+        """
         cpy = attr.evolve(self)
         cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
@@ -257,7 +288,7 @@ class TwoDim:
         ds.probe_wn = ds.probe_wn[pr_idx]
         return ds
 
-    def select_t_range(self, t_min: float= -np.inf, t_max: float=np.inf) -> 'TwoDim':
+    def select_t_range(self, t_min: float = -np.inf, t_max: float = np.inf) -> 'TwoDim':
         """"
         Returns a dataset only containing the data within given time limits.
         """
@@ -322,7 +353,7 @@ class TwoDim:
         for s in spec:
             m = np.argmin(s)
             pr_max = pr[m]
-            i = u_idx = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
+            i = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
             cen_of_m = np.average(pr[i], weights=s[i])
             l.append(cen_of_m)
 
@@ -331,7 +362,9 @@ class TwoDim:
         r = linregress(x, y)
         return x, y, r
 
-    def cls(self, **cls_args):
+    def cls(self, **cls_args) -> CLSResult:
+        """Calculates the CLS for all 2d-spectra. The arguments are given
+        to the single cls function. Returns as `CLSResult`."""
         slopes, slope_errs = [], []
         lines = []
         intercept = []
@@ -348,12 +381,59 @@ class TwoDim:
         self.cls_result_ = res
         return res
 
-    def extract_line_spec(self, offset):
-        if not self.interpolator_:
+    def diag_and_antidiag(self, t: float, offset: Optional[float] = None, p: Optional[float] = None) -> DiagResult:
+        """
+        Extracts the diagonal and anti-diagonal.
+
+        Parameters
+        ----------
+        t: float
+            Waiting time of the 2d-spectra from which the data is extracted.
+        offset: float
+            Offset of the diagonal, if none, it will we determined by the going through the signal
+            minimum.
+        p: float
+            The point where the anti-diagonal crosses the diagonal. If none, it also goes through
+            the signal minimum.
+
+        Returns
+        -------
+        CLSResult
+            Contains the diagonals, coordinates and points.
+        """
+
+        spec_i = self.t_idx(t)
+
+        if self.interpolator_ is None:
             self.interpolator_ = self._make_int()
+            
+        d = self.spec2d[spec_i, ...].T
 
-    def bin_t(self, n: int):
-        pass
+        if offset is None:
+            offset = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
+        if p is None:
+            p = self.probe_wn[np.argmin(np.min(d, 0))]
 
+        y_diag = self.probe_wn + offset
+        y_antidiag = -self.probe_wn + 2 * p + offset
 
-    #def pump_slice_amp(sel
+        ts = np.ones_like(y_diag)
+        diag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_diag)))
+        antidiag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_antidiag)))
+
+        res = DiagResult(
+            diag=diag,
+            antidiag=antidiag,
+            diag_coords=y_diag,
+            antidiag_coords=y_antidiag,
+            offset=offset,
+            p=p,
+        )
+        return res
+
+    def pump_slice_amp(self, t, bg_correct=True):
+        d = self.spec2d[self.t_idx(t), :, :]
+        diag = np.ptp(d, axis=0)
+        if bg_correct:
+            diag -= (diag[0] + diag[-1])/2
+        return diag

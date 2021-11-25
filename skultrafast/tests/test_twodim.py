@@ -41,13 +41,23 @@ def test_select(two_d):
 @pytest.fixture(scope='session')
 def two_d_processed(two_d):
     two_d = two_d.copy()
-    two_d.select_range()
-
-def test_integrate(two_d):
-    two_d = two_d.copy()
-    two_d.intregrate_pump()
+    return two_d.select_range((2030, 2200), (2030, 2200))
 
 
+def test_integrate(two_d_processed):
+    two_d_processed.integrate_pump()
 
-def test_cls(two_d):
-    two_d = two_d.copy()
+
+def test_cls(two_d_processed):
+    two_d = two_d_processed.copy()
+    two_d.single_cls(3)
+    cls_result = two_d.cls()
+    cls_result.plot_cls()
+
+
+def test_diag(two_d_processed):
+    two_d_processed.diag_and_antidiag(3)
+
+
+def test_psa(two_d_processed):
+    two_d_processed.pump_slice_amp(3)
