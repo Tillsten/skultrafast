@@ -53,7 +53,7 @@ infos
 
 plot_helpers.enable_style()
 
-qc_file = QC2DSpec(infos[1], bg_correct=(10, 10), upsampling=4)
+qc_file = QC2DSpec(infos[1], bg_correct=(10, 10), upsampling=2, probe_filter=1.5)
 
 # %%
 # To create the dataset to work with form raw data we call the make_ds methods,
@@ -65,13 +65,13 @@ ds_all = qc_file.make_ds()
 ds_iso = ds_all['iso']
 
 # %%
-# The `TwoDim`-objects are the core structure to work with. The contain both
+# The `TwoDim`-objects are the core structure to work with. They contain both
 # frequency-axis, `pump_freqs` and `probe_freqs`, the waiting times `t`, and the
-# actutal data `spec2d`.
+# actual data `spec2d`.
 #
 # To start and to get an overview, we plot a contour-plot at 1 ps. Like for the
-# `TimeResSpec`-class, plotting functions are acessible under the plot
-# attriubte.
+# `TimeResSpec`-class, plotting functions are accessible under the plot
+# attribute.
 
 ds_iso.plot.contour(1, aspect=1)
 
@@ -80,7 +80,7 @@ ds_iso.plot.contour(1, aspect=1)
 # --------------------
 #
 # Most of the 2D-map is empty. We are only interested in the region of the
-# signal, hence we have to select a sub-range. The methods returns a new and
+# signal, hence we have to select a sub-range. The methods return a new and
 # smaller `TwoDim` dataset. In general, most methods which would modify
 # the data return a new dataset. Now we also plot the contour at different
 # time-points, 0.5, 1 and 7 ps.
@@ -95,8 +95,8 @@ c, ax = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
 # Extracting a transient 1D-spectrum
 # ----------------------------------
 #
-# Using the projection theorem and integrating over over the pump axis, we can
-# get a normal trainsient 1D-dataset. This can be done by the
+# Using the projection theorem and integrating over the pump axis, we can
+# get a normal transient 1D-dataset. This can be done by the
 # `TwoDim.integrate_method`, which returns a skultrafast `TimeResSpec`. Here we
 # integrate over the whole range. It is possible to integrate over a sub-range
 # by supplying arguments to the function.
@@ -112,13 +112,13 @@ fig.tight_layout()
 # Center line slope analyis
 # -------------------------
 #
-# One of the most common ways to analyze the a two dimensional dataset is to
-# extract the frequency-frequency correlation fucntion (FFCF). The most common
+# One of the most common ways to analyze a two-dimensional dataset is to
+# extract the frequency-frequency correlation function (FFCF). The most common
 # ways is to determine the center line slope, which under certain assumptions is
-# propotional to the normlized FFCF.
+# proportional to the normalized FFCF.
 #
 # To extract the cls for a single time-point, we use the `single_cls`-method.
-# Lets determine the cls for 1 ps. We use an window of 10 cm-1 in both pump and
+# Let's determine the cls for 1 ps. We use a window of 10 cm-1 in both pump and
 # probe axis around the maximum for determination. The algorithm currently uses
 # the center-of-mass.
 
@@ -135,14 +135,14 @@ ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
 ax.plot(y_cls*lin_fit.slope+lin_fit.intercept, y_cls, color='w')
 
 # %%
-# To determine the full CLS-decay, we can use the the `cls`-method. It takes the
+# To determine the full CLS-decay, we can use the `cls`-method. It takes the
 # same arguments as `single_cls`, except the single waiting time. The
-# information of each single cls is accessable in the cls result.
+# information of each single cls is accessible in the cls result.
 
 cls_result = ds.cls(pr_range=10, pu_range=10)
 
-ti = ds.t_idx(1)
-_, ax = ds.plot.contour(1, aspect=1)
+ti = ds.t_idx(7)
+_, ax = ds.plot.contour(7, aspect=1)
 x_cls, y_cls = cls_result.lines[ti][:, 1], cls_result.lines[ti][:, 0]
 ax.plot(x_cls, y_cls,
         marker='o', markersize=3, lw=0, color='yellow',)
@@ -156,7 +156,7 @@ ax.plot(cls_result.wt, cls_result.slopes)
 ax.set(xlabel='Waiting Time', ylabel='Slope')
 
 # %%
-# The ClsResult class also offers a convinince funtion to the fit cls with
+# The ClsResult class also offers a convenience function to the fit cls with
 # exponential functions.
 
 tau_estimate = [5]
@@ -170,3 +170,32 @@ ax.annotate(text, (0.98, 0.98), xycoords='axes fraction', ha='right', va='top',
 ax.set_xscale('log')
 
 # %%
+# Notice that there a multiple methods to calculate the extrema position for
+# each pump wavelengths. skultrafast currently supports center-of-mass,
+# quadratic fit, quadratic fit of the log-vales and gaussian fit methods. In
+# general, the results of all methods should not differ much. This is shown
+# below.
+
+fig, ax = plt.subplots()
+methods = 'log_quad', 'quad', 'fit', 'com'
+for m in methods:
+    cls_result_fit = ds.cls(pr_range=12, pu_range=10, method=m)
+    fr_fit = cls_result_fit.exp_fit(tau_estimate,  use_const=True, use_weights=True)
+    cls_result_fit.plot_cls(ax=ax, symlog=True)
+
+ax.legend(methods)
+
+# %%
+# What is often more problematic is the sensitivity to the chosen region.
+# It is often suggested taking only a small region around the peak, but this
+# makes the determination of the slope more error-prone. In most settings,
+# the resolution of the pump axis is rather limited.
+
+fig, ax = plt.subplots()
+pump_range = 5, 7, 10, 12,
+for r in pump_range:
+    cls_result_fit = ds.cls(pr_range=r, pu_range=r, method='com')
+
+    cls_result_fit.plot_cls(ax=ax, symlog=True)
+
+ax.legend()

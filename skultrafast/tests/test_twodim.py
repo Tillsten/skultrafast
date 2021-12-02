@@ -51,6 +51,8 @@ def test_integrate(two_d_processed):
 def test_cls(two_d_processed):
     two_d = two_d_processed.copy()
     two_d.single_cls(3)
+    for m in ['quad', 'fit', 'log_quad']:
+        two_d.single_cls(3, method=m)
     cls_result = two_d.cls()
     cls_result.plot_cls()
 
