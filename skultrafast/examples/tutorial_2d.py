@@ -23,7 +23,6 @@ from skultrafast.twoD_dataset import TwoDim
 
 from skultrafast.data_io import get_twodim_dataset
 
-
 # %%
 # The following line returns a path to a folder containing the sample data. If
 # necessary, it will try to download the data from fighare.
@@ -36,7 +35,6 @@ p = get_twodim_dataset()
 
 infos = list(p.glob('*.info'))
 infos
-
 
 # %%
 # Loading the data
@@ -88,7 +86,6 @@ ds_iso.plot.contour(1, aspect=1)
 ds = ds_iso.select_range((2140, 2180), (2120, 2180))
 c, ax = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
 
-
 # %%
 # There is also a `.select_t_range` method.
 #
@@ -109,13 +106,13 @@ ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
 fig.tight_layout()
 
 # %%
-# Center line slope analyis
-# -------------------------
+# Center line slope analysis
+# --------------------------
 #
 # One of the most common ways to analyze the a two dimensional dataset is to
-# extract the frequency-frequency correlation fucntion (FFCF). The most common
+# extract the frequency-frequency correlation function (FFCF). The most common
 # ways is to determine the center line slope, which under certain assumptions is
-# propotional to the normlized FFCF.
+# proportional to the normalized FFCF.
 #
 # To extract the cls for a single time-point, we use the `single_cls`-method.
 # Lets determine the cls for 1 ps. We use an window of 10 cm-1 in both pump and
@@ -132,12 +129,12 @@ ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
 
 # Plot the resulting fit. Since the slope is a function of the pump frequencies,
 # we have to use y-values for the slope.
-ax.plot(y_cls*lin_fit.slope+lin_fit.intercept, y_cls, color='w')
+ax.plot(y_cls * lin_fit.slope + lin_fit.intercept, y_cls, color='w')
 
 # %%
 # To determine the full CLS-decay, we can use the the `cls`-method. It takes the
 # same arguments as `single_cls`, except the single waiting time. The
-# information of each single cls is accessable in the cls result.
+# information of each single cls is accessible in the cls result.
 
 cls_result = ds.cls(pr_range=10, pu_range=10)
 
@@ -145,8 +142,8 @@ ti = ds.t_idx(1)
 _, ax = ds.plot.contour(1, aspect=1)
 x_cls, y_cls = cls_result.lines[ti][:, 1], cls_result.lines[ti][:, 0]
 ax.plot(x_cls, y_cls,
-        marker='o', markersize=3, lw=0, color='yellow',)
-ax.plot(cls_result.slopes[ti]*y_cls+cls_result.intercepts[ti], y_cls, c='w')
+        marker='o', markersize=3, lw=0, color='yellow', )
+ax.plot(cls_result.slopes[ti] * y_cls + cls_result.intercepts[ti], y_cls, c='w')
 
 # %%
 # Lets look at the time-dependence of the slope.
@@ -156,11 +153,11 @@ ax.plot(cls_result.wt, cls_result.slopes)
 ax.set(xlabel='Waiting Time', ylabel='Slope')
 
 # %%
-# The ClsResult class also offers a convinince funtion to the fit cls with
+# The ClsResult class also offers a convenience function to the fit cls with
 # exponential functions.
 
 tau_estimate = [5]
-fr = cls_result.exp_fit(tau_estimate,  use_const=True, use_weights=True)
+fr = cls_result.exp_fit(tau_estimate, use_const=True, use_weights=True)
 
 fig, ax = plt.subplots()
 cls_result.plot_cls(ax=ax)
@@ -170,3 +167,13 @@ ax.annotate(text, (0.98, 0.98), xycoords='axes fraction', ha='right', va='top',
 ax.set_xscale('log')
 
 # %%
+# Diagonal
+# --------
+#
+# Another common usage of two-dimensional spectra is the extraction of the diagonal.
+# The signal on diagonal is proportional to the fourth power of the transition dipole-moment, in contrast
+# to normal (e.g. FTIR) spectrum, which is proportional to the second power. Hence, shoulders of peaks
+# are often more distinct in the diagonal. The diagonal can be extracted via the 'diag_and_antidag'-method.
+
+
+
