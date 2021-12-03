@@ -196,13 +196,46 @@ for r in pump_range:
     cls_result_fit.plot_cls(ax=ax, symlog=True)
 
 ax.legend()
+
+# %%
 # Diagonal
 # --------
 #
-# Another common usage of two-dimensional spectra is the extraction of the diagonal.
-# The signal on diagonal is proportional to the fourth power of the transition dipole-moment, in contrast
-# to normal (e.g. FTIR) spectrum, which is proportional to the second power. Hence, shoulders of peaks
-# are often more distinct in the diagonal. The diagonal can be extracted via the 'diag_and_antidag'-method.
+# Another common usage of two-dimensional spectra is the extraction of the
+# diagonal. The signal on diagonal is proportional to the fourth power of the
+# transition dipole-moment, in contrast to normal (e.g. FTIR) spectrum, which is
+# proportional to the second power. Hence, shoulders of peaks are often more
+# distinct in the diagonal. The diagonal can be extracted via the
+# 'diag_and_antidag'-method. The methods returns an object containing both the
+# diagonal and anti-diagonal, additional it contains the y-coordinates of the
+# lines. Latter can be useful for plotting. Again the method takes a waiting time
+# to select the spectrum for extraction. Additionally, it takes parameters to shift
+# the position of the diagonal used for extraction. If not given, it goes through
+# the position of the minimum.
 
+diag_result = ds.diag_and_antidiag(0.2)
 
+fig, ax = plt.subplots()
+ax.plot(ds.probe_wn, diag_result.diag)
+ax.plot(ds.probe_wn, diag_result.antidiag)
+plot_helpers.lbl_spec(ax)
 
+# %%
+# The additional attributes of the result can be used to draw the lines in the spectrum.
+
+fig, ax = plt.subplot_mosaic('AABB', figsize=(5, 2), constrained_layout=True)
+
+pm = ax['A'].pcolormesh(ds.probe_wn, ds.pump_wn, ds.spec2d[ds.t_idx(1), :, :].T,
+              shading='auto', cmap='seismic')
+ax['A'].plot(ds.probe_wn, diag_result.diag_coords, lw=1, c="y", ls='--')
+ax['A'].plot(ds.probe_wn, diag_result.antidiag_coords, lw=1, c="c", ls='--')
+ax['A'].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), aspect=1, ylabel=plot_helpers.freq_label)
+ax['A'].set_xlabel(plot_helpers.freq_label)
+plt.colorbar(pm, ax=ax['A'], shrink=0.69, pad=0)
+
+ax['B'].plot(ds.probe_wn, diag_result.diag, c='y')
+ax['B'].plot(ds.probe_wn, diag_result.antidiag, c='c')
+ax['B'].set_xlabel(plot_helpers.freq_label)
+
+fig.align_ylabels()
+fig.tight_layout()
