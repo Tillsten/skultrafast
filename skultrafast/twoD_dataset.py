@@ -1,11 +1,12 @@
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
 
 import attr
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import linregress
+from numpy.polynomial import Polynomial
 
+from scipy.stats import linregress, norm
 from scipy.ndimage import map_coordinates, uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
 import proplot
@@ -78,7 +79,7 @@ class CLSResult:
             style = dict(c='k', zorder=1.8)
             if model_style:
                 style.update(model_style)
-            ax.plot(xu, yu, color='k', zorder=1.8)
+            m_line = ax.plot(xu, yu, color='k', zorder=1.8)
         return ec, m_line
 
 
@@ -260,15 +261,15 @@ class TwoDim:
         return cpy
 
     def t_idx(self, t: Union[float, Iterable[float]]) -> int:
-        "Return nearest idx to nearest time value"
+        """Return nearest idx to nearest time value"""
         return dv.fi(self.t, t)
 
     def probe_idx(self, wn: Union[float, Iterable[float]]) -> int:
-        "Return nearest idx to nearest probe_wn value"
+        """Return nearest idx to nearest probe_wn value"""
         return dv.fi(self.probe_wn, wn)
 
     def pump_idx(self, wn: Union[float, Iterable[float]]) -> int:
-        "Return nearest idx to nearest pump_wn value"
+        """Return nearest idx to nearest pump_wn value"""
         return dv.fi(self.pump_wn, wn)
 
     def select_range(self, pump_range, probe_range, invert=False) -> 'TwoDim':
@@ -318,7 +319,13 @@ class TwoDim:
         data = np.trapz(self.spec2d[:, :, pu_idx], self.pump_wn[pu_idx], axis=-1)
         return TimeResSpec(self.probe_wn, self.t, data, freq_unit='cm')
 
-    def single_cls(self, t, pr_range=9, pu_range=7, mode='neg') -> Tuple[np.ndarray, np.ndarray, object]:
+    def single_cls(self,
+                   t: float,
+                   pr_range: float = 9.0,
+                   pu_range: float = 7.0,
+                   mode: Literal['neg', 'pos'] = 'neg',
+                   method: Literal['com', 'quad', 'fit', 'log_quad'] = 'com'
+                   ) -> Tuple[np.ndarray, np.ndarray, object]:
         """
         Calculate the CLS for single 2D spectrum.
 
@@ -332,8 +339,13 @@ class TwoDim:
         pu_range : float, optional
             The range around the pump-maxima used for calculating
             the CLS.
-        mode : str, optional
+        mode : ('neg', 'pos'), optional
             negative or positive maximum, by default 'neg'
+        method: ('com', 'quad', 'fit')
+            Selects the method used for determination of the
+            maximum signal. `com` uses the center-of-mass,
+            `quad` uses a quadratic fit and `fit` uses
+            a gaussian fit.
 
         Returns
         -------
@@ -355,7 +367,22 @@ class TwoDim:
             pr_max = pr[m]
             i = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
             cen_of_m = np.average(pr[i], weights=s[i])
-            l.append(cen_of_m)
+            if method == 'fit':
+                mod = lmfit.models.GaussianModel()
+                amp = np.trapz(s[i], pr[i])
+                result = mod.fit(s[i], sigma=10, center=cen_of_m, amplitude=amp,
+                                 x=pr[i])
+                l.append(result.params['center'])
+            elif method == 'quad':
+                p: Polynomial = Polynomial.fit(pr[i], s[i], 2)  # type: Ignore
+                l.append(p.deriv().roots()[0])
+            elif method == 'log_quad':
+                s_min = s[m]
+                i2 = (s < s_min * 0.1)
+                p: Polynomial = Polynomial.fit(pr[i & i2], np.log(-s[i & i2]), 2)  # type: Ignore
+                l.append(p.deriv().roots()[0])
+            else:
+                l.append(cen_of_m)
 
         x = pu[pu_idx]
         y = np.array(l)
@@ -406,7 +433,7 @@ class TwoDim:
 
         if self.interpolator_ is None:
             self.interpolator_ = self._make_int()
-            
+
         d = self.spec2d[spec_i, ...].T
 
         if offset is None:
@@ -437,3 +464,4 @@ class TwoDim:
         if bg_correct:
             diag -= (diag[0] + diag[-1])/2
         return diag
+

@@ -186,8 +186,8 @@ class QC2DSpec(QCBaserTimeRes):
     per_spec: Optional[Dict] = None
     """Resulting 2D spectra for perpendicular polarization"""
 
-    probe_filter: Optional[float] = 1
-    """Size of the filter applied to the spectral axis. 1 is no filtering"""
+    probe_filter: Optional[float] = None
+    """Size of the filter applied to the spectral axis. 'None' is no filtering"""
 
     upsampling: int = 2
     """Upsamling factor of the pump-axis"""
@@ -205,7 +205,7 @@ class QC2DSpec(QCBaserTimeRes):
 
     win_function: Optional[Callable] = np.hamming
     """
-    Window function used for apodization. The coded will the window-function with 
+    Window function used for apodization. The coded will the window-function with
     `2*len(t2)` and uses only the second half of the returned array.
     """
 
