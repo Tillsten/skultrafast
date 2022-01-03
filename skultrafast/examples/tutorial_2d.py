@@ -84,7 +84,7 @@ ds_iso.plot.contour(1, aspect=1)
 # time-points, 0.5, 1 and 7 ps.
 
 ds = ds_iso.select_range((2140, 2180), (2120, 2180))
-c, ax = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
+c, _ = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
 
 # %%
 # There is also a `.select_t_range` method.

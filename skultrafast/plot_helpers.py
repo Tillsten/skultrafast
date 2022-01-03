@@ -40,7 +40,11 @@ time_label = 'Delay time [ps]'
 time_unit = 'ps'
 sig_label = 'Absorbance change [mOD]'
 vib_label = 'Wavenumber  [cm$^{-1}$]'
+
+freq_label = 'Wavelength [nm]'
 inv_freq = False
+freq_unit = 'nm'
+
 line_width = 1
 
 
