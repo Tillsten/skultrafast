@@ -203,9 +203,9 @@ ax.legend()
 #
 # Another common usage of two-dimensional spectra is the extraction of the
 # diagonal. The signal on diagonal is proportional to the fourth power of the
-# transition dipole-moment, in contrast to normal (e.g. FTIR) spectrum, which is
-# proportional to the second power. Hence, shoulders of peaks are often more
-# distinct in the diagonal. The diagonal can be extracted via the
+# transition dipole-moment, in contrast to the regular absorption
+# (e.g. FTIR) spectrum, which is  proportional to the second power. Hence, shoulders
+# of peaks are often more distinct in the diagonal. The diagonal can be extracted via the
 # 'diag_and_antidag'-method. The methods returns an object containing both the
 # diagonal and anti-diagonal, additional it contains the y-coordinates of the
 # lines. Latter can be useful for plotting. Again the method takes a waiting time
@@ -221,7 +221,7 @@ ax.plot(ds.probe_wn, diag_result.antidiag)
 plot_helpers.lbl_spec(ax)
 
 # %%
-# The additional attributes of the result can be used to draw the lines in the spectrum.
+# The additional attributes of the result-object can be used to draw lines in the spectrum.
 
 fig, ax = plt.subplot_mosaic('AABB', figsize=(5, 2), constrained_layout=True)
 
@@ -239,3 +239,9 @@ ax['B'].set_xlabel(plot_helpers.freq_label)
 
 fig.align_ylabels()
 fig.tight_layout()
+
+# %%
+# As an alternative, the pump-slice-amplitude method is also supported. Here we are calculating the
+# difference between the maximum and minimum signal along the probe axis for each pump frequency.
+# The resulting curve shares the same properties as the diagonal but is supposedly less influenced
+# by excited state overlap (Valentine et al. doi:10.1021/acs.jpca.1c04558)
