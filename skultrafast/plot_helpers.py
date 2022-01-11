@@ -889,7 +889,6 @@ def enable_style():
     plt.rcParams['font.family'] = ['Arial', 'Helvetica', 'Lato']
     plt.rcParams['text.hinting'] = 'either'
     plt.rcParams['savefig.pad_inches'] = 0.05
-    plt.rcParams['savefig.dpi'] = 200
     plt.rcParams['savefig.bbox'] = 'tight'
     plt.rcParams['legend.borderaxespad'] = 0.2
     plt.rcParams['legend.columnspacing'] = 0.3
