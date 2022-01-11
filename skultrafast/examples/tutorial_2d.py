@@ -1,15 +1,14 @@
 """
-Two dimensional spectra
-=======================
+2D Spectroscopy
+===============
 
-In the example we show skultrafasts current capabilties when it comes to working
-with 2D-spectra. First we need to get a sample spectrum. For that, we use the
-example data, which will be downloaded from figshare if necessary. The data was
-measured with the quickcontrol-software from phasetech.
+In this example we show skultrafasts current capabilties when it comes to
+working with 2D-spectra. First we need to get a sample spectrum. For that, we
+use example data, which will be downloaded from figshare if necessary. The data
+was measured with the quickcontrol-software from phasetech.
 
-First we import the necessary stuff.
+We start by import the required functionalty.
 """
-# sphinx_gallery_thumbnail_number = 4
 
 # %%
 from pathlib import Path
@@ -18,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from skultrafast import plot_helpers
+from skultrafast import data_io
 from skultrafast.quickcontrol import QC2DSpec
 from skultrafast.twoD_dataset import TwoDim
 
@@ -103,7 +103,7 @@ ds1d = ds.integrate_pump()
 fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4))
 ds1d.plot.spec(0.5, 1, 7, add_legend=True, ax=ax0)
 ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
-fig.tight_layout()
+
 
 # %%
 # Center line slope analysis
@@ -119,10 +119,12 @@ fig.tight_layout()
 # probe axis around the maximum for determination. The algorithm currently uses
 # the center-of-mass.
 
+# sphinx_gallery_thumbnail_number = 4
 y_cls, x_cls, lin_fit = ds.single_cls(1, pr_range=10, pu_range=10)
 
 # Plot the result
 _, ax = ds.plot.contour(1, aspect=1)
+ax = ax[0]
 
 # First plot the maxima
 ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
@@ -140,6 +142,7 @@ cls_result = ds.cls(pr_range=10, pu_range=10)
 
 ti = ds.t_idx(1)
 _, ax = ds.plot.contour(1, aspect=1)
+ax = ax[0]
 x_cls, y_cls = cls_result.lines[ti][:, 1], cls_result.lines[ti][:, 0]
 ax.plot(x_cls, y_cls,
         marker='o', markersize=3, lw=0, color='yellow', )
@@ -156,7 +159,7 @@ ax.set(xlabel='Waiting Time', ylabel='Slope')
 # The ClsResult class also offers a convenience function to the fit cls with
 # exponential functions.
 
-tau_estimate = [5]
+tau_estimate = [5.]
 fr = cls_result.exp_fit(tau_estimate, use_const=True, use_weights=True)
 
 fig, ax = plt.subplots()
@@ -178,9 +181,10 @@ methods = 'log_quad', 'quad', 'fit', 'com'
 for m in methods:
     cls_result_fit = ds.cls(pr_range=12, pu_range=10, method=m)
     fr_fit = cls_result_fit.exp_fit(tau_estimate,  use_const=True, use_weights=True)
-    cls_result_fit.plot_cls(ax=ax, symlog=True)
+    data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
+    data_line.set_label(m)
 
-ax.legend(methods)
+ax.legend()
 
 # %%
 # What is often more problematic is the sensitivity to the chosen region.
@@ -229,17 +233,15 @@ pm = ax['A'].pcolormesh(ds.probe_wn, ds.pump_wn, ds.spec2d[ds.t_idx(1), :, :].T,
               shading='auto', cmap='seismic')
 ax['A'].plot(ds.probe_wn, diag_result.diag_coords, lw=1, c="y", ls='--')
 ax['A'].plot(ds.probe_wn, diag_result.antidiag_coords, lw=1, c="c", ls='--')
-ax['A'].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), aspect=1, ylabel=plot_helpers.freq_label)
+ax['A'].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), ylabel=plot_helpers.freq_label)
 ax['A'].set_xlabel(plot_helpers.freq_label)
-plt.colorbar(pm, ax=ax['A'], shrink=0.69, pad=0)
+fig.colorbar(pm, ax=ax['A'], shrink=0.69, pad=0)
 
 ax['B'].plot(ds.probe_wn, diag_result.diag, c='y')
 ax['B'].plot(ds.probe_wn, diag_result.antidiag, c='c')
 ax['B'].set_xlabel(plot_helpers.freq_label)
 
-fig.align_ylabels()
-fig.tight_layout()
-
+fig.align_xlabels()
 # %%
 # As an alternative, the pump-slice-amplitude method is also supported. Here we are calculating the
 # difference between the maximum and minimum signal along the probe axis for each pump frequency.
