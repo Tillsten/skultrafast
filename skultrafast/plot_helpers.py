@@ -5,6 +5,7 @@ Created on Tue May 27 15:35:22 2014
 @author: tillsten
 """
 import math
+from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import skultrafast.dv as dv
@@ -740,9 +741,48 @@ def nsf(num, n=1):
         return '%4.2f' % num
 
 
-def plot_das(fitter):
-    pass
+def fig_fixed_axes(axes_shape: Tuple[int, int],
+                   axes_size: Tuple[float, float],
+                   padding: float = 0.3,
+                   left_margin: float = 0.45,
+                   bot_margin: float = 0.42,
+                   hspace: float = 0.1,
+                   vspace: float = 0.1,
+                   xlabel: Optional[str] = None,
+                   ylabel: Optional[str] = None,
+                   **kwargs):
+    """Helper funtion to generate a figure form axes sizes given in inches"""
+    bots = np.arange(
+        0, axes_shape[0]) * (axes_size[0] + vspace) + padding + bot_margin - vspace
+    tops = bots + axes_size[0]
+    lefts = np.arange(
+        0, axes_shape[1]) * (axes_size[1] + hspace) + padding + left_margin - hspace
+    rights = lefts + axes_size[1]
 
+    figsize = (rights.max() + padding, tops.max() + padding)
+    fig = plt.figure(figsize=figsize, **kwargs)
+    tr = fig.dpi_scale_trans + fig.transFigure.inverted()
+
+    arrs = []
+    for i in range(axes_shape[0]):
+        cols = []
+        for j in range(axes_shape[1]):
+            x0, y0 = tr.transform((lefts[j], bots[i]))
+            w, h = tr.transform((axes_size[1], axes_size[0]))
+            ax = fig.add_axes((x0, y0, w, h))
+
+            ax.tick_params(labelbottom=(i == 0), labelleft=(j == 0))
+            cols.append(ax)
+        arrs.append(cols)
+
+    if xlabel:
+        x, y = tr.transform((padding, (tops.max() + bots.min()) / 2))
+        fig.text(x, y, xlabel, rotation=90, ha='center', va='center')
+
+    if ylabel:
+        x, y = tr.transform(((lefts.max() + rights.min()) / 2, padding))
+        fig.text(x, y, ylabel, ha='center', va='center')
+    return fig, np.array(arrs)[::-1, :]
 
 def symticks(ax, linthresh=1, linstep=0.2, axis='x'):
     l, r = ax.get_xlim() if axis == 'x' else ax.get_ylim()
@@ -779,7 +819,7 @@ def lbl_axes(axs=None, pos=(-.2, -.2), fmt="(%s)", labels=None, **kwargs):
         Format string, by default "(%s)"
     labels : [type], optional
         The label, by default None, resulting in a, b, c, ...
-    kwargs: 
+    kwargs:
         will be passed to ax.text.
     """
     if axs is None:
@@ -806,22 +846,22 @@ def ci_plot(ci_dict, trace):
     """
     n = len(ci_dict)
     fig, ax = plt.subplots(n, 1, figsize=(1.5, n*0.8), gridspec_kw=dict(hspace=0.5))
-    
+
     for i, (pname, vals) in enumerate(ci_dict.items()):
-        para_trace = trace[pname] 
+        para_trace = trace[pname]
         idx = np.argsort(para_trace[pname])
-        
+
         center = vals[len(vals)//2][1]
         arr = np.array(vals)
         b = -.2
         x, y = trace[pname][pname][idx], 1-trace[pname]['prob'][idx]
         u, l = arr[[0, -1], 1]
-        
+
         r = (x > u) & (x < l)
-        
+
         xn = np.linspace(u, l, 100)
         un, idx = np.unique(x, return_index=True)
-        
+
         yn = np.interp(xn, x[idx], y[idx])
         yn = interpolate.interp1d(x[idx], y[idx], 'quadratic',
                                   fill_value=0)(xn)

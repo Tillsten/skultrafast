@@ -7,7 +7,6 @@ import numpy as np
 from pathlib import Path
 
 from scipy.interpolate import interp1d, UnivariateSpline
-from matplotlib.cbook import deprecated
 from matplotlib.lines import Line2D
 
 import skultrafast.dv as dv

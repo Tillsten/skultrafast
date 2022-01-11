@@ -9,7 +9,7 @@ from numpy.polynomial import Polynomial
 from scipy.stats import linregress, norm
 from scipy.ndimage import map_coordinates, uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
-import proplot
+
 
 from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
@@ -96,7 +96,7 @@ class DiagResult:
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times, region=None, ax=None, subplots_kws={}, aspect=None,
+    def contour(self, *times,  ax=None, ax_size=2, subplots_kws={}, aspect=None,
                 direction='vertical', scale="firstmax", average=None):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
@@ -109,8 +109,23 @@ class TwoDimPlotter:
             else:
                 nrows = 1
                 ncols = len(idx)
-            fig, ax = proplot.subplots(nrows=nrows, ncols=ncols, **subplots_kws,
-                                       aspect=aspect)
+            if aspect > 1:
+                ax_size_x = ax_size
+                ax_size_y = ax_size/aspect
+            else:
+                ax_size_x = ax_size*aspect
+                ax_size_y = ax_size
+
+            fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x),
+                xlabel='Probe Freq', ylabel='Pump Freq', left_margin=0.7, bot_margin=0.6,
+                hspace=0.15, vspace=0.15, padding=0.3)
+
+            if nrows > ncols:
+                ax = ax[:, 0]
+            else:
+                ax = ax[0, :]
+
+
         if scale == 'fullmax':
             m = abs(ds.spec2d).max()
         elif scale == 'firstmax':
@@ -123,27 +138,25 @@ class TwoDimPlotter:
         else:
             s2d = ds.spec2d
 
+        if isinstance(ax, plt.Axes):
+            ax = [ax]
+
         for i, k in enumerate(idx):
             c = ax[i].contourf(ds.probe_wn,
                                ds.pump_wn,
                                s2d[k].T,
-                               N=np.linspace(-m, m, 21),
-                               cmap='Div',
-                               linewidths=[0.7],
-                               linestyles=['-'])
+                               levels=np.linspace(-m, m, 21),
+                               cmap='bwr',
+                           )
             start = max(ds.probe_wn.min(), ds.pump_wn.min())
             ax[i].axline((start, start), slope=1, c='k', lw=0.5)
             if ds.t[k] < 1:
                 title = '%.0f fs' % (ds.t[k] * 1000)
             else:
                 title = '%.1f ps' % (ds.t[k])
-            ax[i].format(title=title, titleloc='ul', titleweight='bold')
-
-        ax.format(xlabel='Probe Freq. / cm$^{-1}$',
-                  ylabel='Pump Freq. / cm$^{-1}$',
-                  xlim=region,
-                  ylim=region)
-        return c, ax
+            ax[i].text(x=0.05, y=0.95, s=title, fontweight='bold', va='top', ha='left',
+                       transform=ax[i].transAxes)
+        return fig, ax
 
     def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
@@ -437,9 +450,9 @@ class TwoDim:
         d = self.spec2d[spec_i, ...].T
 
         if offset is None:
-            offset = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
+            offset: float = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
         if p is None:
-            p = self.probe_wn[np.argmin(np.min(d, 0))]
+            p: float = self.probe_wn[np.argmin(np.min(d, 0))]
 
         y_diag = self.probe_wn + offset
         y_antidiag = -self.probe_wn + 2 * p + offset
@@ -463,5 +476,3 @@ class TwoDim:
         diag = np.ptp(d, axis=0)
         if bg_correct:
             diag -= (diag[0] + diag[-1])/2
-        return diag
-
