@@ -886,9 +886,7 @@ def enable_style():
     plt.rcParams['figure.dpi'] = 120
     plt.rcParams['figure.figsize'] = (3.2, 2.3)
     plt.rcParams['font.size'] = 9
-    plt.rcParams['font.sans-serif'] = 'Arial'
-    # plt.rcParams['font.serif'] = 'Helvetica'
-    plt.rcParams['font.family'] = 'sans-serif'
+    plt.rcParams['font.family'] = ['Arial', 'Helvetica', 'Lato']
     plt.rcParams['text.hinting'] = 'either'
     plt.rcParams['savefig.pad_inches'] = 0.05
     plt.rcParams['savefig.dpi'] = 200
