@@ -8,5 +8,4 @@ matplotlib
 pytest
 sympy
 wrapt
-proplot
 zipfile_deflate64

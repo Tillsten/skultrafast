@@ -764,13 +764,15 @@ def fig_fixed_axes(axes_shape: Tuple[int, int],
     tr = fig.dpi_scale_trans + fig.transFigure.inverted()
 
     arrs = []
+    first_ax = None
     for i in range(axes_shape[0]):
         cols = []
         for j in range(axes_shape[1]):
             x0, y0 = tr.transform((lefts[j], bots[i]))
             w, h = tr.transform((axes_size[1], axes_size[0]))
-            ax = fig.add_axes((x0, y0, w, h))
-
+            ax = fig.add_axes((x0, y0, w, h), sharex=first_ax, sharey=first_ax)
+            if first_ax is None:
+                first_ax = ax
             ax.tick_params(labelbottom=(i == 0), labelleft=(j == 0))
             cols.append(ax)
         arrs.append(cols)
@@ -881,10 +883,9 @@ def ci_plot(ci_dict, trace):
 
 def enable_style():
     plt.rcParams['figure.facecolor'] = 'w'
-    plt.rcParams['figure.dpi'] = 150
-    plt.rcParams['figure.autolayout'] = True
+    plt.rcParams['figure.dpi'] = 120
     plt.rcParams['figure.figsize'] = (3.2, 2.3)
-    plt.rcParams['font.size'] = 8
+    plt.rcParams['font.size'] = 9
     plt.rcParams['font.sans-serif'] = 'Arial'
     # plt.rcParams['font.serif'] = 'Helvetica'
     plt.rcParams['font.family'] = 'sans-serif'

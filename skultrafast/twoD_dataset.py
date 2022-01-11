@@ -68,7 +68,7 @@ class CLSResult:
             ax = plt.gca()
         ec = ax.errorbar(self.wt, self.slopes, self.slope_errors, **kwargs)
         if symlog:
-            ax.set_xscale('symlog', linthreshx=1)
+            ax.set_xscale('symlog', linthresh=1)
         plot_helpers.lbl_trans(ax=ax, use_symlog=symlog)
 
         ax.set(xlabel=plot_helpers.time_label, ylabel='Slope')
@@ -96,7 +96,7 @@ class DiagResult:
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times,  ax=None, ax_size=2, subplots_kws={}, aspect=None,
+    def contour(self, *times,  ax=None, ax_size=1.5, subplots_kws={}, aspect=None,
                 direction='vertical', scale="firstmax", average=None):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]

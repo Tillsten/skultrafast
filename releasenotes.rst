@@ -1,5 +1,5 @@
-skultrafast Release notes
-=========================
+Release notes
+=============
 
 3.1.0 2021-02-24
 ----------------
@@ -11,7 +11,7 @@ skultrafast Release notes
 
 - plot sas function
 - doc fixes
-  
+
 3.0 2021-02-09
 --------------
 
@@ -19,3 +19,12 @@ skultrafast Release notes
 - EDAS plot fuction
 - compartment modelling is now working
 
+4.0 2021-01-22
+--------------
+
+- Initial support for 2D data:
+    * CLS spectra
+    * Pump-slice Amplitude
+    * Diagonal extraction
+    * Plotting
+- Support for quick-control files

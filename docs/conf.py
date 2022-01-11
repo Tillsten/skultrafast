@@ -38,8 +38,10 @@ sphinx_gallery_conf = {
   'gallery_dirs': ['auto_examples', ],
   'filename_pattern': r'tutorial',
   'ignore_pattern': r'convo',
-  'abort_on_example_error': False,
-  'only_warn_on_example_error': True
+  'abort_on_example_error': True,
+  'only_warn_on_example_error': False,
+  'remove_config_comments': True,
+  'image_srcset': ["2x", "1.5x"]
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -113,10 +115,12 @@ html_theme = 'alabaster'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-  'fixed_sidebar': True,
-  'font_size': 15,
-  }
+html_theme_options = {'logo_name': 'false',
+                      'logo': 'skultrafast_logo_v1.svg',
+                      'github_button': 'true',
+                      'github_repo': 'skultrafast',
+                      'github_user': 'tillsten',
+                      }
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -126,11 +130,12 @@ html_theme_options = {
 #html_title = None
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-#html_short_title = None
+html_short_title = "skultrafast"
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+
+#html_logo = '_static/skultrafast_logo_v1.svg'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -268,7 +273,7 @@ autoclass_content = "init"
 autodoc_member_order = 'bysource'
 autosummary_generate = True
 body_max_width = '100em'
-plot_formats = ['svg', ('png', 144)]
+plot_formats = ['svg', ('png', 120)]
 #autodoc_mock_imports = ['matplotlib', 'matplotlib.pyplot']
 #import matplotlib
-#matplotlib.use('agg')
+#matplotlib.use('agg'

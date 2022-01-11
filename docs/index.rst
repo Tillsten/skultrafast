@@ -1,11 +1,3 @@
-.. skultrafast documentation master file, created by
-   sphinx-quickstart on Sat Mar 24 22:49:10 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-
-
-
 Welcome to skultrafast's documentation!
 =======================================
 
@@ -15,10 +7,11 @@ Contents:
    :maxdepth: 2
 
    introduction
-   releasenotes
    install
+   releasenotes
    auto_examples/tutorial_start
-   data_io   
+   auto_examples/tutorial_2d
+   data_io
    api
    development
    zero-finding
