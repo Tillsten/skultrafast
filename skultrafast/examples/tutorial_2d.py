@@ -2,9 +2,9 @@
 2D Spectroscopy
 ===============
 
-This example demonstrates _skultrafasts_ current capabilties when it comes to
+This example demonstrates *skultrafast*s current capabilties when it comes to
 working with 2D-spectra. First, we need a sample spectrum. For that,
-_skultrafast_ can access example data which is hosted on figshare and will be
+*skultrafast* can access example data which is hosted on figshare and will be
 downloaded if necessary. The data was measured with the quickcontrol-software
 from phasetech.
 
@@ -72,7 +72,7 @@ ds_iso = ds_all['iso']
 # `TimeResSpec`-class, plotting functions are accessible under the plot
 # attribute.
 
-ds_iso.plot.contour(1, aspect=1)
+ds_iso.plot.contour(1, 2, 4)
 
 # %%
 # Selecting a subrange
@@ -85,7 +85,7 @@ ds_iso.plot.contour(1, aspect=1)
 # time-points, 0.5, 1 and 7 ps.
 
 ds = ds_iso.select_range((2140, 2180), (2120, 2180))
-c, _ = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
+c, _ = ds.plot.contour(0.5, 1, 7,  direction='h')
 
 # %%
 # There is also a `.select_t_range` method.
@@ -94,7 +94,7 @@ c, _ = ds.plot.contour(0.5, 1, 7, aspect=1, direction='h')
 # ----------------------------------
 #
 # Using the projection theorem by integrating over the pump axis, we can
-# calculate a normal transient 1D-dataset. In _skultrafast_, this is archived by
+# calculate a normal transient 1D-dataset. In *skultrafast*, this is archived by
 # the `TwoDim.integrate_method`, which returns a skultrafast `TimeResSpec`. Here
 # we integrate over the whole range. It is possible to integrate over a
 # sub-range by supplying arguments to the function.
@@ -124,14 +124,14 @@ ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
 y_cls, x_cls, lin_fit = ds.single_cls(1, pr_range=10, pu_range=10)
 
 # Plot the result
-_, ax = ds.plot.contour(1, aspect=1)
+_, ax = ds.plot.contour(1)
 ax = ax[0]
 
 # First plot the maxima
 ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
 
 # Plot the resulting fit. Since the slope is a function of the pump frequencies,
-# we have to use y-values for the slope.
+# we have to use y-values as x-coordinatetes for the slope.
 ax.plot(y_cls * lin_fit.slope + lin_fit.intercept, y_cls, color='w')
 
 # %%
@@ -244,9 +244,10 @@ ax['B'].plot(ds.probe_wn, diag_result.antidiag, c='c')
 ax['B'].set_xlabel(plot_helpers.freq_label)
 
 fig.align_xlabels()
+
 # %%
 # As an alternative, the pump-slice-amplitude method is also supported. Here we
 # are calculating the difference between the maximum and minimum signal along
 # the probe axis for each pump frequency. The resulting curve shares the same
 # properties as the diagonal but is supposedly less influenced by excited state
-# overlap (Valentine et al. doi:
+# overlap (Valentine et al. doi:10.1021/acs.jpca.1c04558).
