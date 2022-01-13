@@ -21,12 +21,21 @@ def inbetween(a, lower, upper):
 
 @attr.s(auto_attribs=True)
 class CLSResult:
-    wt: List[float]
-    slopes: List[float]
-    intercepts: List[float]
-    intercept_errors: Optional[List[float]] = None
-    slope_errors: Optional[List[float]] = None
+    """
+    Class holding the data of CLS-analysis. Has methods to analyze and plot them.
+    """
+    wt: np.ndarray
+    """Containts the waiting times"""
+    slopes: np.ndarray
+    """Contains the determined slops, the dimension as wt"""
+    intercepts: np.ndarray
+    """Contains the intercepts, useful for plotting mostly"""
+    intercept_errors: Optional[np.ndarray] = None
+    """Errors of the intercepts"""
+    slope_errors: Optional[np.ndarray] = None
+    """Errors of slopes, as determined from the linear fit"""
     lines: Optional[np.ndarray] = None
+    """Contains the x and y values used for the linear """
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
 
     def exp_fit(self, start_taus: List[float], use_const=True, use_weights=True):
@@ -227,6 +236,11 @@ class TwoDimPlotter:
 
 @attr.s(auto_attribs=True)
 class TwoDim:
+    """
+    Dataset for an two dimensional dataset. Requires the t- (waiting times),the
+    probe- and pump-axes in addtition to the three dimensional spec2d data.
+    """
+
     t: np.ndarray
     "Array of the waiting times"
     pump_wn: np.ndarray
@@ -234,7 +248,7 @@ class TwoDim:
     probe_wn: np.ndarray
     "Array with the probe-wavenumbers"
     spec2d: np.ndarray
-    "Array with the data"
+    "Array with the data, shape must be (t.size, wn_probe.size, wn_pump.size)"
     info: Dict = {}
     "Meta Info"
     cls_result_: Optional[CLSResult] = None
@@ -416,8 +430,8 @@ class TwoDim:
             lines.append(np.column_stack((x, y)))
             intercept.append(r.intercept)
             intercept_errs.append(r.intercept_stderr)
-        res = CLSResult(self.t, slopes=slopes, slope_errors=slope_errs,
-                        lines=lines, intercepts=intercept, intercept_errors=intercept_errs)
+        res = CLSResult(self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
+                        lines=lines, intercepts=np.array(intercept), intercept_errors=np.array(intercept_errs))
         self.cls_result_ = res
         return res
 
@@ -476,3 +490,4 @@ class TwoDim:
         diag = np.ptp(d, axis=0)
         if bg_correct:
             diag -= (diag[0] + diag[-1])/2
+        return diag

@@ -14,12 +14,10 @@ from scipy.stats import trim_mean
 from typing import Tuple, Union, Optional
 
 
-def _add_rel_errors(data1, err1, data2, err2):
-    # TODO Implement
-    pass
-
-
 class MessPy2File:
+    """
+    Class for working with older messpy2 files.
+    """
     def __init__(self, fname: os.PathLike):
         self.file = np.load(fname,  allow_pickle=True)
 
@@ -62,10 +60,10 @@ class MessPy2File:
             disp_freq_unit='nm')
         pol = PolTRSpec(para, perp)
 
-        pol = pol.cut_freqs([vis_range], invert_sel=True)
+        pol = pol.cut_freq(*vis_range, invert_sel=True)
         return pol.para, pol.perp, pol
 
-    def process_ir(self, t0=0, min_scans=0, 
+    def process_ir(self, t0=0, min_scans=0,
                    max_scans=None, subtract_background=True,
                    center_ch=16, disp=14, sigma=3) -> PolTRSpec:
         data_file = self.file
@@ -81,7 +79,7 @@ class MessPy2File:
         dpm = dp.mean(0)
         ds = sigma_clip(d[0::2, ...], axis=0, sigma=sigma)
         dsm = ds.mean(0)
-        
+
         if subtract_background:
             dsm -= dsm[:, :10, ...].mean(1, keepdims=True)
             dpm -= dpm[:, :10, ...].mean(1, keepdims=True)
@@ -98,7 +96,7 @@ class MessPy2File:
                            disp_freq_unit='cm')
 
         para.plot.spec(1, n_average=20)
-        
+
         for i in range(1, wli.shape[0]):
             para_t =  TimeResSpec(wli[i],
                             t,
@@ -108,8 +106,8 @@ class MessPy2File:
 
             para_t.plot.spec(1, n_average=20)
             para = para.concat_datasets(para_t)
-               
-            
+
+
             perp = perp.concat_datasets(
                 TimeResSpec(wli[i],
                             t,
@@ -510,10 +508,10 @@ def get_t0(fname: str,
                 sig = np.nanmean(data[0, ..., scan], axis=-1)
             else:
                 sig = data[0, ..., scan]
-            sig = np.nanmean(sig[:, :, 1], axis=1)            
+            sig = np.nanmean(sig[:, :, 1], axis=1)
         else:
             sig = np.nanmean(a['signal'], 1)
-            
+
         t = a['t'] / 1000.
     else:
         data = a['data_Remote IR 32x2']

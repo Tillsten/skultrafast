@@ -1,6 +1,6 @@
 
 .. image:: https://github.com/Tillsten/skultrafast/raw/master/docs/_static/skultrafast_logo_v1.svg
-      :alt: ***skultrafast***
+    :alt: ***skultrafast***
 
 .. image:: https://readthedocs.org/projects/skultrafast/badge/?version=latest
     :target: https://skultrafast.readthedocs.io/en/latest/?badge=latest
@@ -9,8 +9,8 @@
 .. image:: https://github.com/Tillsten/skultrafast/workflows/Python%20package/badge.svg
     :target: https://github.com/Tillsten/skultrafast/actions?query=workflow%3A%22Python+package%22
 
-  .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.5713589.svg
-   :target: https://doi.org/10.5281/zenodo.5713589
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.5713589.svg
+    :target: https://doi.org/10.5281/zenodo.5713589
 
 What is skultrafast?
 --------------------
@@ -69,4 +69,4 @@ if anyone would like to join the project!
 
 License
 =======
-Standard BSD-License. See the LICENSE file for
+Standard BSD-License. See the LICENSE file for more details.
