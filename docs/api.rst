@@ -23,28 +23,32 @@ dataset
 
 twoD_dataset
 ------------
-.. automodule:: twoD_dataset
-    :members:
+.. currentmodule:: twoD_dataset
+.. autosummary::
+    :toctree: api
+
+    TwoDim
+    TwoDimPlotter
+    CLSResult
 
 messpy
 ------
 
-.. automodule:: messpy
-    :members:
+.. currentmodule:: messpy
+.. autosummary::
+    :toctree: api
+
+    MessPyFile
+    MessPy2File
+    get_t0
 
 quickcontrol
 ------------
 
-.. automodule:: quickcontrol
-    :members:
+.. currentmodule:: quickcontrol
+.. autosummary::
+    :toctree: api
 
-
-
-
-zero_finding
-------------
-
-.. automodule:: zero_finding
-   :members:
-
+    QC1DSpec
+    QC2DSpec
 

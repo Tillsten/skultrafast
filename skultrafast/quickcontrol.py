@@ -132,6 +132,8 @@ class QCBaserTimeRes(QCFile):
 
 @attr.s(auto_attribs=True)
 class QC1DSpec(QCBaserTimeRes):
+    """Helper class to load time resolved spectra measured with QuickControl"""
+
     t: Iterable[float] = attr.ib()
     """Delay times """
 
@@ -168,6 +170,7 @@ class QC1DSpec(QCBaserTimeRes):
 
 @attr.s(auto_attribs=True)
 class QC2DSpec(QCBaserTimeRes):
+    """Helper class to load 2D-spectra measured with QuickControl"""
     t: np.ndarray = attr.ib()
     """Waiting times"""
 

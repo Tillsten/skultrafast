@@ -38,8 +38,8 @@ infos = list(p.glob('*.info'))
 infos
 
 # %%
-# Loading the data
-# ----------------
+# Loading data
+# ------------
 #
 # There are two `.info`-files the directory. The first contains the transient
 # 1D-data and the second the transient 2D-data. Here in this tutorial we will work with
