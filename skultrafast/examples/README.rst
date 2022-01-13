@@ -1,3 +1,3 @@
-Skultrafast examples and tutorials
-==================================
+Examples and tutorials
+======================
 Below are the skultrafast tutorials.

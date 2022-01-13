@@ -13,8 +13,8 @@ Welcome to skultrafast's documentation!
    api
    development
    zero-finding
-   fitting
    auto_examples/index
+   fitting
 
 
 Indices and tables
