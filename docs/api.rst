@@ -21,6 +21,11 @@ dataset
     PolTRSpecPlotter
 
 
+twoD_dataset
+------------
+.. automodule:: twoD_dataset
+    :members:
+
 messpy
 ------
 
@@ -29,10 +34,11 @@ messpy
 
 quickcontrol
 ------------
-    
+
 .. automodule:: quickcontrol
     :members:
-    
+
+
 
 
 zero_finding
@@ -40,3 +46,5 @@ zero_finding
 
 .. automodule:: zero_finding
    :members:
+
+

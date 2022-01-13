@@ -9,7 +9,7 @@
 .. image:: https://github.com/Tillsten/skultrafast/workflows/Python%20package/badge.svg
     :target: https://github.com/Tillsten/skultrafast/actions?query=workflow%3A%22Python+package%22
 
-.. image::https://zenodo.org/badge/DOI/10.5281/zenodo.5713589.svg
+  .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.5713589.svg
    :target: https://doi.org/10.5281/zenodo.5713589
 
 What is skultrafast?
