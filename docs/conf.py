@@ -120,6 +120,7 @@ html_theme_options = {'logo_name': 'false',
                       'github_button': 'true',
                       'github_repo': 'skultrafast',
                       'github_user': 'tillsten',
+                      'font_size': '12pt',
                       }
 
 # Add any paths that contain custom themes here, relative to this directory.
