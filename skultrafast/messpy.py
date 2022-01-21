@@ -1,17 +1,22 @@
+from collections import defaultdict
 import numpy as np
 import lmfit
 from pathlib import Path
 import os
 import attr
-from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
-from skultrafast import plot_helpers as ph
-from skultrafast.utils import sigma_clip, gauss_step
 import matplotlib.pyplot as plt
-from skultrafast.dv import make_fi, subtract_background
-
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
-from typing import Tuple, Union, Optional
+from typing import Literal, Tuple, Union, Optional, no_type_check
+import h5py
+from sympy import per
+
+from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
+from skultrafast.twoD_dataset import TwoDim
+from skultrafast import plot_helpers as ph
+from skultrafast.utils import sigma_clip, gauss_step
+from skultrafast.dv import make_fi, subtract_background
+from skultrafast.unit_conversions import THz2cm
 
 
 class MessPy2File:
@@ -451,6 +456,52 @@ class MessPyPlotter(PlotterMixin):
         ph.lbl_spec(ax)
 
 
+@attr.define
+class Messpy25File:
+    h5_file: h5py.File = attr.ib(init=True)
+    probe_wn: np.ndarray = attr.ib(init=False)
+    pump_wn: np.ndarray = attr.ib(init=False)
+    t3: np.ndarray = attr.ib(init=False)
+    t2: np.ndarray = attr.ib(init=False)
+    rot_frame: float  = attr.ib(init=False)
+    para_array: Literal['Probe1', 'Probe2'] = 'Probe1'
+
+    @no_type_check
+    def __attrs_post_init__(self):
+        self.t2 = self.h5_file['t2'][:]
+        self.t3 = self.h5_file['t3'][:]
+        self.rot_frame = self.h5_file['t2'].attrs['rot_frame']
+        self.probe_wn = self.h5_file['wn'][:]
+        i: np.ndarray = self.h5_file['ifr_data/Probe1/0/0']
+        self.pump_wn = THz2cm(np.fft.rfftfreq(i.shape[1]*2, (self.t2[1]-self.t2[0])))
+        self.pump_wn += self.rot_frame
+
+    def get_means(self):
+        means = {}
+        for name, l in self.h5_file['2d_data'].items():
+            means[name] = []
+            for i in range(self.t3.size):
+                means[name].append(l[str(i)]['mean'])
+        para = self.para_array
+
+        perp = "Probe2" if self.para_array == "Probe1" else "Probe2"
+        para_means = np.stack(means[para], 0)
+        perp_means = np.stack(means[perp], 0)
+        return para_means, perp_means, 2/3*perp_means + 1/3*para_means
+
+    def make_two_d(self) -> dict[str, TwoDim]:
+        means = self.get_means()
+        data =  {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
+        out = {}
+        for k,v in data.items():
+            ds = TwoDim(self.t3, self.pump_wn, self.probe_wn, v)
+            out[k] = ds
+        return out
+
+    def print_structure(self):
+        self.h5_file.visit(print)
+
+
 @attr.s(auto_attribs=True)
 class TzResult:
     x0: float
@@ -571,6 +622,9 @@ def get_t0(fname: str,
         fwhm=result.params['FWHM'],
         data=(t[idx], sig),
         fit_result=result,
-        fig=fig,
     )
-    return res
+
+
+
+
+
