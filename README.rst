@@ -14,33 +14,38 @@
 
 What is skultrafast?
 --------------------
-Skultrafast stands for scikit.ultrafast and is an python package which aims
-to include everything needed to analyze data from time-resolved spectroscopy
-experiments in the femtosecond domain. Its current features are listed down
-below.
+Skultrafast stands for scikit.ultrafast and is an python package which aims to
+include everything needed to analyze data from time-resolved spectroscopy
+experiments in the femtosecond domain. Its current features are listed further
+down below.
 
-The latest version of the software is available on `github <https://github
-.com/Tillsten/skultrafast>`_. A build of the documentation can be found at
-`Read the docs <https://skultrafast.readthedocs.io/en/latest/>`_. The
-documentation includes `Installtion notes <https://skultrafast.readthedocs.io/en/latest/install.html>`_.
+The latest version of the package is available on `github <https://github
+.com/Tillsten/skultrafast>`_. A build of the documentation can be found at `Read
+the docs <https://skultrafast.readthedocs.io/en/latest/>`_. The documentation
+includes `Installtion notes
+<https://skultrafast.readthedocs.io/en/latest/install.html>`_.
 
-The package was created and is maintained by *Till Stensitzki*. Most coding was
-done while being employed in the `Heyne group <http://www.physik.fu-berlin
+
+Funding
+-------
+The package was created and is maintained by *Till Stensitzki*. The package was
+created while being employed in the `Heyne group <http://www.physik.fu-berlin
 .de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via `SFB
-1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_. Recent additions
-were added while being part of the `Ultrafast Structual Dynamics
-<https://www.uni-potsdam.de/usd>`_.
+1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_. Recent development
+focussed on 2D-spectroscopy is part my stay in `Ultrafast Structual Dynamics
+Group <https://www.uni-potsdam.de/usd>`_ in Potsdam under Müller-Werkmeister.
 
 
-
-Aims of the project
--------------------
+Scope of the project
+--------------------
 I like to include any kind of algorithm or data structure which comes up in
-ultrafast physics. I am also open to add a graphical interface to the
-package, but as experience shows, a GUI brings in a lot of maintenance
-burden. Hence, the first target is a interactive data-explorer for the
-jupyter notebook.
+ultrafast spectropy. I am also open to add a graphical interface to the package,
+but as experience shows, a GUI brings in a lot of maintenance burden. Hence, the
+first target is a interactive data-explorer for the jupyter notebook.
 
+This package also tries its best to follow modern software practices. This
+includes version control using *git*, continues integration testing via
+github action and a decent documentation hosted on `Read the docs`.
 
 Features
 --------
@@ -49,21 +54,18 @@ The current releases centers around working with time-resolved spectra:
 * Publication ready plots with few lines.
 * Global fitting of transient Data: DAS, SAS and compartment modelling.
 * Support for polarization resovled datasets.
+* Easy data processing: Selection, filtering, recalibration of data.
 * Automatic dispersion correction of chriped spectra.
-* Easy data processing: Selection, Filtering, Recalibration
 * Modern error estimates of the fitting results via
   `lmfit <http://lmfit.github.io/lmfit-py/>`_.
-* Lifetime-density analyses using regularization regression.
-* 2D spectroscopy: Centerline-slope decay, digonal extraction, pump-slice-amplidude
+* Lifetime-density analyses using regularized regression.
+* 2D spectroscopy: CLS-decay, digonal extraction, pump-slice-amplidude
   spectrum, integration.
-
-This package also tries its best to follow modern software practices. This
-includes version control using *git*, continues integration testing via
-github action and a decent documentation hosted on `Read the docs`.
 
 Users
 -----
-At the moment it is mostly me and other people in my group. I would be happy
+
+At the moment it is mostly me and other people in my groups. I would be happy
 if anyone would like to join the project!
 
 
