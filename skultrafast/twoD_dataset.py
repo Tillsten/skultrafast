@@ -199,13 +199,6 @@ class TwoDimPlotter:
         plot_helpers.lbl_trans(ax, use_symlog)
         return l
 
-    def pump_slice_amps(self, ax=None):
-        if ax is None:
-            ax = plt.gca()
-        ax.plot(self.ds.pump_wn, self.ds.pump_slice_amp())
-        plot_helpers.ir_mode()
-        ax.set(xlabel=plot_helpers.freq_label, ylabel='Slice Amp. [mOD]')
-
     def elp(self, t, offset=None, p=None):
         ds = self.ds
         spec_i = ds.t_idx(t)
@@ -232,6 +225,20 @@ class TwoDimPlotter:
         ax1.plot(ds.probe_wn, diag)
         ax1.plot(ds.probe_wn, antidiag)
         return
+
+    def psa(self, t, bg_correct=True, normalize=False, ax=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+        ds = self.ds
+        diag = ds.pump_slice_amp(t, bg_correct=bg_correct)
+        if isinstance(normalize, (float, int)):
+            diag = diag/diag[ds.pump_idx(normalize)]
+        elif normalize:
+            diag /= diag.max()
+        kwargs.update(label='%d ps')
+        line = ax.plot(ds.pump_wn, diag, **kwargs)
+        ax.set(xlabel='Pump Freq.', ylabel='Slice Amplitude')
+        return line
 
 
 @attr.s(auto_attribs=True)

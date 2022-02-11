@@ -4,7 +4,7 @@ import scipy.stats as st
 import scipy.signal as sig
 from collections import namedtuple
 from scipy.constants import c, physical_constants
-
+from typing import Union, List
 
 tup = namedtuple('tup','wl t data')
 
@@ -20,31 +20,6 @@ def add_tup(str_lst):
         str_lst[1].append(fn)
         return fn
     return function_enum
-
-def fs2cm(t):
-    return 1/(t * 3e-5)
-
-def cm2fs(cm):
-    return  1/(cm * 3e-5)
-
-def nm2cm(nm):
-    return 1e7/nm
-
-def cm2nm(cm):
-    return 1e7/cm
-
-def cm2eV(cm):
-    eV_m = physical_constants['electron volt-inverse meter relationship'][0]
-    eV_cm = eV_m/100
-    return cm/eV_cm
-
-def eV2cm(eV):
-    eV_m = physical_constants['electron volt-inverse meter relationship'][0]
-    eV_cm = eV_m/100
-    return eV*eV_cm
-
-def cm2THz(cm):
-    return c/(cm*100)
 
 def trimmed_mean(arr, axis=-1, ratio=2., use_sem=True):
     arr = np.sort(arr, axis=axis)
@@ -124,7 +99,7 @@ def binner(n, wl, dat, func=np.mean):
         binned_wl[i]=np.mean(wl[idx[i]:idx[i+1]])
     return binned, binned_wl
 
-def fi(w, x):
+def fi(w, x) -> Union[List[int], int]:
     """
     Given a value, it finds the index of the nearest value in the array.
 
@@ -269,7 +244,7 @@ def equal_color(plots1,plots2):
 def find_linear_part(t):
     """
     Finds the first value of an 1d-array where the difference betweeen
-    consecutively value varys.
+    consecutively values varys.
     """
     d=np.diff(t)
     return np.argmin(np.abs(d-d[0])<0.00001)
@@ -421,7 +396,7 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
         y_c = y - y[-1]
         if start_amps is None:
             a = y_c[fi(x, start_taus[i])]
-        else: 
+        else:
             a = start_amps[i]
         para.add('amp' + str(i), a)
         if amp_max is not None:
@@ -438,12 +413,12 @@ def exp_fit(x, y, start_taus = [1], use_constant=True, amp_max=None, amp_min=Non
             amp = p['amp'+str(i)].value
             tau = p['tau'+str(i)].value
 
-            y_fit += amp * np.exp(-x/tau) 
+            y_fit += amp * np.exp(-x/tau)
 
         return y_fit
 
     def res(p):
-        
+
         if weights is None:
             pen = 0
             for i in range(num_exp):
