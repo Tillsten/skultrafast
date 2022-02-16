@@ -7,7 +7,7 @@ import numpy as np
 from numpy.polynomial import Polynomial
 
 from scipy.stats import linregress, norm
-from scipy.ndimage import map_coordinates, uniform_filter1d
+from scipy.ndimage import map_coordinates, uniform_filter1d, uniform_filter, gaussian_filter
 from scipy.interpolate import RegularGridInterpolator
 
 
@@ -101,23 +101,38 @@ class DiagResult:
     offset: float
     p: float
 
+
+@attr.define
+class ContourOptions:
+    levels: int = 21
+    cmap: str = 'bwr'
+    linewidth: float = 0.5
+    add_line: bool = True
+    add_diag: bool = True
+
+
 @attr.s(auto_attribs=True)
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times,  ax=None, ax_size=1.5, subplots_kws={}, aspect=None,
-                direction='vertical', scale="firstmax", average=None):
+    def contour(self, *times,  ax=None, ax_size: float = 1.5, subplots_kws={}, aspect=None,
+                direction: Union[Tuple[int, int], str] = 'vertical', contour_ops: ContourOptions = ContourOptions(),
+                scale: Literal['firstmax', 'fullmax'] = "firstmax", average=None, fig_kws: dict = {}):
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
             if aspect is None:
                 aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
-            if direction[:1] == 'v':
+            if direction[0] == 'v':
                 nrows = len(idx)
                 ncols = 1
-            else:
+            elif direction[0] == 'h':
                 nrows = 1
                 ncols = len(idx)
+            else:
+                nrows = direction[0]
+                ncols = direction[1]
+
             if aspect > 1:
                 ax_size_x = ax_size
                 ax_size_y = ax_size/aspect
@@ -126,14 +141,13 @@ class TwoDimPlotter:
                 ax_size_y = ax_size
 
             fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x),
-                xlabel='Probe Freq', ylabel='Pump Freq', left_margin=0.7, bot_margin=0.6,
-                hspace=0.15, vspace=0.15, padding=0.3)
+                                                  xlabel='Probe Freq', ylabel='Pump Freq', left_margin=0.7, bot_margin=0.6,
+                                                  hspace=0.15, vspace=0.15, padding=0.3, **fig_kws)
 
             if nrows > ncols:
                 ax = ax[:, 0]
             else:
                 ax = ax[0, :]
-
 
         if scale == 'fullmax':
             m = abs(ds.spec2d).max()
@@ -151,14 +165,26 @@ class TwoDimPlotter:
             ax = [ax]
 
         for i, k in enumerate(idx):
+            levels = np.linspace(-m, m, contour_ops.levels)
             c = ax[i].contourf(ds.probe_wn,
                                ds.pump_wn,
                                s2d[k].T,
-                               levels=np.linspace(-m, m, 21),
-                               cmap='bwr',
-                           )
-            start = max(ds.probe_wn.min(), ds.pump_wn.min())
-            ax[i].axline((start, start), slope=1, c='k', lw=0.5)
+                               levels=levels,
+                               cmap=contour_ops.cmap,
+                               )
+
+            if contour_ops.add_line:
+                ax[i].contour(ds.probe_wn,
+                              ds.pump_wn,
+                              s2d[k].T,
+                              levels=levels,
+                              colors='k',
+                              linestyles='-',
+                              linewidths=contour_ops.linewidth,
+                              )
+            if contour_ops.add_diag:
+                start = max(ds.probe_wn.min(), ds.pump_wn.min())
+                ax[i].axline((start, start), slope=1, c='k', lw=0.5)
             if ds.t[k] < 1:
                 title = '%.0f fs' % (ds.t[k] * 1000)
             else:
@@ -212,14 +238,17 @@ class TwoDimPlotter:
         fig, (ax, ax1) = plt.subplots(2, figsize=(3, 6), sharex='col')
 
         d = ds.spec2d[spec_i].real.copy()[::, ::].T
-        interpol = RegularGridInterpolator((ds.pump_wn, ds.probe_wn,), d[::, ::], bounds_error=False)
+        interpol = RegularGridInterpolator(
+            (ds.pump_wn, ds.probe_wn,), d[::, ::], bounds_error=False)
         m = abs(d).max()
         ax.pcolormesh(ds.probe_wn, ds.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
 
-        ax.set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), xlim=(ds.probe_wn.min(), ds.probe_wn.max()))
+        ax.set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()),
+               xlim=(ds.probe_wn.min(), ds.probe_wn.max()))
         ax.set_aspect(1)
         if offset is None:
-            offset = ds.pump_wn[np.argmin(np.min(d, 1))] - ds.probe_wn[np.argmin(np.min(d, 0))]
+            offset = ds.pump_wn[np.argmin(np.min(d, 1))] - \
+                ds.probe_wn[np.argmin(np.min(d, 0))]
         if p is None:
             p = ds.probe_wn[np.argmin(np.min(d, 0))]
         y_diag = ds.probe_wn + offset
@@ -406,7 +435,8 @@ class TwoDim:
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
-                p: Polynomial = Polynomial.fit(pr[i & i2], np.log(-s[i & i2]), 2)  # type: Ignore
+                p: Polynomial = Polynomial.fit(
+                    pr[i & i2], np.log(-s[i & i2]), 2)  # type: Ignore
                 l.append(p.deriv().roots()[0])
             else:
                 l.append(cen_of_m)
@@ -464,7 +494,8 @@ class TwoDim:
         d = self.spec2d[spec_i, ...].T
 
         if offset is None:
-            offset: float = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
+            offset: float = self.pump_wn[np.argmin(
+                np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
         if p is None:
             p: float = self.probe_wn[np.argmin(np.min(d, 0))]
 
@@ -491,3 +522,13 @@ class TwoDim:
         if bg_correct:
             diag -= (diag[0] + diag[-1])/2
         return diag
+
+    def apply_filter(self, kind, size, *args):
+        filtered = self.copy()
+        if len(size) == 2:
+            size = (1, size[0], size[1])
+        if kind == 'uniform':
+            filtered.spec2d = uniform_filter(self.spec2d, size, mode='nearest')
+        if kind == 'gaussian':
+            filtered.spec2d = gaussian_filter(self.spec2d, size, mode='nearest')
+        return filtered

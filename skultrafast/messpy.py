@@ -23,6 +23,7 @@ class MessPy2File:
     """
     Class for working with older messpy2 files.
     """
+
     def __init__(self, fname: os.PathLike):
         self.file = np.load(fname,  allow_pickle=True)
 
@@ -60,9 +61,9 @@ class MessPy2File:
         dss = dsm.std(0)
 
         para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm',
-             disp_freq_unit='nm')
+                           disp_freq_unit='nm')
         perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm',
-            disp_freq_unit='nm')
+                           disp_freq_unit='nm')
         pol = PolTRSpec(para, perp)
 
         pol = pol.cut_freq(*vis_range, invert_sel=True)
@@ -74,7 +75,7 @@ class MessPy2File:
         data_file = self.file
         t = data_file['t'] - t0
         wli = data_file['wl_Remote IR 32x2']
-        print( wli[:, 16, None])
+        print(wli[:, 16, None])
 
         wli = -(disp * (np.arange(32) - center_ch)) + wli[:, 16, None]
         wli = 1e7 / wli
@@ -103,15 +104,14 @@ class MessPy2File:
         para.plot.spec(1, n_average=20)
 
         for i in range(1, wli.shape[0]):
-            para_t =  TimeResSpec(wli[i],
-                            t,
-                            dpm[i, :, 0, ...],
-                            freq_unit='cm',
-                            disp_freq_unit='cm')
+            para_t = TimeResSpec(wli[i],
+                                 t,
+                                 dpm[i, :, 0, ...],
+                                 freq_unit='cm',
+                                 disp_freq_unit='cm')
 
             para_t.plot.spec(1, n_average=20)
             para = para.concat_datasets(para_t)
-
 
             perp = perp.concat_datasets(
                 TimeResSpec(wli[i],
@@ -459,18 +459,26 @@ class MessPyPlotter(PlotterMixin):
 @attr.define
 class Messpy25File:
     h5_file: h5py.File = attr.ib(init=True)
+    'h5py file object containing the 2D dataset, the only required parameter'
+    is_para_array: Literal['Probe1', 'Probe2'] = 'Probe1'
+    'which dataset has parallel polarisation'
     probe_wn: np.ndarray = attr.ib(init=False)
+    'Array with probe wavenumbers'
     pump_wn: np.ndarray = attr.ib(init=False)
-    t3: np.ndarray = attr.ib(init=False)
+    'Array with the pump wavenumbers. Depends on the upsampling used during measurment'
     t2: np.ndarray = attr.ib(init=False)
-    rot_frame: float  = attr.ib(init=False)
-    para_array: Literal['Probe1', 'Probe2'] = 'Probe1'
+    t1: np.ndarray = attr.ib(init=False)
+    rot_frame: float = attr.ib(init=False)
 
     @no_type_check
     def __attrs_post_init__(self):
-        self.t2 = self.h5_file['t2'][:]
-        self.t3 = self.h5_file['t3'][:]
-        self.rot_frame = self.h5_file['t2'].attrs['rot_frame']
+        if 't1' in self.h5_file:
+            self.t1 = self.h5_file['t1'][:]
+            self.t2 = self.h5_file['t2'][:]
+        else:
+            self.t1 = self.h5_file['t2'][:]
+            self.t2 = self.h5_file['t3'][:]
+        self.rot_frame = self.h5_file['t1'].attrs['rot_frame']
         self.probe_wn = self.h5_file['wn'][:]
         i: np.ndarray = self.h5_file['ifr_data/Probe1/0/0']
         self.pump_wn = THz2cm(np.fft.rfftfreq(i.shape[1]*2, (self.t2[1]-self.t2[0])))
@@ -480,20 +488,33 @@ class Messpy25File:
         means = {}
         for name, l in self.h5_file['2d_data'].items():
             means[name] = []
-            for i in range(self.t3.size):
+            for i in range(self.t2.size):
                 means[name].append(l[str(i)]['mean'])
-        para = self.para_array
+        para = self.is_para_array
 
-        perp = "Probe2" if self.para_array == "Probe1" else "Probe2"
+        perp = "Probe2" if self.is_para_array == "Probe1" else "Probe2"
         para_means = np.stack(means[para], 0)
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
+    def get_ifr(self):
+        ifr = {}
+        for name, l in self.h5_file['ifr'].items():
+            ifr[name] = []
+            for i in range(self.t3.size):
+                ifr[name].append(l[str(i)]['mean'])
+        para = self.is_para_array
+
+        perp = "Probe2" if self.is_para_array == "Probe1" else "Probe2"
+        para_means = np.stack(ifr[para], 0)
+        perp_means = np.stack(ifr[perp], 0)
+        return para_means, perp_means, 2/3*perp_means + 1/3*para_means
+
     def make_two_d(self) -> dict[str, TwoDim]:
         means = self.get_means()
-        data =  {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
+        data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
-        for k,v in data.items():
+        for k, v in data.items():
             ds = TwoDim(self.t3, self.pump_wn, self.probe_wn, v)
             out[k] = ds
         return out
@@ -623,8 +644,3 @@ def get_t0(fname: str,
         data=(t[idx], sig),
         fit_result=result,
     )
-
-
-
-
-
