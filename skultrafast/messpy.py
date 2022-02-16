@@ -7,7 +7,7 @@ import attr
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
-from typing import Literal, Tuple, Union, Optional, no_type_check
+from typing import Literal, Tuple, Union, Optional, no_type_check, Dict
 import h5py
 from sympy import per
 
@@ -510,7 +510,7 @@ class Messpy25File:
         perp_means = np.stack(ifr[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self) -> dict[str, TwoDim]:
+    def make_two_d(self) -> Dict[str, TwoDim]:
         means = self.get_means()
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
