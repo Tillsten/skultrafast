@@ -481,7 +481,7 @@ class Messpy25File:
         self.rot_frame = self.h5_file['t1'].attrs['rot_frame']
         self.probe_wn = self.h5_file['wn'][:]
         i: np.ndarray = self.h5_file['ifr_data/Probe1/0/0']
-        self.pump_wn = THz2cm(np.fft.rfftfreq(i.shape[1]*2, (self.t2[1]-self.t2[0])))
+        self.pump_wn = THz2cm(np.fft.rfftfreq(2*i.shape[1], (self.t1[1]-self.t1[0])))
         self.pump_wn += self.rot_frame
 
     def get_means(self):
@@ -499,9 +499,9 @@ class Messpy25File:
 
     def get_ifr(self):
         ifr = {}
-        for name, l in self.h5_file['ifr'].items():
+        for name, l in self.h5_file['ifr_data'].items():
             ifr[name] = []
-            for i in range(self.t3.size):
+            for i in range(self.t2.size):
                 ifr[name].append(l[str(i)]['mean'])
         para = self.is_para_array
 
@@ -510,14 +510,25 @@ class Messpy25File:
         perp_means = np.stack(ifr[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self) -> Dict[str, TwoDim]:
-        means = self.get_means()
+    def make_two_d(self, upsample=4, window_fcn=np.hanning) -> Dict[str, TwoDim]:
+        means = self.get_ifr()
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
-            ds = TwoDim(self.t3, self.pump_wn, self.probe_wn, v)
+            v[:, :, 0] *= 0.5
+            if window_fcn is not None:
+                v = v*window_fcn(v.shape[2]*2)[None, None, v.shape[2]:]
+            sig = np.fft.rfft(v, axis=2, n=v.shape[2]*upsample).real
+            self.pump_wn = THz2cm(np.fft.rfftfreq(upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
+            ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
             out[k] = ds
         return out
+
+    
+    def calc_signal(self):
+        ifr = self.get_ifr()
+
+
 
     def print_structure(self):
         self.h5_file.visit(print)
