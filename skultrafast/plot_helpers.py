@@ -777,13 +777,13 @@ def fig_fixed_axes(axes_shape: Tuple[int, int],
             cols.append(ax)
         arrs.append(cols)
 
-    if xlabel:
-        x, y = tr.transform((padding, (tops.max() + bots.min()) / 2))
-        fig.text(x, y, xlabel, rotation=90, ha='center', va='center')
-
     if ylabel:
+        x, y = tr.transform((padding, (tops.max() + bots.min()) / 2))
+        fig.text(x, y, ylabel, rotation=90, ha='center', va='center')
+
+    if xlabel:
         x, y = tr.transform(((lefts.max() + rights.min()) / 2, padding))
-        fig.text(x, y, ylabel, ha='center', va='center')
+        fig.text(x, y, xlabel, ha='center', va='center')
     return fig, np.array(arrs)[::-1, :]
 
 def symticks(ax, linthresh=1, linstep=0.2, axis='x'):

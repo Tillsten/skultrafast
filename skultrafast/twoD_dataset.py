@@ -264,7 +264,7 @@ class TwoDimPlotter:
             diag = diag/diag[ds.pump_idx(normalize)]
         elif normalize:
             diag /= diag.max()
-        kwargs.update(label='%d ps')
+        kwargs.update(label='%d ps'%t)
         line = ax.plot(ds.pump_wn, diag, **kwargs)
         ax.set(xlabel='Pump Freq.', ylabel='Slice Amplitude')
         return line
