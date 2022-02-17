@@ -39,7 +39,7 @@ def test_select(two_d):
 
 
 @pytest.fixture(scope='session')
-def two_d_processed(two_d):
+def two_d_processed(two_d) -> TwoDim:
     two_d = two_d.copy()
     return two_d.select_range((2030, 2200), (2030, 2200))
 
@@ -57,7 +57,7 @@ def test_cls(two_d_processed):
     cls_result.plot_cls()
 
 
-def test_diag(two_d_processed):
+def test_diag(two_d_processed: TwoDim):
     two_d_processed.diag_and_antidiag(3)
 
 

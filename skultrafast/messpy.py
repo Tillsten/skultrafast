@@ -132,7 +132,7 @@ class MessPyFile:
             pol_first_scan="unknown",
             valid_channel=None,
     ):
-        """Class for working with data files from MessPy.
+        """Class for working with data files from MessPy v1.
 
         Parameters
         ----------
