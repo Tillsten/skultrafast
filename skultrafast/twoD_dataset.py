@@ -115,7 +115,7 @@ class ContourOptions:
 class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
-    def contour(self, *times,  ax=None, ax_size: float = 1.5, subplots_kws={}, aspect=None,
+    def contour(self, *times,  ax=None, ax_size: float = 1.5, subplots_kws={}, aspect=None, labels={'x': "Probe Freq. [cm-1]", 'y': "Pump Freq. [cm-1]"},
                 direction: Union[Tuple[int, int], str] = 'vertical', contour_ops: ContourOptions = ContourOptions(),
                 scale: Literal['firstmax', 'fullmax'] = "firstmax", average=None, fig_kws: dict = {}):
         ds = self.ds
@@ -141,7 +141,7 @@ class TwoDimPlotter:
                 ax_size_y = ax_size
 
             fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x),
-                                                  xlabel='Probe Freq', ylabel='Pump Freq', left_margin=0.7, bot_margin=0.6,
+                                                  xlabel=labels['x'], ylabel=labels['y'], left_margin=0.7, bot_margin=0.6,
                                                   hspace=0.15, vspace=0.15, padding=0.3, **fig_kws)
 
             if nrows > ncols:
@@ -255,16 +255,21 @@ class TwoDimPlotter:
         ax1.plot(ds.probe_wn, antidiag)
         return
 
-    def psa(self, t, bg_correct=True, normalize=False, ax=None, **kwargs):
+    def psa(self, t: float, bg_correct: bool = True,
+            normalize: Optional[Union[float, Literal['max']]] = None, ax=None, **kwargs):
         if ax is None:
             ax = plt.gca()
         ds = self.ds
         diag = ds.pump_slice_amp(t, bg_correct=bg_correct)
-        if isinstance(normalize, (float, int)):
-            diag = diag/diag[ds.pump_idx(normalize)]
-        elif normalize:
+
+        if normalize is None:
+            pass
+        elif normalize == 'max':
             diag /= diag.max()
-        kwargs.update(label='%d ps'%t)
+        else:
+            diag = diag/diag[ds.pump_idx(normalize)]
+
+        kwargs.update(label='%d ps' % t)
         line = ax.plot(ds.pump_wn, diag, **kwargs)
         ax.set(xlabel='Pump Freq.', ylabel='Slice Amplitude')
         return line

@@ -12,8 +12,6 @@ We start by import the required functionalty.
 """
 
 # %%
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -232,7 +230,7 @@ plot_helpers.lbl_spec(ax)
 fig, ax = plt.subplot_mosaic('AABB', figsize=(5, 2), constrained_layout=True)
 
 pm = ax['A'].pcolormesh(ds.probe_wn, ds.pump_wn, ds.spec2d[ds.t_idx(1), :, :].T,
-              shading='auto', cmap='seismic')
+                        shading='auto', cmap='seismic')
 ax['A'].plot(ds.probe_wn, diag_result.diag_coords, lw=1, c="y", ls='--')
 ax['A'].plot(ds.probe_wn, diag_result.antidiag_coords, lw=1, c="c", ls='--')
 ax['A'].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), ylabel=plot_helpers.freq_label)
@@ -251,3 +249,11 @@ fig.align_xlabels()
 # the probe axis for each pump frequency. The resulting curve shares the same
 # properties as the diagonal but is supposedly less influenced by excited state
 # overlap (Valentine et al. doi:10.1021/acs.jpca.1c04558).
+
+for t in [0.5, 1, 10, 30]:
+    ds.plot.psa(t, normalize=2160)
+
+
+# %%
+ds.plot.contour(1, 10)
+# %%
