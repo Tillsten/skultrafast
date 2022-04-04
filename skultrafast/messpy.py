@@ -7,7 +7,7 @@ import attr
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
-from typing import Literal, Tuple, Union, Optional, no_type_check, Dict
+from typing import Callable, Literal, Tuple, Union, Optional, no_type_check, Dict
 import h5py
 from sympy import per
 
@@ -501,6 +501,22 @@ class Messpy25File:
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
     def get_ifr(self, probe_filter=None, bg_correct=None):
+        """
+        Returns the interferograms. If necessary, apply probefilter and background correction.
+
+        Parameters
+        ----------
+        probe_filter: float
+            The probe filter width in channels. (Gaussian filter)
+        bg_correct: Tuple[int, int]
+            Number of left and right channels to use for background correction.
+
+        Returns
+        -------
+        ifr: Tuple[np.ndarray, np.ndarray, np.ndarray]
+            The interferograms for paralllel, perpendicular and isotropic polarisation.
+            The shape of each array is (n_t2, n_probe_wn, n_t1).
+        """
         ifr = {}
         for name, l in self.h5_file['ifr_data'].items():
             ifr[name] = []
@@ -517,7 +533,6 @@ class Messpy25File:
             perp_means = gaussian_filter1d(
                 perp_means, probe_filter, 1, mode='nearest')
         if bg_correct is not None:
-            print(para_means.shape)
             for i in range(para_means.shape[0]):
                 poly_bg_correction(
                     self.probe_wn, para_means[i].T, bg_correct[0], bg_correct[1])
@@ -525,7 +540,23 @@ class Messpy25File:
                     self.probe_wn, perp_means[i].T, bg_correct[0], bg_correct[1])
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self, upsample=4, window_fcn=np.hanning, probe_filter=None, bg_correct=None) -> Dict[str, TwoDim]:
+    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning,
+                   probe_filter: Optional[float] = None, bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
+        """
+        Calculates the 2D spectra from the interferograms and returns it as a dictionary.
+        The dictorary contains messpy 2D-objects for paralllel, perpendicular and isotropic polarisation.
+
+        Parameters
+        ----------
+        upsample: int
+            Upsampling factor used in the FFT. A factor over 2 only does sinc interpolation.
+        window_fcn: Callable
+            If given, apply a window function to the FFT.
+        probe_filter: float
+            The probe filter width in channels. (Gaussian filter)
+        bg_correct: Tuple[int, int]
+            Number of left and right channels to use for background correction.
+        """
         means = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
@@ -539,12 +570,6 @@ class Messpy25File:
             ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
             out[k] = ds
         return out
-
-    def calc_signal(self):
-        ifr = self.get_ifr()
-
-    def print_structure(self):
-        self.h5_file.visit(print)
 
     def make_model_fitfiles(self, path, name, probe_filter=None, bg_correct=None):
         """
