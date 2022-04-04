@@ -14,7 +14,7 @@ from sympy import per
 from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast.twoD_dataset import TwoDim
 from skultrafast import plot_helpers as ph
-from skultrafast.utils import sigma_clip, gauss_step
+from skultrafast.utils import sigma_clip, gauss_step, poly_bg_correction
 from skultrafast.dv import make_fi, subtract_background
 from skultrafast.unit_conversions import THz2cm
 
@@ -500,21 +500,33 @@ class Messpy25File:
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def get_ifr(self):
+    def get_ifr(self, probe_filter=None, bg_correct=None):
         ifr = {}
         for name, l in self.h5_file['ifr_data'].items():
             ifr[name] = []
             for i in range(self.t2.size):
                 ifr[name].append(l[str(i)]['mean'])
         para = self.is_para_array
-
         perp = "Probe2" if self.is_para_array == "Probe1" else "Probe2"
+
         para_means = np.stack(ifr[para], 0)
         perp_means = np.stack(ifr[perp], 0)
+        if probe_filter is not None:
+            para_means = gaussian_filter1d(
+                para_means, probe_filter, 1, mode='nearest')
+            perp_means = gaussian_filter1d(
+                perp_means, probe_filter, 1, mode='nearest')
+        if bg_correct is not None:
+            print(para_means.shape)
+            for i in range(para_means.shape[0]):
+                poly_bg_correction(
+                    self.probe_wn, para_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(
+                    self.probe_wn, perp_means[i].T, bg_correct[0], bg_correct[1])
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self, upsample=4, window_fcn=np.hanning) -> Dict[str, TwoDim]:
-        means = self.get_ifr()
+    def make_two_d(self, upsample=4, window_fcn=np.hanning, probe_filter=None, bg_correct=None) -> Dict[str, TwoDim]:
+        means = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
@@ -534,14 +546,14 @@ class Messpy25File:
     def print_structure(self):
         self.h5_file.visit(print)
 
-    def make_model_fitfiles(self, path, name):
+    def make_model_fitfiles(self, path, name, probe_filter=None, bg_correct=None):
         """
         Saves the data in a format useable for the ModelFit Gui from Kevin Robben
         https://github.com/kevin-robben/model-fitting
         """
         p = Path(path)
         p.mkdir(parents=True, exist_ok=True)
-        ifr = self.get_ifr()
+        ifr = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
         data = {pol: ifr[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         idx = np.argsort(self.probe_wn)
 
@@ -550,7 +562,9 @@ class Messpy25File:
             folder.mkdir(parents=True, exist_ok=True)
             for i, t in enumerate(self.t2):
                 fname = folder / (name + '_%f.txt' % t)
-                np.savetxt(fname, data[pol][i, idx, :])
+                d = data[pol][i, idx, :]
+
+                np.savetxt(fname, d)
         np.savetxt(p / 'pump_wn.txt', self.pump_wn)
         np.savetxt(p / 'probe_wn.calib', self.probe_wn[idx])
         np.savetxt(p / 't1.txt', self.t1)
@@ -558,7 +572,7 @@ class Messpy25File:
         timestep = (self.t1[1] - self.t1[0])*1000
 
         np.savetxt(
-            p / f"{self.rot_frame: .0f}_rot_frame_t1stepfs_{timestep: d}.txt", [self.rot_frame])
+            p / f"{self.rot_frame: .0f}_rot_frame_t1stepfs_{timestep: .0f}.txt", [self.rot_frame])
 
 
 @attr.s(auto_attribs=True)
