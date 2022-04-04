@@ -467,8 +467,11 @@ class Messpy25File:
     pump_wn: np.ndarray = attr.ib(init=False)
     'Array with the pump wavenumbers. Depends on the upsampling used during measurment'
     t2: np.ndarray = attr.ib(init=False)
+    'Array containing the waiting times'
     t1: np.ndarray = attr.ib(init=False)
+    'Array containing the double pulse delays'
     rot_frame: float = attr.ib(init=False)
+    'Rotation frame used while measuring'
 
     @no_type_check
     def __attrs_post_init__(self):
@@ -519,19 +522,43 @@ class Messpy25File:
             if window_fcn is not None:
                 v = v*window_fcn(v.shape[2]*2)[None, None, v.shape[2]:]
             sig = np.fft.rfft(v, axis=2, n=v.shape[2]*upsample).real
-            self.pump_wn = THz2cm(np.fft.rfftfreq(upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
+            self.pump_wn = THz2cm(np.fft.rfftfreq(
+                upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
             ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
             out[k] = ds
         return out
 
-    
     def calc_signal(self):
         ifr = self.get_ifr()
 
-
-
     def print_structure(self):
         self.h5_file.visit(print)
+
+    def make_model_fitfiles(self, path, name):
+        """
+        Saves the data in a format useable for the ModelFit Gui from Kevin Robben
+        https://github.com/kevin-robben/model-fitting
+        """
+        p = Path(path)
+        p.mkdir(parents=True, exist_ok=True)
+        ifr = self.get_ifr()
+        data = {pol: ifr[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
+        idx = np.argsort(self.probe_wn)
+
+        for pol in ['para', 'perp', 'iso']:
+            folder = p / pol
+            folder.mkdir(parents=True, exist_ok=True)
+            for i, t in enumerate(self.t2):
+                fname = folder / (name + '_%f.txt' % t)
+                np.savetxt(fname, data[pol][i, idx, :])
+        np.savetxt(p / 'pump_wn.txt', self.pump_wn)
+        np.savetxt(p / 'probe_wn.calib', self.probe_wn[idx])
+        np.savetxt(p / 't1.txt', self.t1)
+        np.savetxt(p / 't2.txt', self.t2)
+        timestep = (self.t1[1] - self.t1[0])*1000
+
+        np.savetxt(
+            p / f"{self.rot_frame: .0f}_rot_frame_t1stepfs_{timestep: d}.txt", [self.rot_frame])
 
 
 @attr.s(auto_attribs=True)
