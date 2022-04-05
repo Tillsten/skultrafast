@@ -63,3 +63,8 @@ def test_diag(two_d_processed: TwoDim):
 
 def test_psa(two_d_processed):
     two_d_processed.pump_slice_amp(3)
+
+
+def test_savetext(two_d_processed, tmp_path_factory):
+    two_d_processed.save_txt(tmp_path_factory.mktemp('data'))
+    

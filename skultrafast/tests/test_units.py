@@ -1,5 +1,5 @@
 from skultrafast.unit_conversions import (cm2eV, eV2cm, cm2fs, fs2cm, cm2nm, nm2cm,
-                                          cm2THz, THz2cm, cm2kcal, kcal2cm)
+                                          cm2THz, THz2cm, cm2kcal, kcal2cm, invps2cm, cm2invps)
 import numpy as np
 
 
@@ -12,3 +12,4 @@ def test_handle_np():
         np.testing.assert_allclose(cm2THz(THz2cm(x)), x)
         np.testing.assert_allclose(cm2nm(nm2cm(x)), x)
         np.testing.assert_allclose(cm2kcal(kcal2cm(x)), x)
+        np.testing.assert_allclose(invps2cm(cm2invps(x)), x)

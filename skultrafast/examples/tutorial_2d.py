@@ -255,5 +255,8 @@ for t in [0.5, 1, 10, 30]:
 
 
 # %%
-ds.plot.contour(1, 10)
-# %%
+# Exporting
+# ---------
+#
+# To export a dataset to a textfile, use the 'save_txt' method. The method takes
+# the path to an directory.

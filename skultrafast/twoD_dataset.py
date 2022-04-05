@@ -1,18 +1,17 @@
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
-
-import attr
-import lmfit
-import matplotlib.pyplot as plt
-import numpy as np
-from numpy.polynomial import Polynomial
-
-from scipy.stats import linregress, norm
-from scipy.ndimage import map_coordinates, uniform_filter1d, uniform_filter, gaussian_filter
-from scipy.interpolate import RegularGridInterpolator
-
-
-from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
+from skultrafast import dv, plot_helpers
+from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import map_coordinates, uniform_filter1d, uniform_filter, gaussian_filter
+from scipy.stats import linregress, norm
+from numpy.polynomial import Polynomial
+import numpy as np
+import matplotlib.pyplot as plt
+import lmfit
+import attr
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
+import os
+PathLike = Union[str, bytes, os.PathLike]
 
 
 def inbetween(a, lower, upper):
@@ -528,7 +527,7 @@ class TwoDim:
         )
         return res
 
-    def pump_slice_amp(self, t, bg_correct=True):
+    def pump_slice_amp(self, t: float, bg_correct: bool = True):
         d = self.spec2d[self.t_idx(t), :, :]
         diag = np.ptp(d, axis=0)
         if bg_correct:
@@ -544,3 +543,39 @@ class TwoDim:
         if kind == 'gaussian':
             filtered.spec2d = gaussian_filter(self.spec2d, size, mode='nearest')
         return filtered
+
+    def save_txt(self, pname: PathLike, **kwargs):
+        """
+        Saves 2d-spectra as a text files a directory.
+
+        Parameters
+        ----------
+        pname: PathLike
+            Path to the file.
+        kwargs:
+            Additional arguments for the np.savetxt function.
+        """
+        p = Path(pname)
+        if not p.is_dir() or p.mkdir(parents=True, exist_ok=True):
+            raise ValueError(f'{p} is not a directory')
+        for i in range(self.spec2d.shape[0]):
+            tstr = f'{self.t[i]:.3f}ps'
+            self.save_single_txt(p / f'wt_{tstr}.txt', i, **kwargs)
+
+    def save_single_txt(self, fname: PathLike, i: int, **kwargs):
+        """
+        Save a single 2D spectra as a text file
+
+        Parameters
+        ----------
+        fname: str
+            The file name.
+        i: int
+            The index of the 2D spectra.
+        kwargs:
+            Additional arguments for the `np.savetxt` function.
+        """
+        arr = np.block([[0, self.pump_wn],
+                        [self.probe_wn[:, None], self.spec2d[i]]])
+        np.savetxt(fname, arr, **kwargs,
+                   header='# pump axis along rows, probe axis along columns')
