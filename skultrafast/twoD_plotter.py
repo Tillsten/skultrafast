@@ -5,20 +5,19 @@ import attr
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
-from typing import Union, Literal, Optional, Tuple, TYPE_CHECKING
+from typing import Any, TypedDict, Union, Literal, Optional, Tuple, TYPE_CHECKING
 import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:
     from skultrafast.twoD_dataset import TwoDim
 
 
-@attr.define
-class ContourOptions:
-    levels: int = 21
-    cmap: str = 'bwr'
-    linewidth: float = 0.5
-    add_line: bool = True
-    add_diag: bool = True
+class ContourOptions(TypedDict):
+    levels: int
+    cmap: str
+    linewidth: float
+    add_lines: bool
+    add_diag: bool
 
 
 @attr.s(auto_attribs=True)
@@ -26,8 +25,8 @@ class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
     def contour(self, *times,  ax=None, ax_size: float = 1.5, subplots_kws={}, aspect=None, labels={'x': "Probe Freq. [cm-1]", 'y': "Pump Freq. [cm-1]"},
-                direction: Union[Tuple[int, int], str] = 'vertical', contour_ops: ContourOptions = ContourOptions(),
-                scale: Literal['firstmax', 'fullmax'] = "firstmax", average=None, fig_kws: dict = {}):
+                direction: Union[Tuple[int, int], str] = 'vertical', contour_params: dict = {},
+                scale: Literal['firstmax', 'fullmax', 'eachmax'] = "firstmax", average=None, fig_kws: dict = {}) -> dict[str, Any]:
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
@@ -64,7 +63,7 @@ class TwoDimPlotter:
         elif scale == 'firstmax':
             m = abs(ds.spec2d[idx[0], ...]).max()
         elif scale == 'eachmax':
-            m =
+            m = None
         else:
             raise ValueError("scale must be either fullmax or firstmax")
 
@@ -76,34 +75,50 @@ class TwoDimPlotter:
         if isinstance(ax, plt.Axes):
             ax = [ax]
 
+        contour_ops: ContourOptions = ContourOptions(
+            levels=21,
+            cmap='bwr',
+            linewidth=0.5,
+            add_lines=True,
+            add_diag=True
+        )
+        contour_ops.update(contour_params)
+        out = {'fig': fig, 'axs': ax}
         for i, k in enumerate(idx):
-            levels = np.linspace(-m, m, contour_ops.levels)
+            out_i = {'ax': ax[i]}
+            if m is None:
+                m = np.abs(s2d[k, ...]).max()
+
+            levels = np.linspace(-m, m, contour_ops['levels'])
             c = ax[i].contourf(ds.probe_wn,
                                ds.pump_wn,
                                s2d[k].T,
                                levels=levels,
-                               cmap=contour_ops.cmap,
+                               cmap=contour_ops['cmap'],
                                )
+            out_i['contourf'] = c
 
-            if contour_ops.add_line:
-                ax[i].contour(ds.probe_wn,
-                              ds.pump_wn,
-                              s2d[k].T,
-                              levels=levels,
-                              colors='k',
-                              linestyles='-',
-                              linewidths=contour_ops.linewidth,
-                              )
-            if contour_ops.add_diag:
+            if contour_ops['add_lines']:
+                cl = ax[i].contour(ds.probe_wn,
+                                   ds.pump_wn,
+                                   s2d[k].T,
+                                   levels=levels,
+                                   colors='k',
+                                   linestyles='-',
+                                   linewidths=contour_ops['linewidth'],
+                                   )
+                out_i['contour'] = cl
+            if contour_ops['add_diag']:
                 start = max(ds.probe_wn.min(), ds.pump_wn.min())
-                ax[i].axline((start, start), slope=1, c='k', lw=0.5)
+                out_i['diag_line'] = ax[i].axline((start, start), slope=1, c='k', lw=0.5)
             if ds.t[k] < 1:
                 title = '%.0f fs' % (ds.t[k] * 1000)
             else:
                 title = '%.1f ps' % (ds.t[k])
-            ax[i].text(x=0.05, y=0.95, s=title, fontweight='bold', va='top', ha='left',
-                       transform=ax[i].transAxes)
-        return fig, ax
+            out_i['title'] = ax[i].text(x=0.05, y=0.95, s=title, fontweight='bold', va='top', ha='left',
+                                        transform=ax[i].transAxes)
+            out[i] = out_i
+        return out
 
     def single_contour(self, t, co: ContourOptions = ContourOptions(), ax=None) -> dict:
         if ax is None:
