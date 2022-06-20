@@ -339,7 +339,7 @@ class TwoDim:
         y_diag = self.probe_wn + offset
         y_antidiag = -self.probe_wn + 2 * p + offset
 
-        ts = np.ones_like(y_diag)
+        ts = self.t_idx[spec_i]*np.ones_like(y_diag)
         diag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_diag)))
         antidiag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_antidiag)))
 

@@ -522,7 +522,7 @@ class Messpy25File:
             for i in range(self.t2.size):
                 ifr[name].append(l[str(i)]['mean'])
         para = self.is_para_array
-        perp = "Probe2" if self.is_para_array == "Probe1" else "Probe2"
+        perp = "Probe2" if self.is_para_array == "Probe1" else "Probe1"
 
         para_means = np.stack(ifr[para], 0)
         perp_means = np.stack(ifr[perp], 0)
