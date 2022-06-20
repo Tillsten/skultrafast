@@ -11,7 +11,7 @@ from scipy.ndimage import gaussian_filter1d
 
 from skultrafast.dataset import PolTRSpec, TimeResSpec
 from skultrafast.twoD_dataset import TwoDim
-from skultrafast.utils import poly_bg_correction
+from skultrafast.utils import poly_bg_correction, inbetween
 
 
 def parse_str(s: str):
@@ -166,7 +166,7 @@ class QC2DSpec(QCBaserTimeRes):
     upsampling: int = 2
     """Upsamling factor of the pump-axis"""
 
-    pump_freq: np.ndarray = attr.ib()
+    pump_freq: np.ndarray = attr.ib()  # type: ignore
     """
     Resulting wavenumbers of the pump axis.
     """

@@ -1,3 +1,5 @@
+import typing
+import functools
 from collections import namedtuple
 import attr
 import lmfit
@@ -631,9 +633,9 @@ class TimeResSpec:
     def estimate_dispersion(self,
                             heuristic="abs",
                             heuristic_args=(),
-                            deg=2,
-                            shift_result=0,
-                            t_parameter=1.3):
+                            deg: int = 2,
+                            shift_result: float = 0,
+                            t_parameter: float = 1.3):
         """
         Estimates the dispersion from a dataset by first
         applying a heuristic to each channel. The results are than
@@ -641,7 +643,7 @@ class TimeResSpec:
 
         Parameters
         ----------
-        heuristic : {'abs', 'diff', 'gauss_diff'} or func
+        heuristic : {'abs', 'diff', 'gauss_diff', 'max'} or func
             Determines which heuristic to use on each channel. Can
             also be a function which follows `func(t, y, *args) and returns
             a `t0`-value. The heuristics are described in `zero_finding`.
@@ -1132,10 +1134,6 @@ class PolTRSpec:
             setattr(new_ds, i, getattr(self, i).concat_datasets(o))
         new_ds.wavelengths = new_ds.para.wavelengths
         return new_ds
-
-
-import functools
-import typing
 
 
 def delegator(pol_tr: PolTRSpec,

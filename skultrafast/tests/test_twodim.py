@@ -68,3 +68,10 @@ def test_psa(two_d_processed):
 def test_savetext(two_d_processed, tmp_path_factory):
     two_d_processed.save_txt(tmp_path_factory.mktemp('data'))
     
+
+def test_twodplot_contour(two_d_processed):
+    two_d_processed.plot.contour(1)
+    two_d_processed.plot.contour(1, 3, 5, )
+    two_d_processed.plot.elp()
+
+    

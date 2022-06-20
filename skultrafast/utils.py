@@ -275,3 +275,10 @@ def poly_bg_correction(wavelengths, data, left=30, right=30, deg=1):
     back = np.polynomial.polynomial.polyval(wavelengths, coef)
     data -= back
     return data
+
+
+def inbetween(a: np.ndarray, lower: float, upper: float):
+    """
+    Returns index-array where a is between upper and lower
+    """
+    return np.logical_and(a >= lower, a <= upper)

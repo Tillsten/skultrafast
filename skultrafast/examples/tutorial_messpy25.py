@@ -3,8 +3,6 @@ Messpy 2.5 Tutorial
 ===================
 This example demonstrates how to load MessPy 2.5 files.
 """
-
-
 # %%
 import numpy as np
 import pymesh
@@ -14,19 +12,30 @@ from skultrafast.twoD_dataset import ContourOptions
 from skultrafast.messpy import Messpy25File
 from matplotlib import pyplot as plt
 from skultrafast import plot_helpers
+%load_ext autoreload
+%autoreload 2
+
+# %%
+
+
+# %%
 plot_helpers.enable_style()
 
 f = h5py.File(
     r"C:\Users\TillStensitzki\Nextcloud\AG Mueller-Werkmeister\2DIR\tmp2d\22-02-09 13_16 1 M NaSCN in H2O 10 mu.messpy")
+# %%
 mp = Messpy25File(f)
 
 two_d = mp.get_means()
-two_d = mp.make_two_d()['iso']
+mp.make_model_fitfiles(r'C:/Users/TillStensitzki/Desktop/test',
+                       'test', probe_filter=2, bg_correct=(5, 15))
+two_d = mp.make_two_d(probe_filter=1, bg_correct=(10, 10))['iso']
+
 two_d = two_d.select_range((2000, 2155),  (1985, 2155)).select_t_range(0, 6)
 co = ContourOptions(levels=16)
 
-two_d.apply_filter('gaussian', (1, 2, 1)).plot.contour(
-    0.4, 1, 3, contour_ops=co, ax_size=1.9, average=1, fig_kws={'dpi': 150})
+two_d.plot.contour(
+    0.2, 0.4, 0.8, 1.6, 3, 6, contour_ops=co, ax_size=1.9, average=1, fig_kws={'dpi': 150})
 plt.savefig('contour.svg')
 ds = two_d
 # %%
@@ -55,14 +64,22 @@ idx1 = two_d.spec2d[0, ...].max(1).argmax()
 idx2 = (two_d.spec2d)[0, ...].min(1).argmin()
 two_d.probe_wn[[idx1, idx2]]
 # %%
-tf = two_d.apply_filter('gaussian', (1, 1, 1))
-plt.imshow(tf.spec2d[8, :, :])
-# %%
-d = tf.spec2d[8, :, :]
+tf = two_d.apply_filter('gaussian', (2, 2, 2))
+
+d = tf.spec2d[4:8, :, :].mean(0)
 # %%
 mcubes.marching_cubes(d, 10)
 # %%
 # %%
 
 np.save("spec.npy", d)
+# %%
+m = abs(d).max()
+levels = np.linspace(-m, m, 12)
+fig = plt.figure(dpi=200)
+ax = plt.axes([0, 0, 1, 1])
+ax.contourf(d.T, cmap="gray", levels=levels)
+plt.savefig('contour.png', dpi=600)
+# %%
+
 # %%

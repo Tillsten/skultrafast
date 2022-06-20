@@ -597,7 +597,7 @@ class Messpy25File:
         timestep = (self.t1[1] - self.t1[0])*1000
 
         np.savetxt(
-            p / f"{self.rot_frame: .0f}_rot_frame_t1stepfs_{timestep: .0f}.txt", [self.rot_frame])
+            p / f"rot_frame_{self.rot_frame: .0f}_t1_stepfs_{timestep: .0f}.txt", [self.rot_frame])
 
 
 @attr.s(auto_attribs=True)

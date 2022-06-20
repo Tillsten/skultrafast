@@ -1,21 +1,20 @@
+from skultrafast.twoD_plotter import TwoDimPlotter
 from skultrafast.dataset import TimeResSpec
+from skultrafast.utils import inbetween
 from skultrafast import dv, plot_helpers
 from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import map_coordinates, uniform_filter1d, uniform_filter, gaussian_filter
-from scipy.stats import linregress, norm
-from numpy.polynomial import Polynomial
+from scipy.ndimage import uniform_filter, gaussian_filter
+from scipy.stats import linregress
+
 import numpy as np
+from numpy.polynomial import Polynomial
 import matplotlib.pyplot as plt
 import lmfit
 import attr
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal, TYPE_CHECKING
 import os
 PathLike = Union[str, bytes, os.PathLike]
-
-
-def inbetween(a, lower, upper):
-    return np.logical_and(a >= lower, a <= upper)
 
 
 @attr.s(auto_attribs=True)
@@ -99,179 +98,6 @@ class DiagResult:
     antidiag_coords: np.ndarray
     offset: float
     p: float
-
-
-@attr.define
-class ContourOptions:
-    levels: int = 21
-    cmap: str = 'bwr'
-    linewidth: float = 0.5
-    add_line: bool = True
-    add_diag: bool = True
-
-
-@attr.s(auto_attribs=True)
-class TwoDimPlotter:
-    ds: 'TwoDim' = attr.ib()
-
-    def contour(self, *times,  ax=None, ax_size: float = 1.5, subplots_kws={}, aspect=None, labels={'x': "Probe Freq. [cm-1]", 'y': "Pump Freq. [cm-1]"},
-                direction: Union[Tuple[int, int], str] = 'vertical', contour_ops: ContourOptions = ContourOptions(),
-                scale: Literal['firstmax', 'fullmax'] = "firstmax", average=None, fig_kws: dict = {}):
-        ds = self.ds
-        idx = [ds.t_idx(i) for i in times]
-        if ax is None:
-            if aspect is None:
-                aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
-            if direction[0] == 'v':
-                nrows = len(idx)
-                ncols = 1
-            elif direction[0] == 'h':
-                nrows = 1
-                ncols = len(idx)
-            else:
-                nrows = direction[0]
-                ncols = direction[1]
-
-            if aspect > 1:
-                ax_size_x = ax_size
-                ax_size_y = ax_size/aspect
-            else:
-                ax_size_x = ax_size*aspect
-                ax_size_y = ax_size
-
-            fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x),
-                                                  xlabel=labels['x'], ylabel=labels['y'], left_margin=0.7, bot_margin=0.6,
-                                                  hspace=0.15, vspace=0.15, padding=0.3, **fig_kws)
-
-            if nrows > ncols:
-                ax = ax[:, 0]
-            else:
-                ax = ax[0, :]
-
-        if scale == 'fullmax':
-            m = abs(ds.spec2d).max()
-        elif scale == 'firstmax':
-            m = abs(ds.spec2d[idx[0], ...]).max()
-        else:
-            raise ValueError("scale must be either fullmax or firstmax")
-
-        if average is not None:
-            s2d = uniform_filter1d(ds.spec2d, average, 0, mode="nearest")
-        else:
-            s2d = ds.spec2d
-
-        if isinstance(ax, plt.Axes):
-            ax = [ax]
-
-        for i, k in enumerate(idx):
-            levels = np.linspace(-m, m, contour_ops.levels)
-            c = ax[i].contourf(ds.probe_wn,
-                               ds.pump_wn,
-                               s2d[k].T,
-                               levels=levels,
-                               cmap=contour_ops.cmap,
-                               )
-
-            if contour_ops.add_line:
-                ax[i].contour(ds.probe_wn,
-                              ds.pump_wn,
-                              s2d[k].T,
-                              levels=levels,
-                              colors='k',
-                              linestyles='-',
-                              linewidths=contour_ops.linewidth,
-                              )
-            if contour_ops.add_diag:
-                start = max(ds.probe_wn.min(), ds.pump_wn.min())
-                ax[i].axline((start, start), slope=1, c='k', lw=0.5)
-            if ds.t[k] < 1:
-                title = '%.0f fs' % (ds.t[k] * 1000)
-            else:
-                title = '%.1f ps' % (ds.t[k])
-            ax[i].text(x=0.05, y=0.95, s=title, fontweight='bold', va='top', ha='left',
-                       transform=ax[i].transAxes)
-        return fig, ax
-
-    def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
-        from matplotlib.animation import FuncAnimation
-
-        c, ax = self.contour(self.ds.t[0], **subplots_kw)
-        fig = ax.get_figure()
-        frames = self.ds.t
-        std_kws = {}
-
-        def func(x):
-            ax.cla()
-            self.contour(x, ax=ax, scale="fullmax", **subplots_kw)
-
-        ani = FuncAnimation(fig=fig, func=func, frames=frames)
-        ani.save(fname)
-
-    def plot_cls(self):
-        pass
-
-    def plot_square(self, probe_range, pump_range=None, use_symlog=True, ax=None):
-        if pump_range is None:
-            pump_range = probe_range
-        pr = inbetween(self.ds.probe_wn, min(probe_range), max(probe_range))
-        reg = self.ds.spec2d[:, pr, :]
-        pu = inbetween(self.ds.pump_wn, min(pump_range), max(pump_range))
-        reg = reg[:, :, pu]
-        s = reg.sum(1).sum(1)
-        if ax is None:
-            ax = plt.gca()
-        l, = ax.plot(self.ds.t, s)
-        plot_helpers.lbl_trans(ax, use_symlog)
-        return l
-
-    def elp(self, t, offset=None, p=None):
-        ds = self.ds
-        spec_i = ds.t_idx(t)
-        fig, (ax, ax1) = plt.subplots(2, figsize=(3, 6), sharex='col')
-
-        d = ds.spec2d[spec_i].real.copy()[::, ::].T
-        interpol = RegularGridInterpolator(
-            (ds.pump_wn, ds.probe_wn,), d[::, ::], bounds_error=False)
-        m = abs(d).max()
-        ax.pcolormesh(ds.probe_wn, ds.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
-
-        ax.set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()),
-               xlim=(ds.probe_wn.min(), ds.probe_wn.max()))
-        ax.set_aspect(1)
-        if offset is None:
-            offset = ds.pump_wn[np.argmin(np.min(d, 1))] - \
-                ds.probe_wn[np.argmin(np.min(d, 0))]
-        if p is None:
-            p = ds.probe_wn[np.argmin(np.min(d, 0))]
-        y_diag = ds.probe_wn + offset
-        y_antidiag = -ds.probe_wn + 2 * p + offset
-        ax.plot(ds.probe_wn, y_diag, lw=1)
-        ax.plot(ds.probe_wn, y_antidiag, lw=1)
-
-        diag = interpol(np.column_stack((y_diag, ds.probe_wn)))
-        antidiag = interpol(np.column_stack((y_antidiag, ds.probe_wn)))
-        ax1.plot(ds.probe_wn, diag)
-        ax1.plot(ds.probe_wn, antidiag)
-        return
-
-    def psa(self, t: float, bg_correct: bool = True,
-            normalize: Optional[Union[float, Literal['max']]] = None, ax=None, **kwargs):
-        if ax is None:
-            ax = plt.gca()
-        ds = self.ds
-        diag = ds.pump_slice_amp(t, bg_correct=bg_correct)
-
-        if normalize is None:
-            pass
-        elif normalize == 'max':
-            diag /= diag.max()
-        else:
-            diag = diag/diag[ds.pump_idx(normalize)]
-
-        kwargs.update(label='%d ps' % t)
-        line = ax.plot(ds.pump_wn, diag, **kwargs)
-        ax.set(xlabel='Pump Freq.', ylabel='Slice Amplitude')
-        return line
 
 
 @attr.s(auto_attribs=True)
