@@ -9,11 +9,11 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   strategy:
-    matrix:
-      Python37:
-        python.version: '3.7'
-      Python36:
-        python.version: '3.6'
+    matrix:      
+      Python39:
+        python.version: '3.9'
+      Python310:
+        python.version: '3.10'
     maxParallel: 4
 
   steps:
