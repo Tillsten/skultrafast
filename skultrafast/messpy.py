@@ -1,3 +1,4 @@
+from dis import dis
 import numpy as np
 import lmfit
 from pathlib import Path
@@ -596,6 +597,18 @@ class Messpy25File:
 
         np.savetxt(
             p / f"rot_frame_{self.rot_frame: .0f}_t1_stepfs_{timestep: .0f}.txt", [self.rot_frame])
+
+    def recalculate_wl(self, center_wl=None, center_ch: int = 65, disp: Optional[float] = None):
+        """
+        Recalculates the wavelengths from the probe.
+        """
+        if disp is None:
+            if np.diff(1e7/self.probe_wn).max() < 6:
+                disp = 7.8/2
+            else:
+                disp = 7.8
+        wls = center_wl - disp*(np.arange(128)-center_ch)
+        self.probe_wn = 1e7/wls
 
 
 @attr.s(auto_attribs=True)
