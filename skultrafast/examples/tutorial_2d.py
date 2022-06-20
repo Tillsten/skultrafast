@@ -86,7 +86,7 @@ ds_iso.plot.contour(1, 2, 4)
 # time-points, 0.5, 1 and 7 ps.
 
 ds = ds_iso.select_range((2140, 2180), (2120, 2180))
-c, _ = ds.plot.contour(0.5, 1, 7,  direction='h')
+artists = ds.plot.contour(0.5, 1, 7,  direction='h')
 
 # %%
 # There is also a `.select_t_range` method.
@@ -125,8 +125,8 @@ ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
 y_cls, x_cls, lin_fit = ds.single_cls(1, pr_range=10, pu_range=10)
 
 # Plot the result
-_, ax = ds.plot.contour(1)
-ax = ax[0]
+artists = ds.plot.contour(1)
+ax = artists[0]['ax']
 
 # First plot the maxima
 ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
@@ -143,8 +143,9 @@ ax.plot(y_cls * lin_fit.slope + lin_fit.intercept, y_cls, color='w')
 cls_result = ds.cls(pr_range=10, pu_range=10)
 
 ti = ds.t_idx(1)
-_, ax = ds.plot.contour(1, aspect=1)
-ax = ax[0]
+artists = ds.plot.contour(1, aspect=1)
+ax = artists[0]['ax']
+
 x_cls, y_cls = cls_result.lines[ti][:, 1], cls_result.lines[ti][:, 0]
 ax.plot(x_cls, y_cls,
         marker='o', markersize=3, lw=0, color='yellow', )
@@ -244,7 +245,6 @@ ax['B'].plot(ds.probe_wn, diag_result.diag, c='y')
 ax['B'].plot(ds.probe_wn, diag_result.antidiag, c='c')
 ax['B'].set_xlabel(plot_helpers.freq_label)
 
-fig.align_xlabels()
 
 # %%
 # As an alternative, the pump-slice-amplitude method is also supported. Here we
