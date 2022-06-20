@@ -2,13 +2,11 @@
 2D Spectroscopy
 ===============
 
-This example demonstrates *skultrafast*s current capabilties when it comes to
-working with 2D-spectra. First, we need a sample spectrum. For that,
-*skultrafast* can access example data which is hosted on figshare and will be
+This example demonstrates skultrafasts current capabilties when it comes to
+working with 2D IR-spectra. First, we need a sample spectrum. For that,
+skultrafast can access example data which is hosted on figshare and will be
 downloaded if necessary. The data was measured with the quickcontrol-software
-from phasetech.
-
-We start by import the required functionalty.
+from Phasetech. We start by importing the required functionality.
 """
 
 # %%

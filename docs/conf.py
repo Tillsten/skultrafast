@@ -11,7 +11,9 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
+from skultrafast._version import get_versions
+import sys
+import os
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -21,7 +23,7 @@ sys.path.insert(0, os.path.abspath('../skultrafast'))
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.8'
+needs_sphinx = '5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -34,14 +36,14 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx_gallery.gen_gallery']
 
 sphinx_gallery_conf = {
-  'examples_dirs': ['../skultrafast/examples', ],
-  'gallery_dirs': ['auto_examples', ],
-  'filename_pattern': r'tutorial',
-  'ignore_pattern': r'convo',
-  'abort_on_example_error': True,
-  'only_warn_on_example_error': False,
-  'remove_config_comments': True,
-  'image_srcset': ["2x", "1.5x"]
+    'examples_dirs': ['../skultrafast/examples', ],
+    'gallery_dirs': ['auto_examples', ],
+    'filename_pattern': r'tutorial',
+    'ignore_pattern': r'wip',
+    'abort_on_example_error': False,
+    'only_warn_on_example_error': True,
+    'remove_config_comments': True,
+    'image_srcset': ["2x", "1.5x"]
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -64,7 +66,6 @@ copyright = u'2022, Till Stensitzki'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-from _version import get_versions
 release = get_versions()['version']
 del get_versions
 
@@ -196,21 +197,21 @@ htmlhelp_basename = 'skultrafastdoc'
 # -- Options for LaTeX output --------------------------------------------------
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    # 'papersize': 'letterpaper',
 
-# The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    # 'pointsize': '10pt',
 
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    # 'preamble': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'skultrafast.tex', u'skultrafast Documentation',
-   u'Till Stensitzki', 'manual'),
+    ('index', 'skultrafast.tex', u'skultrafast Documentation',
+     u'Till Stensitzki', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -253,9 +254,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'skultrafast', u'skultrafast Documentation',
-   u'Till Stensitzki', 'skultrafast', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'skultrafast', u'skultrafast Documentation',
+     u'Till Stensitzki', 'skultrafast', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -275,6 +276,3 @@ autodoc_member_order = 'bysource'
 autosummary_generate = True
 body_max_width = '100em'
 plot_formats = ['svg', ('png', 120)]
-#autodoc_mock_imports = ['matplotlib', 'matplotlib.pyplot']
-#import matplotlib
-#matplotlib.use('agg'
