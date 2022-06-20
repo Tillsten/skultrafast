@@ -73,11 +73,12 @@ class QCFile:
     def _load_info(self):
         h = []
         d = {}
-        with (self.path / self.prefix).with_suffix('.info').open() as i:
-            for l in i:
+        with (self.path / self.prefix).with_suffix('.info').open() as info_file:
+            for l in info_file:
                 key, val = l.split('\t')
                 val = val[:-1].strip()
                 d[key] = parse_str(val)
+        print(d)
         return d
 
 
