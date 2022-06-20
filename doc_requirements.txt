@@ -1,4 +1,4 @@
-sphinx > 1.8
+sphinx >= 4
 sphinx-gallery
 pytest
-docutils<0.18
+docutils
