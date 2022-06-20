@@ -78,7 +78,6 @@ class QCFile:
                 key, val = l.split('\t')
                 val = val[:-1].strip()
                 d[key] = parse_str(val)
-        print(d)
         return d
 
 

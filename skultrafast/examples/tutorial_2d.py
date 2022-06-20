@@ -39,19 +39,20 @@ infos
 # %% Loading data
 # ------------
 #
-# There are two `.info`-files the directory. The first contains the transient
-# 1D-data and the second the transient 2D-data. Here in this tutorial, we will
-# work with the 2D data. Therefore we select the second file and open it by
-# instancing an `QC2DSpec`-class. Given the info-file, the class collects all
-# necessary data from the folder. It is also responsible to turn the saved data,
-# which are still inferogramms, into 2D-spectra. This process also includes some
-# preprocessing. Below we we apply 4 times upsampling of pump axis and use 10
-# pixel left and right to estimate and subtract an background before taking the
-# FFT. For apodization, we are use the default hamming window.
+# There are two `.info`-files the directory. The first, index 319, contains the
+# transient 1D-data and the second (320) the transient 2D-data. Here in this
+# tutorial, we will work with the 2D data. Therefore we select the second file
+# and open it by instancing an `QC2DSpec`-class. Given the info-file, the class
+# collects all necessary data from the folder. It is also responsible to turn
+# the saved data, which are still inferogramms, into 2D-spectra. This process
+# also includes some preprocessing. Below we we apply 4 times upsampling of pump
+# axis and use 10 pixel left and right to estimate and subtract an background
+# before taking the FFT. For apodization, we are use the default hamming window.
 
 plot_helpers.enable_style()
 
-qc_file = QC2DSpec(infos[1], bg_correct=(10, 10), upsampling=4)
+data2d_info_path = list(p.glob('*#320.info'))[0]
+qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=4)
 
 # %%
 # To create a dataset to work with form the raw data, we call the `make_ds`
