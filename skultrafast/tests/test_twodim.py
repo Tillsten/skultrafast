@@ -72,6 +72,6 @@ def test_savetext(two_d_processed, tmp_path_factory):
 def test_twodplot_contour(two_d_processed):
     two_d_processed.plot.contour(1)
     two_d_processed.plot.contour(1, 3, 5, )
-    two_d_processed.plot.elp()
+    two_d_processed.plot.elp(1)
 
     
