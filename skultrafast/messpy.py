@@ -1,4 +1,3 @@
-from collections import defaultdict
 import numpy as np
 import lmfit
 from pathlib import Path
@@ -9,7 +8,6 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
 from typing import Callable, Literal, Tuple, Union, Optional, no_type_check, Dict
 import h5py
-from sympy import per
 
 from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast.twoD_dataset import TwoDim
@@ -721,3 +719,4 @@ def get_t0(fname: str,
         data=(t[idx], sig),
         fit_result=result,
     )
+    return res
