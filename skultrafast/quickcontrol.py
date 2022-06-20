@@ -11,6 +11,7 @@ from scipy.ndimage import gaussian_filter1d
 
 from skultrafast.dataset import PolTRSpec, TimeResSpec
 from skultrafast.twoD_dataset import TwoDim
+from skultrafast.utils import poly_bg_correction, inbetween
 
 
 def parse_str(s: str):
@@ -42,36 +43,6 @@ def parse_str(s: str):
         return False
     else:
         return s
-
-
-def bg_correct(wavelengths, data, left=30, right=30, deg=1):
-    """
-    Fit and subtract baseline from given data
-
-    Parameters
-    ----------
-    wavelengths : np.ndarry
-        Shared x-values
-    data : np.ndarray
-        Dataarray
-    left : int, optional
-        left points to use, by default 30
-    right : int, optional
-        right points to use, by default 30
-    deg : int, optional
-        Degree of the polynomial fit, by default 1 (linear)
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    x = np.hstack((wavelengths[:left], wavelengths[-right:]))
-    y = np.hstack((data[:, :left], data[:, -right:]))
-    coef = np.polynomial.polynomial.polyfit(x, y.T, deg=deg)
-    back = np.polynomial.polynomial.polyval(wavelengths, coef)
-    data -= back
-    return data
 
 
 @attr.s(auto_attribs=True)
@@ -195,7 +166,7 @@ class QC2DSpec(QCBaserTimeRes):
     upsampling: int = 2
     """Upsamling factor of the pump-axis"""
 
-    pump_freq: np.ndarray = attr.ib()
+    pump_freq: np.ndarray = attr.ib()  # type: ignore
     """
     Resulting wavenumbers of the pump axis.
     """
@@ -260,7 +231,8 @@ class QC2DSpec(QCBaserTimeRes):
                 if self.probe_filter is not None:
                     d = gaussian_filter1d(d, self.probe_filter, -1, mode='nearest')
                 if self.bg_correct:
-                    bg_correct(self.wavelength, d, self.bg_correct[0], self.bg_correct[1])
+                    poly_bg_correction(self.wavelength, d,
+                                       self.bg_correct[0], self.bg_correct[1])
                 d[0, :] *= 0.5
                 if self.win_function is not None:
                     win = self.win_function(2 * len(self.t2))

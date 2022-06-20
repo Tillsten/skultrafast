@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+import pathlib
+import versioneer
 from setuptools import setup, Command
-import os, glob, shutil
+import os
+import glob
+import shutil
 from os.path import normpath, abspath, dirname, join
 here = normpath(abspath(dirname(__file__)))
-import versioneer
 
 with open('requirements.txt') as f:
     install_reqs = f.read().splitlines()
@@ -41,7 +44,6 @@ class CleanCommand(Command):
 cmdclass = {'clean': CleanCommand}
 cmdclass.update(versioneer.get_cmdclass())
 
-import pathlib
 
 examples = pathlib.Path(__file__) / 'skultrafast/examples/'
 
@@ -61,6 +63,6 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=install_reqs,
     keywords='science physics chemistry pump-probe spectroscopy time-resolved',
-    python_requires='>=3.5',
+    python_requires='>=3.9',
     include_package_data=True,
 )

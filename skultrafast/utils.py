@@ -245,3 +245,40 @@ def TwoExpDecay(x, A1, tau1, A2, tau2, c):
 
 def ThreeExpDecay(x, A1, tau1, A2, tau2, A3, tau3, c):
     return A3 * np.exp(-x / tau3) + TwoExpDecay(x, A1, tau1, A2, tau2, c)
+
+
+def poly_bg_correction(wavelengths, data, left=30, right=30, deg=1):
+    """
+    Fit and subtract baseline from given data
+
+    Parameters
+    ----------
+    wavelengths : np.ndarry
+        Shared x-values
+    data : np.ndarray
+        Dataarray
+    left : int, optional
+        left points to use, by default 30
+    right : int, optional
+        right points to use, by default 30
+    deg : int, optional
+        Degree of the polynomial fit, by default 1 (linear)
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
+    x = np.hstack((wavelengths[:left], wavelengths[-right:]))
+    y = np.hstack((data[:, :left], data[:, -right:]))
+    coef = np.polynomial.polynomial.polyfit(x, y.T, deg=deg)
+    back = np.polynomial.polynomial.polyval(wavelengths, coef)
+    data -= back
+    return data
+
+
+def inbetween(a: np.ndarray, lower: float, upper: float):
+    """
+    Returns index-array where a is between upper and lower
+    """
+    return np.logical_and(a >= lower, a <= upper)

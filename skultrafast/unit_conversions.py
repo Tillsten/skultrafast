@@ -13,7 +13,8 @@ names = dict(cm="wavenumbers in 1/cm",
              dichro="Dichroic ratio (para/perp)",
              angle="relative angle between transition dipole moments in degrees",
              aniso="Anisotropy (para-perp)/(para+2*perp)",
-             kcal="energy in kcal/mol")
+             kcal="energy in kcal/mol",
+             invps="energy in inverse picoseconds",)
 
 
 def make_doc(func):
@@ -96,3 +97,13 @@ def cm2kcal(cm):
 @make_doc
 def kcal2cm(kcal):
     return kcal / 2.859e-3
+
+
+@make_doc
+def invps2cm(invps):
+    return 1 / (invps * 1e-12 * c)
+
+
+@make_doc
+def cm2invps(cm):
+    return 1 / (cm * 1e-12 * c)

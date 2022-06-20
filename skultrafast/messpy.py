@@ -7,14 +7,14 @@ import attr
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import trim_mean
-from typing import Literal, Tuple, Union, Optional, no_type_check, Dict
+from typing import Callable, Literal, Tuple, Union, Optional, no_type_check, Dict
 import h5py
 from sympy import per
 
 from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast.twoD_dataset import TwoDim
 from skultrafast import plot_helpers as ph
-from skultrafast.utils import sigma_clip, gauss_step
+from skultrafast.utils import sigma_clip, gauss_step, poly_bg_correction
 from skultrafast.dv import make_fi, subtract_background
 from skultrafast.unit_conversions import THz2cm
 
@@ -467,8 +467,11 @@ class Messpy25File:
     pump_wn: np.ndarray = attr.ib(init=False)
     'Array with the pump wavenumbers. Depends on the upsampling used during measurment'
     t2: np.ndarray = attr.ib(init=False)
+    'Array containing the waiting times'
     t1: np.ndarray = attr.ib(init=False)
+    'Array containing the double pulse delays'
     rot_frame: float = attr.ib(init=False)
+    'Rotation frame used while measuring'
 
     @no_type_check
     def __attrs_post_init__(self):
@@ -497,21 +500,64 @@ class Messpy25File:
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def get_ifr(self):
+    def get_ifr(self, probe_filter=None, bg_correct=None):
+        """
+        Returns the interferograms. If necessary, apply probefilter and background correction.
+
+        Parameters
+        ----------
+        probe_filter: float
+            The probe filter width in channels. (Gaussian filter)
+        bg_correct: Tuple[int, int]
+            Number of left and right channels to use for background correction.
+
+        Returns
+        -------
+        ifr: Tuple[np.ndarray, np.ndarray, np.ndarray]
+            The interferograms for paralllel, perpendicular and isotropic polarisation.
+            The shape of each array is (n_t2, n_probe_wn, n_t1).
+        """
         ifr = {}
         for name, l in self.h5_file['ifr_data'].items():
             ifr[name] = []
             for i in range(self.t2.size):
                 ifr[name].append(l[str(i)]['mean'])
         para = self.is_para_array
-
         perp = "Probe2" if self.is_para_array == "Probe1" else "Probe2"
+
         para_means = np.stack(ifr[para], 0)
         perp_means = np.stack(ifr[perp], 0)
+        if probe_filter is not None:
+            para_means = gaussian_filter1d(
+                para_means, probe_filter, 1, mode='nearest')
+            perp_means = gaussian_filter1d(
+                perp_means, probe_filter, 1, mode='nearest')
+        if bg_correct is not None:
+            for i in range(para_means.shape[0]):
+                poly_bg_correction(
+                    self.probe_wn, para_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(
+                    self.probe_wn, perp_means[i].T, bg_correct[0], bg_correct[1])
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self, upsample=4, window_fcn=np.hanning) -> Dict[str, TwoDim]:
-        means = self.get_ifr()
+    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning,
+                   probe_filter: Optional[float] = None, bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
+        """
+        Calculates the 2D spectra from the interferograms and returns it as a dictionary.
+        The dictorary contains messpy 2D-objects for paralllel, perpendicular and isotropic polarisation.
+
+        Parameters
+        ----------
+        upsample: int
+            Upsampling factor used in the FFT. A factor over 2 only does sinc interpolation.
+        window_fcn: Callable
+            If given, apply a window function to the FFT.
+        probe_filter: float
+            The probe filter width in channels. (Gaussian filter)
+        bg_correct: Tuple[int, int]
+            Number of left and right channels to use for background correction.
+        """
+        means = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
@@ -519,19 +565,39 @@ class Messpy25File:
             if window_fcn is not None:
                 v = v*window_fcn(v.shape[2]*2)[None, None, v.shape[2]:]
             sig = np.fft.rfft(v, axis=2, n=v.shape[2]*upsample).real
-            self.pump_wn = THz2cm(np.fft.rfftfreq(upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
+            self.pump_wn = THz2cm(np.fft.rfftfreq(
+                upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
             ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
             out[k] = ds
         return out
 
-    
-    def calc_signal(self):
-        ifr = self.get_ifr()
+    def make_model_fitfiles(self, path, name, probe_filter=None, bg_correct=None):
+        """
+        Saves the data in a format useable for the ModelFit Gui from Kevin Robben
+        https://github.com/kevin-robben/model-fitting
+        """
+        p = Path(path)
+        p.mkdir(parents=True, exist_ok=True)
+        ifr = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
+        data = {pol: ifr[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
+        idx = np.argsort(self.probe_wn)
 
+        for pol in ['para', 'perp', 'iso']:
+            folder = p / pol
+            folder.mkdir(parents=True, exist_ok=True)
+            for i, t in enumerate(self.t2):
+                fname = folder / (name + '_%f.txt' % t)
+                d = data[pol][i, idx, :]
 
+                np.savetxt(fname, d)
+        np.savetxt(p / 'pump_wn.txt', self.pump_wn)
+        np.savetxt(p / 'probe_wn.calib', self.probe_wn[idx])
+        np.savetxt(p / 't1.txt', self.t1)
+        np.savetxt(p / 't2.txt', self.t2)
+        timestep = (self.t1[1] - self.t1[0])*1000
 
-    def print_structure(self):
-        self.h5_file.visit(print)
+        np.savetxt(
+            p / f"rot_frame_{self.rot_frame: .0f}_t1_stepfs_{timestep: .0f}.txt", [self.rot_frame])
 
 
 @attr.s(auto_attribs=True)
