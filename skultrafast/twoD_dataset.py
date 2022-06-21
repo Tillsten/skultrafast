@@ -70,7 +70,7 @@ class CLSResult:
         self.exp_fit_result_ = res
         return res
 
-    def plot_cls(self, ax=None, model_style: Dict = None, symlog=False, **kwargs):
+    def plot_cls(self, ax=None, model_style: Dict = {}, symlog=False, **kwargs):
         if ax is None:
             ax = plt.gca()
         ec = ax.errorbar(self.wt, self.slopes, self.slope_errors, **kwargs)
@@ -153,15 +153,15 @@ class TwoDim:
         cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
 
-    def t_idx(self, t: Union[float, Iterable[float]]) -> int:
+    def t_idx(self, t: Union[float, Iterable[float]]) -> Union[int,List[int]]:
         """Return nearest idx to nearest time value"""
         return dv.fi(self.t, t)
 
-    def probe_idx(self, wn: Union[float, Iterable[float]]) -> int:
+    def probe_idx(self, wn: Union[float, Iterable[float]]) -> Union[int,List[int]]:
         """Return nearest idx to nearest probe_wn value"""
         return dv.fi(self.probe_wn, wn)
 
-    def pump_idx(self, wn: Union[float, Iterable[float]]) -> int:
+    def pump_idx(self, wn: Union[float, Iterable[float]]) -> Union[int,List[int]]:
         """Return nearest idx to nearest pump_wn value"""
         return dv.fi(self.pump_wn, wn)
 
