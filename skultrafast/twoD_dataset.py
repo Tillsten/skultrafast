@@ -165,7 +165,8 @@ class TwoDim:
         """Return nearest idx to nearest pump_wn value"""
         return dv.fi(self.pump_wn, wn)
 
-    def select_range(self, pump_range, probe_range, invert=False) -> 'TwoDim':
+    def select_range(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float],
+                     invert: bool =False) -> 'TwoDim':
         """
         Return a dataset containing only the selected region.
         """
@@ -275,6 +276,13 @@ class TwoDim:
                 p: Polynomial = Polynomial.fit(
                     pr[i & i2], np.log(-s[i & i2]), 2)  # type: Ignore
                 l.append(p.deriv().roots()[0])
+            elif method == 'skew_fit':
+                mod = lmfit.models.GaussianModel()+lmfit.models.LinearModel()
+                amp = np.trapz(s[i], pr[i])
+                result = mod.fit(s[i], sigma=5, center=cen_of_m, amplitude=amp,
+                                 x=pr[i], slope=0, intercept=0)
+                l.append(result.params['center'])
+
             else:
                 l.append(cen_of_m)
 
@@ -339,7 +347,7 @@ class TwoDim:
         y_diag = self.probe_wn + offset
         y_antidiag = -self.probe_wn + 2 * p + offset
 
-        ts = self.t_idx[spec_i]*np.ones_like(y_diag)
+        ts = self.t[spec_i]*np.ones_like(y_diag)
         diag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_diag)))
         antidiag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_antidiag)))
 
@@ -405,3 +413,14 @@ class TwoDim:
                         [self.probe_wn[:, None], self.spec2d[i]]])
         np.savetxt(fname, arr, **kwargs,
                    header='# pump axis along rows, probe axis along columns')
+
+
+    def background_correction(self, excluded_range: Tuple[float, float], deg=3):
+        wn_range = ~inbetween(self.probe_wn, excluded_range[0], excluded_range[1])
+        for ti in range(self.spec2d.shape[0]):
+            for pi in range(self.spec2d.shape[2]):
+                s = self.spec2d[ti, :, pi]
+                back = s[wn_range]
+                p = np.polyfit(self.probe_wn[wn_range], back, deg)
+                s -= np.polyval(p)(self.probe_wn)
+
