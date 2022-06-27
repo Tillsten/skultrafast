@@ -1,25 +1,25 @@
-import typing
 import functools
+import typing
 from collections import namedtuple
+from pathlib import Path
+from typing import Callable, List, Optional, Type, Union, Iterable, Dict, cast
+
 import attr
 import lmfit
-from lmfit.minimizer import MinimizerResult
 import matplotlib.pyplot as plt
 import numpy as np
-from pathlib import Path
-
-from scipy.interpolate import interp1d, UnivariateSpline
+from lmfit.minimizer import MinimizerResult
 from matplotlib.lines import Line2D
+from scipy.interpolate import interp1d, UnivariateSpline
 
 import skultrafast.dv as dv
-from skultrafast.utils import sigma_clip, linreg_std_errors
 import skultrafast.plot_helpers as ph
+from skultrafast import filter
 from skultrafast import zero_finding, fitter, lifetimemap
 from skultrafast.data_io import save_txt
 from skultrafast.kinetic_model import Model
-from skultrafast import filter
+from skultrafast.utils import sigma_clip, linreg_std_errors
 
-from typing import Callable, List, Optional, Type, Union, Iterable, Dict, cast
 ndarray: Type[np.ndarray] = np.ndarray
 
 EstDispResult = namedtuple("EstDispResult", "correct_ds tn polynomial")
@@ -36,7 +36,8 @@ polynomial : function
     Function which maps wavenumbers to time-zeros.
 """
 
-#FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
+
+# FitExpResult = namedtuple("FitExpResult", "lmfit_mini lmfit_res fitter")
 
 
 @attr.s(auto_attribs=True)
@@ -110,15 +111,15 @@ class LDMResult:
 
 class TimeResSpec:
     def __init__(
-        self,
-        wl,
-        t,
-        data,
-        err=None,
-        name=None,
-        freq_unit="nm",
-        disp_freq_unit=None,
-        auto_plot=True,
+            self,
+            wl,
+            t,
+            data,
+            err=None,
+            name=None,
+            freq_unit="nm",
+            disp_freq_unit=None,
+            auto_plot=True,
     ):
         """
         Class for working with time-resolved spectra. If offers methods for
@@ -164,8 +165,8 @@ class TimeResSpec:
         """
 
         assert (
-            t.shape[0], wl.shape[0]
-        ) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
+                   t.shape[0], wl.shape[0]
+               ) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
         t = t.copy()
         wl = wl.copy()
         data = data.copy()
@@ -574,11 +575,11 @@ class TimeResSpec:
             if self.err is None or not use_err:
                 weights = None
             else:
-                weights = 1 / self.err[:, idx[i]:idx[i + 1]]**2
+                weights = 1 / self.err[:, idx[i]:idx[i + 1]] ** 2
             vals = self.data[:, idx[i]:idx[i + 1]]
             binned[:, i] = np.average(vals, 1, weights=weights)
             if weights is not None:
-                binned_err[:, i] = np.average((vals - binned[:, i, None])**2,
+                binned_err[:, i] = np.average((vals - binned[:, i, None]) ** 2,
                                               1,
                                               weights=weights)
             binned_wl[i] = np.mean(arr[idx[i]:idx[i + 1]])
@@ -725,17 +726,17 @@ class TimeResSpec:
         return c
 
     def fit_exp(
-        self,
-        x0,
-        fix_sigma=True,
-        fix_t0=True,
-        fix_last_decay=True,
-        model_coh=False,
-        lower_bound=0.1,
-        verbose=True,
-        use_error=False,
-        fixed_names=None,
-        from_t=None,
+            self,
+            x0,
+            fix_sigma=True,
+            fix_t0=True,
+            fix_last_decay=True,
+            model_coh=False,
+            lower_bound=0.1,
+            verbose=True,
+            use_error=False,
+            fixed_names=None,
+            from_t=None,
     ):
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -827,7 +828,7 @@ class TimeResSpec:
             max_t = self.t.max()
             start = np.floor(np.log10(dt))
             end = np.ceil(np.log10(max_t))
-            taus = np.geomspace(start, end, 5 * (end-start))
+            taus = np.geomspace(start, end, 5 * (end - start))
 
         result = lifetimemap.start_ltm(self,
                                        taus,
@@ -902,12 +903,12 @@ class TimeResSpec:
             if abs(nwl[i + 1] - nwl[i]) < distance:
                 if self.err is not None:
                     if self.err is not None and use_err:
-                        w = weights[:, i:i + 2]**2
+                        w = weights[:, i:i + 2] ** 2
                     else:
                         w = None
                     mean = np.average(nspec[:, i:i + 2], 1, weights=w)
                     err = np.sqrt(
-                        np.average((nspec[:, i:i + 2] - mean[:, None])**2, 1, weights=w))
+                        np.average((nspec[:, i:i + 2] - mean[:, None]) ** 2, 1, weights=w))
                     nspec[:, i] = mean
                     if nerr is not None:
                         nerr[:, i] = err
@@ -1032,16 +1033,16 @@ class PolTRSpec:
         return self.para.T[:, idx], self.perp.T[:, idx]
 
     def fit_exp(
-        self,
-        x0,
-        fix_sigma=True,
-        fix_t0=True,
-        fix_last_decay=True,
-        from_t=None,
-        model_coh=False,
-        lower_bound=0.1,
-        use_error=False,
-        fixed_names=None,
+            self,
+            x0,
+            fix_sigma=True,
+            fix_t0=True,
+            fix_last_decay=True,
+            from_t=None,
+            model_coh=False,
+            lower_bound=0.1,
+            use_error=False,
+            fixed_names=None,
     ) -> FitExpResult:
         """
         Fit a sum of exponentials to the dataset. This function assumes
@@ -1400,7 +1401,7 @@ class TimeResSpecPlotter(PlotterMixin):
         for i in args:
             if isinstance(i, tuple):
                 if ds.err is not None and use_weights:
-                    weights = 1 / ds.err[ds.t_idx(i[0]):ds.t_idx(i[1]), :]**2
+                    weights = 1 / ds.err[ds.t_idx(i[0]):ds.t_idx(i[1]), :] ** 2
                 else:
                     weights = None
                 dat = np.average(ds.data[ds.t_idx(i[0]):ds.t_idx(i[1]), :],
@@ -1410,7 +1411,7 @@ class TimeResSpecPlotter(PlotterMixin):
             else:
                 idx = dv.fi(ds.t, i)
                 if n_average > 0:
-                    dat = filter.uniform_filter(ds, (2*n_average + 1, 1)).data[idx, :]
+                    dat = filter.uniform_filter(ds, (2 * n_average + 1, 1)).data[idx, :]
                 elif n_average == 0:
                     dat = ds.data[idx, :]
                 else:
@@ -1814,7 +1815,6 @@ class TimeResSpecPlotter(PlotterMixin):
 
 
 class PolTRSpecPlotter(PlotterMixin):
-
     perp_ls = dict(marker='s', markersize=3, linewidth=1, markerfacecolor='w')
     para_ls = dict(marker='o', markersize=3, linewidth=1)
 
@@ -2167,17 +2167,20 @@ class PolTRSpecPlotter(PlotterMixin):
             ax.legend(title="SAS\nConstants", ncol=ncol)
         return palines, pelines
 
-    def trans_anisotropy(self, wls, symlog=True, ax=None, freq_unit="auto"):
+    def trans_anisotropy(self, *wls: float, symlog: bool = True, ax: Optional[plt.Axes] = None,
+                         freq_unit=typing.Literal['auto', 'nm', 'cm']):
         """
         Plots the anisotropy over time for given frequencies.
         Parameters
         ----------
-        wls : list of floats
+        wls :floats
             Which frequencies are plotted.
         symlog : bool
             Use symlog scale
         ax : plt.Axes or None
             Matplotlib Axes, if `None`, defaults to `plt.gca()`.
+        freq_unit: ['auto', 'nm', 'cm']
+            Unit of the frequecies.
 
         Returns
         -------
@@ -2199,7 +2202,7 @@ class PolTRSpecPlotter(PlotterMixin):
         for i in wls:
             idx = dv.fi(x, i)
             pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
-            aniso = (pa-pe) / (2*pe + pa)
+            aniso = (pa - pe) / (2 * pe + pa)
             l += ax.plot(ds.para.t,
                          aniso,
                          label=ph.time_formatter(ds.t[idx], ph.time_unit))

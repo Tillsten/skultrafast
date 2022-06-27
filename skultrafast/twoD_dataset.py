@@ -153,20 +153,20 @@ class TwoDim:
         cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
 
-    def t_idx(self, t: Union[float, Iterable[float]]) -> Union[int,List[int]]:
+    def t_idx(self, t: Union[float, Iterable[float]]) -> Union[int, List[int]]:
         """Return nearest idx to nearest time value"""
         return dv.fi(self.t, t)
 
-    def probe_idx(self, wn: Union[float, Iterable[float]]) -> Union[int,List[int]]:
+    def probe_idx(self, wn: Union[float, Iterable[float]]) -> Union[int, List[int]]:
         """Return nearest idx to nearest probe_wn value"""
         return dv.fi(self.probe_wn, wn)
 
-    def pump_idx(self, wn: Union[float, Iterable[float]]) -> Union[int,List[int]]:
+    def pump_idx(self, wn: Union[float, Iterable[float]]) -> Union[int, List[int]]:
         """Return nearest idx to nearest pump_wn value"""
         return dv.fi(self.pump_wn, wn)
 
     def select_range(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float],
-                     invert: bool =False) -> 'TwoDim':
+                     invert: bool = False) -> 'TwoDim':
         """
         Return a dataset containing only the selected region.
         """
@@ -215,8 +215,8 @@ class TwoDim:
 
     def single_cls(self,
                    t: float,
-                   pr_range: float = 9.0,
-                   pu_range: float = 7.0,
+                   pr_range: Union[float, Tuple[float, float]] = 9.0,
+                   pu_range: Union[float, Tuple[float, float]] = 7.0,
                    mode: Literal['neg', 'pos'] = 'neg',
                    method: Literal['com', 'quad', 'fit', 'log_quad'] = 'com'
                    ) -> Tuple[np.ndarray, np.ndarray, object]:
@@ -229,7 +229,8 @@ class TwoDim:
             Delay time of the spectrum to analyse
         pr_range : float, optional
             How many wavenumbers away from the maximum to use for
-            determining the exact position, by default 9
+            determining the exact position, by default 9. If a tuple of 
+            float is given, it is interpreted as the selected region
         pu_range : float, optional
             The range around the pump-maxima used for calculating
             the CLS.
@@ -251,36 +252,42 @@ class TwoDim:
         spec = self.spec2d[self.t_idx(t), :, :].T
         if mode == 'pos':
             spec = -spec
-        pu_max = pu[np.argmin(np.min(spec, 1))]
-        pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
+        if not isinstance(pu_range, (tuple, list)):
+            pu_max = pu[np.argmin(np.min(spec, 1))]
+            pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
+        else:
+            pu_idx = inbetween(pu, pu_range[0], pu_range[1])
         spec = spec[pu_idx, :]
         l = []
 
         for s in spec:
             m = np.argmin(s)
-            pr_max = pr[m]
-            i = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
-            cen_of_m = np.average(pr[i], weights=s[i])
+            if not isinstance(pr_range, (tuple, list)):
+                pr_max = pr[m]
+                pr_idx = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
+            else:
+                pr_idx = inbetween(pr, pr_range[0], pr_range[1])
+            cen_of_m = np.average(pr[pr_idx], weights=s[pr_idx])
             if method == 'fit':
-                mod = lmfit.models.GaussianModel()
-                amp = np.trapz(s[i], pr[i])
-                result = mod.fit(s[i], sigma=10, center=cen_of_m, amplitude=amp,
-                                 x=pr[i])
+                mod = lmfit.models.PseudoVoigtModel() + lmfit.models.ConstantModel()
+                amp = np.trapz(s[pr_idx], pr[pr_idx])
+                result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp, c=0,
+                                 x=pr[pr_idx])
                 l.append(result.params['center'])
             elif method == 'quad':
-                p: Polynomial = Polynomial.fit(pr[i], s[i], 2)  # type: Ignore
+                p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: Ignore
                 l.append(p.deriv().roots()[0])
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
                 p: Polynomial = Polynomial.fit(
-                    pr[i & i2], np.log(-s[i & i2]), 2)  # type: Ignore
+                    pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: Ignore
                 l.append(p.deriv().roots()[0])
             elif method == 'skew_fit':
-                mod = lmfit.models.GaussianModel()+lmfit.models.LinearModel()
-                amp = np.trapz(s[i], pr[i])
-                result = mod.fit(s[i], sigma=5, center=cen_of_m, amplitude=amp,
-                                 x=pr[i], slope=0, intercept=0)
+                mod = lmfit.models.PseudoVoigtModel()+lmfit.models.LinearModel()
+                amp = np.trapz(s[pr_idx], pr[pr_idx])
+                result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp,
+                                 x=pr[pr_idx], slope=0, intercept=0)
                 l.append(result.params['center'])
 
             else:
@@ -405,7 +412,7 @@ class TwoDim:
         fname: str
             The file name.
         i: int
-            The index of the 2D spectra.
+            The index of the 2D spectra.<
         kwargs:
             Additional arguments for the `np.savetxt` function.
         """
@@ -414,8 +421,19 @@ class TwoDim:
         np.savetxt(fname, arr, **kwargs,
                    header='# pump axis along rows, probe axis along columns')
 
+    def background_correction(self, excluded_range: Tuple[float, float], deg: int=3) -> None:
+        """
+        Fits and subtracts a background for each pump-frequency. Done for each
+        waiting time. Does the subtraction inplace, e.g. modifies the dataset.
 
-    def background_correction(self, excluded_range: Tuple[float, float], deg=3):
+        Parameters
+        ----------
+        excluded_range: (float, float)
+            Defines the range which is excluded from the fit, e.g.
+            the region of interest.
+        deg: int
+            The degree of the polynomial.
+        """
         wn_range = ~inbetween(self.probe_wn, excluded_range[0], excluded_range[1])
         for ti in range(self.spec2d.shape[0]):
             for pi in range(self.spec2d.shape[2]):
@@ -423,4 +441,3 @@ class TwoDim:
                 back = s[wn_range]
                 p = np.polyfit(self.probe_wn[wn_range], back, deg)
                 s -= np.polyval(p)(self.probe_wn)
-
