@@ -253,7 +253,7 @@ class TwoDim:
             spec = -spec
         pu_max = pu[np.argmin(np.min(spec, 1))]
         if not isinstance(pu_range, tuple):
-        pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
+            pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
         else:
             pu_idx = inbetween(pu, pu_range[0], pu_range[1])
         spec = spec[pu_idx, :]
@@ -262,15 +262,15 @@ class TwoDim:
         for s in spec:
             m = np.argmin(s)
             if not isinstance(pr_range, tuple):
-            pr_max = pr[m]
-            i = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
+                pr_max = pr[m]
+                i = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
             else:
                 i = inbetween(pr, pr_range[0], pr_range[1])
             cen_of_m = np.average(pr[i], weights=s[i])
             if method == 'fit':
                 mod = lmfit.models.GaussianModel()+lmfit.models.ConstantModel()
                 amp = np.trapz(s[i], pr[i])
-                result = mod.fit(s[i], sigma=20, center=cen_of_m, amplitude=amp, c=0,
+                result = mod.fit(s[i], sigma=3, center=cen_of_m, amplitude=amp, c=0,
                                  x=pr[i])
                 l.append(result.params['center'])
             elif method == 'quad':
