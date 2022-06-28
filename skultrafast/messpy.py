@@ -24,7 +24,7 @@ class MessPy2File:
     """
 
     def __init__(self, fname: os.PathLike):
-        self.file = np.load(fname,  allow_pickle=True)
+        self.file = np.load(fname, allow_pickle=True)
 
     def get_meta_info(self):
         meta = self.file['meta']
@@ -38,8 +38,12 @@ class MessPy2File:
     def vis_wls(self, slope=-1.5, intercept=864.4):
         return slope * np.arange(390) + intercept
 
-    def process_vis(self, vis_range=(390, 720), min_scan=None,
-                    max_scan=None, sigma=2.3, para_angle=45):
+    def process_vis(self,
+                    vis_range=(390, 720),
+                    min_scan=None,
+                    max_scan=None,
+                    sigma=2.3,
+                    para_angle=45):
         data_file = self.file
         wls = self.vis_wls()
         t = data_file['t']
@@ -59,18 +63,21 @@ class MessPy2File:
         ds = dsm.mean(0)
         dss = dsm.std(0)
 
-        para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm',
-                           disp_freq_unit='nm')
-        perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm',
-                           disp_freq_unit='nm')
+        para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
+        perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
         pol = PolTRSpec(para, perp)
 
         pol = pol.cut_freq(*vis_range, invert_sel=True)
         return pol.para, pol.perp, pol
 
-    def process_ir(self, t0=0, min_scans=0,
-                   max_scans=None, subtract_background=True,
-                   center_ch=16, disp=14, sigma=3) -> PolTRSpec:
+    def process_ir(self,
+                   t0=0,
+                   min_scans=0,
+                   max_scans=None,
+                   subtract_background=True,
+                   center_ch=16,
+                   disp=14,
+                   sigma=3) -> PolTRSpec:
         data_file = self.file
         t = data_file['t'] - t0
         wli = data_file['wl_Remote IR 32x2']
@@ -123,13 +130,14 @@ class MessPy2File:
 
 
 class MessPyFile:
+
     def __init__(
-            self,
-            fname,
-            invert_data=False,
-            is_pol_resolved=False,
-            pol_first_scan="unknown",
-            valid_channel=None,
+        self,
+        fname,
+        invert_data=False,
+        is_pol_resolved=False,
+        pol_first_scan="unknown",
+        valid_channel=None,
     ):
         """Class for working with data files from MessPy v1.
 
@@ -329,6 +337,7 @@ class MessPyFile:
 
 
 class MessPyPlotter(PlotterMixin):
+
     def __init__(self, messpyds):
         """
         Class to plot utility plots
@@ -483,7 +492,7 @@ class Messpy25File:
         self.rot_frame = self.h5_file['t1'].attrs['rot_frame']
         self.probe_wn = self.h5_file['wn'][:]
         i: np.ndarray = self.h5_file['ifr_data/Probe1/0/0']
-        self.pump_wn = THz2cm(np.fft.rfftfreq(2*i.shape[1], (self.t1[1]-self.t1[0])))
+        self.pump_wn = THz2cm(np.fft.rfftfreq(2 * i.shape[1], (self.t1[1] - self.t1[0])))
         self.pump_wn += self.rot_frame
 
     def get_means(self):
@@ -527,28 +536,31 @@ class Messpy25File:
         para_means = np.stack(ifr[para], 0)
         perp_means = np.stack(ifr[perp], 0)
         if probe_filter is not None:
-            para_means = gaussian_filter1d(
-                para_means, probe_filter, 1, mode='nearest')
-            perp_means = gaussian_filter1d(
-                perp_means, probe_filter, 1, mode='nearest')
+            para_means = gaussian_filter1d(para_means, probe_filter, 1, mode='nearest')
+            perp_means = gaussian_filter1d(perp_means, probe_filter, 1, mode='nearest')
         if bg_correct is not None:
             for i in range(para_means.shape[0]):
-                poly_bg_correction(
-                    self.probe_wn, para_means[i].T, bg_correct[0], bg_correct[1])
-                poly_bg_correction(
-                    self.probe_wn, perp_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(self.probe_wn, para_means[i].T, bg_correct[0],
+                                   bg_correct[1])
+                poly_bg_correction(self.probe_wn, perp_means[i].T, bg_correct[0],
+                                   bg_correct[1])
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning,
-                   probe_filter: Optional[float] = None, bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
+    def make_two_d(self,
+                   upsample: int = 4,
+                   window_fcn: Optional[Callable] = np.hanning,
+                   probe_filter: Optional[float] = None,
+                   bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
         """
-        Calculates the 2D spectra from the interferograms and returns it as a dictionary.
-        The dictorary contains messpy 2D-objects for paralllel, perpendicular and isotropic polarisation.
+        Calculates the 2D spectra from the interferograms and returns it as a
+        dictionary. The dictorary contains messpy 2D-objects for paralllel,
+        perpendicular and isotropic polarisation.
 
         Parameters
         ----------
         upsample: int
-            Upsampling factor used in the FFT. A factor over 2 only does sinc interpolation.
+            Upsampling factor used in the FFT. A factor over 2 only does sinc
+            interpolation.
         window_fcn: Callable
             If given, apply a window function to the FFT.
         probe_filter: float
@@ -562,10 +574,11 @@ class Messpy25File:
         for k, v in data.items():
             v[:, :, 0] *= 0.5
             if window_fcn is not None:
-                v = v*window_fcn(v.shape[2]*2)[None, None, v.shape[2]:]
-            sig = np.fft.rfft(v, axis=2, n=v.shape[2]*upsample).real
-            self.pump_wn = THz2cm(np.fft.rfftfreq(
-                upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
+                v = v * window_fcn(v.shape[2] * 2)[None, None, v.shape[2]:]
+            sig = np.fft.rfft(v, axis=2, n=v.shape[2] * upsample).real
+            self.pump_wn = THz2cm(
+                np.fft.rfftfreq(upsample * v.shape[2],
+                                (self.t1[1] - self.t1[0]))) + self.rot_frame
             ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
             out[k] = ds
         return out
@@ -585,7 +598,7 @@ class Messpy25File:
             folder = p / pol
             folder.mkdir(parents=True, exist_ok=True)
             for i, t in enumerate(self.t2):
-                fname = folder / (name + '_%f.txt' % t)
+                fname = folder / (name + '_%f.txt'%t)
                 d = data[pol][i, idx, :]
 
                 np.savetxt(fname, d)
@@ -593,22 +606,25 @@ class Messpy25File:
         np.savetxt(p / 'probe_wn.calib', self.probe_wn[idx])
         np.savetxt(p / 't1.txt', self.t1)
         np.savetxt(p / 't2.txt', self.t2)
-        timestep = (self.t1[1] - self.t1[0])*1000
+        timestep = (self.t1[1] - self.t1[0]) * 1000
 
-        np.savetxt(
-            p / f"rot_frame_{self.rot_frame: .0f}_t1_stepfs_{timestep: .0f}.txt", [self.rot_frame])
+        np.savetxt(p / f"rot_frame_{self.rot_frame: .0f}_t1_stepfs_{timestep: .0f}.txt",
+                   [self.rot_frame])
 
-    def recalculate_wl(self, center_wl=None, center_ch: int = 65, disp: Optional[float] = None):
+    def recalculate_wl(self,
+                       center_wl=None,
+                       center_ch: int = 65,
+                       disp: Optional[float] = None):
         """
         Recalculates the wavelengths from the probe.
         """
         if disp is None:
-            if np.diff(1e7/self.probe_wn).max() < 6:
-                disp = 7.8/2
+            if np.diff(1e7 / self.probe_wn).max() < 6:
+                disp = 7.8 / 2
             else:
                 disp = 7.8
-        wls = center_wl - disp*(np.arange(128)-center_ch)
-        self.probe_wn = 1e7/wls
+        wls = center_wl - disp * (np.arange(128) - center_ch)
+        self.probe_wn = 1e7 / wls
 
 
 @attr.s(auto_attribs=True)

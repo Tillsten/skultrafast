@@ -169,9 +169,9 @@ class TwoDimPlotter:
     def plot_cls(self):
         pass
 
-    def plot_square(self, probe_range, pump_range=None, use_symlog=True, ax=None):
-        if pump_range is None:
-            pump_range = probe_range
+    def plot_square(self, pump_range, probe_range=None, use_symlog=True, ax=None):
+        if probe_range is None:
+            probe_range = pump_range
         pr = inbetween(self.ds.probe_wn, min(probe_range), max(probe_range))
         reg = self.ds.spec2d[:, pr, :]
         pu = inbetween(self.ds.pump_wn, min(pump_range), max(pump_range))
@@ -180,6 +180,8 @@ class TwoDimPlotter:
         if ax is None:
             ax = plt.gca()
         l, = ax.plot(self.ds.t, s)
+        if symlog:
+            ax.set_xscale("symlog", linthresh=1.0, linscale=linscale)
         plot_helpers.lbl_trans(ax, use_symlog)
         return l
 
