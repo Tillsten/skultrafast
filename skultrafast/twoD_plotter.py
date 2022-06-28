@@ -86,7 +86,7 @@ class TwoDimPlotter:
         out = {'fig': fig, 'axs': ax}
         for i, k in enumerate(idx):
             out_i = {'ax': ax[i]}
-            if m is None:
+            if scale == 'eachmax':
                 m = np.abs(s2d[k, ...]).max()
 
             levels = np.linspace(-m, m, contour_ops['levels'])

@@ -1,9 +1,10 @@
+from pathlib import Path
+
 import pytest
 
-from skultrafast.quickcontrol import QC2DSpec
 from skultrafast.data_io import get_twodim_dataset
+from skultrafast.quickcontrol import QC2DSpec
 from skultrafast.twoD_dataset import TwoDim
-from pathlib import Path
 
 
 @pytest.fixture(scope='session')
@@ -32,7 +33,6 @@ def test_select(two_d):
     assert two_d.probe_wn.size > 0
     assert two_d.probe_wn.max() < 2200
 
-
     two_d = two_d.select_t_range(1)
 
     assert two_d.t.min() > 1
@@ -51,9 +51,19 @@ def test_integrate(two_d_processed):
 def test_cls(two_d_processed):
     two_d = two_d_processed.copy()
     two_d.single_cls(3)
-    for m in ['quad', 'fit', 'log_quad']:
+    for m in ['quad', 'fit', 'log_quad', 'skew_fit']:
         two_d.single_cls(3, method=m)
-    cls_result = two_d.cls()
+
+
+def test_cls_subrange(two_d_processed):
+    two_d = two_d_processed.copy()
+    two_d.single_cls(3, pr_range=(2140, 2169), pu_range=(2140, 2169))
+
+
+def test_all_cls(two_d_processed):
+    cls_result = two_d_processed.cls()
+    cls_result.fit_exp([1])
+    assert cls_result.exp_fit_result_ is not None
     cls_result.plot_cls()
 
 
@@ -67,11 +77,9 @@ def test_psa(two_d_processed):
 
 def test_savetext(two_d_processed, tmp_path_factory):
     two_d_processed.save_txt(tmp_path_factory.mktemp('data'))
-    
+
 
 def test_twodplot_contour(two_d_processed):
     two_d_processed.plot.contour(1)
     two_d_processed.plot.contour(1, 3, 5, )
     two_d_processed.plot.elp(1)
-
-    
