@@ -1,19 +1,21 @@
-from skultrafast.twoD_plotter import TwoDimPlotter
-from skultrafast.dataset import TimeResSpec
-from skultrafast.utils import inbetween
-from skultrafast import dv, plot_helpers
+import os
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
+
+import attr
+import lmfit
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy.polynomial import Polynomial
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import uniform_filter, gaussian_filter
 from scipy.stats import linregress
 
-import numpy as np
-from numpy.polynomial import Polynomial
-import matplotlib.pyplot as plt
-import lmfit
-import attr
-from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal, TYPE_CHECKING
-import os
+from skultrafast import dv, plot_helpers
+from skultrafast.dataset import TimeResSpec
+from skultrafast.twoD_plotter import TwoDimPlotter
+from skultrafast.utils import inbetween
+
 PathLike = Union[str, bytes, os.PathLike]
 
 
@@ -157,6 +159,24 @@ class TwoDim:
         """Return nearest idx to nearest time value"""
         return dv.fi(self.t, t)
 
+    def t_d(self, t) -> np.ndarray:
+        """Return the dataset nearest to the given time t"""
+        return self.spec2d[self.t_idx(t), :, :]
+
+    def data_at(self, t: Optional[float] = None, probe_wn: Optional[float] = None,
+                pump_wn: Optional[float] = None) -> np.ndarray:
+        spec2d = self.spec2d
+        if t is not None:
+            t_idx = self.t_idx(t)
+            spec2d = spec2d[t_idx, ...]
+        if probe_wn is not None:
+            pr_idx = self.probe_idx(probe_wn)
+            spec2d = spec2d[..., pr_idx, :]
+        if pump_wn is not None:
+            pu_idx = self.pump_wn(pump_wn)
+            spec2d = spec2d[..., pu_idx]
+        return spec2d
+
     def probe_idx(self, wn: Union[float, Iterable[float]]) -> Union[int, List[int]]:
         """Return nearest idx to nearest probe_wn value"""
         return dv.fi(self.probe_wn, wn)
@@ -284,7 +304,7 @@ class TwoDim:
                     pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: Ignore
                 l.append(p.deriv().roots()[0])
             elif method == 'skew_fit':
-                mod = lmfit.models.PseudoVoigtModel()+lmfit.models.LinearModel()
+                mod = lmfit.models.PseudoVoigtModel() + lmfit.models.LinearModel()
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp,
                                  x=pr[pr_idx], slope=0, intercept=0)
@@ -354,7 +374,7 @@ class TwoDim:
         y_diag = self.probe_wn + offset
         y_antidiag = -self.probe_wn + 2 * p + offset
 
-        ts = self.t[spec_i]*np.ones_like(y_diag)
+        ts = self.t[spec_i] * np.ones_like(y_diag)
         diag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_diag)))
         antidiag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_antidiag)))
 
@@ -368,14 +388,27 @@ class TwoDim:
         )
         return res
 
-    def pump_slice_amp(self, t: float, bg_correct: bool = True):
+    def pump_slice_amp(self, t: float, bg_correct: bool = True) -> np.ndarray:
+        """"
+        Calculates the pump-slice-amplitude for a given delay t.
+        """
         d = self.spec2d[self.t_idx(t), :, :]
         diag = np.ptp(d, axis=0)
         if bg_correct:
-            diag -= (diag[0] + diag[-1])/2
+            diag -= (diag[0] + diag[-1]) / 2
         return diag
 
-    def apply_filter(self, kind, size, *args):
+    def apply_filter(self, kind: Literal['uniform', 'gaussian'], size, *args) -> 'TwoDim':
+        """"
+        Returns filtered dataset.
+
+        Parameters
+        ----------
+        kind: str
+            Which filter to use. Supported are uniform and gaussian.
+        size: tuple[float, float, float]
+            Kernel of the filter
+        """
         filtered = self.copy()
         if len(size) == 2:
             size = (1, size[0], size[1])
@@ -421,7 +454,7 @@ class TwoDim:
         np.savetxt(fname, arr, **kwargs,
                    header='# pump axis along rows, probe axis along columns')
 
-    def background_correction(self, excluded_range: Tuple[float, float], deg: int=3) -> None:
+    def background_correction(self, excluded_range: Tuple[float, float], deg: int = 3) -> None:
         """
         Fits and subtracts a background for each pump-frequency. Done for each
         waiting time. Does the subtraction inplace, e.g. modifies the dataset.
@@ -441,3 +474,30 @@ class TwoDim:
                 back = s[wn_range]
                 p = np.polyfit(self.probe_wn[wn_range], back, deg)
                 s -= np.polyval(p)(self.probe_wn)
+
+    def get_minmax(self, t: float, com: int = 3) -> Dict[str, float]:
+        """
+        Returns the position of the minimum and maximum of the dataset at time t. If com > 0,
+        it return the center of mass around the minimum and maximum. The com argument gives
+        the number of points to be used for the center of mass.
+        """
+        from scipy.ndimage import minimum_position, maximum_position
+        spec_i = self.spec2d[self.t_idx(t), :, :]
+        min_pos = minimum_position(spec_i)
+        max_pos = maximum_position(spec_i)
+        if com > 0:
+            idx = slice(min_pos[0]-com, min_pos[0]+com+1)
+            probe_min = np.average(self.probe_wn[idx], weights=spec_i.min(1)[idx])
+            idx = slice(max_pos[0]-com, max_pos[0]+com+1)
+            probe_max = np.average(self.probe_wn[idx], weights=spec_i.max(1)[idx])
+            idx = slice(min_pos[1]-com, min_pos[1]+com+1)
+            pump_min = np.average(self.pump_wn[idx], weights=spec_i.min(0)[idx])
+            idx = slice(max_pos[1]-com, max_pos[1]+com+1)
+            pump_max = np.average(self.pump_wn[idx], weights=spec_i.max(0)[idx])
+        else:
+            probe_min = self.probe_wn[min_pos[0]]
+            probe_max = self.probe_wn[max_pos[0]]
+            pump_min = self.pump_wn[min_pos[1]]
+            pump_max = self.pump_wn[max_pos[1]]
+        return {'ProbeMin': probe_min, 'ProbeMax': probe_max,
+                'PumpMin': pump_min, 'PumpMax': pump_max}

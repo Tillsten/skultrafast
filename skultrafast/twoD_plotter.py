@@ -5,7 +5,7 @@ import attr
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
-from typing import Any, TypedDict, Union, Literal, Optional, Tuple, TYPE_CHECKING
+from typing import Any, TypedDict, Union, Literal, Optional, Tuple, TYPE_CHECKING, List
 import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:
@@ -231,3 +231,24 @@ class TwoDimPlotter:
         line = ax.plot(ds.pump_wn, diag, **kwargs)
         ax.set(xlabel='Pump Freq.', ylabel='Slice Amplitude')
         return line
+
+    def diagonal(self, *t: float, offset: Optional[float] = None, ax: Optional[plt.Axes] = None) -> List[plt.Line2D]:
+        if ax is None:
+            ax = plt.gca()
+        l = []
+        for ti in t:
+            diag_data = self.ds.diag_and_antidiag(ti, offset)
+            l += ax.plot(diag_data.diag_coords, diag_data.diag, label='%.1f ps' % ti)
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Diagonal Amplitude [AU]')
+        return l
+
+    def anti_diagonal(self, *t: float, offset: Optional[float] = None, ax: Optional[plt.Axes] = None):
+        if ax is None:
+            ax = plt.gca()
+        l = []
+        for ti in t:
+            diag_data = self.ds.diag_and_antidiag(ti, offset)
+            l += ax.plot(diag_data.antidiag_coords,
+                         diag_data.antidiag, label='%.1f ps' % ti)
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Diagonal Amplitude [AU]')
+        return l
