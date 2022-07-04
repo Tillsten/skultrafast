@@ -499,7 +499,7 @@ class Messpy25File:
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def get_ifr(self, probe_filter=None, bg_correct=None):
+    def get_ifr(self, probe_filter=None, bg_correct=None, ch_shift: int = 0):
         """
         Returns the interferograms. If necessary, apply probefilter and background correction.
 
@@ -509,7 +509,8 @@ class Messpy25File:
             The probe filter width in channels. (Gaussian filter)
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
-
+        ch_shift: int
+            Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         Returns
         -------
         ifr: Tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -531,15 +532,23 @@ class Messpy25File:
                 para_means, probe_filter, 1, mode='nearest')
             perp_means = gaussian_filter1d(
                 perp_means, probe_filter, 1, mode='nearest')
+        if ch_shift > 0:
+            para_means = para_means[:, :-ch_shift, :]
+            perp_means = perp_means[:, ch_shift:, :]
+        elif ch_shift < 0:
+            para_means = para_means[:, -ch_shift:, :]
+            perp_means = perp_means[:, :-ch_shift, :]
+
         if bg_correct is not None:
             for i in range(para_means.shape[0]):
                 poly_bg_correction(
-                    self.probe_wn, para_means[i].T, bg_correct[0], bg_correct[1])
+                    self.probe_wn[ch_shift:], para_means[i].T, bg_correct[0], bg_correct[1])
                 poly_bg_correction(
-                    self.probe_wn, perp_means[i].T, bg_correct[0], bg_correct[1])
+                    self.probe_wn[ch_shift:], perp_means[i].T, bg_correct[0], bg_correct[1])
+
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning,
+    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning, ch_shift: int = 1,
                    probe_filter: Optional[float] = None, bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
         """
         Calculates the 2D spectra from the interferograms and returns it as a dictionary.
@@ -553,10 +562,13 @@ class Messpy25File:
             If given, apply a window function to the FFT.
         probe_filter: float
             The probe filter width in channels. (Gaussian filter)
+        ch_shift: int
+            Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
         """
-        means = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
+        means = self.get_ifr(probe_filter=probe_filter,
+                             bg_correct=bg_correct, ch_shift=ch_shift)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
@@ -566,7 +578,7 @@ class Messpy25File:
             sig = np.fft.rfft(v, axis=2, n=v.shape[2]*upsample).real
             self.pump_wn = THz2cm(np.fft.rfftfreq(
                 upsample*v.shape[2], (self.t1[1]-self.t1[0]))) + self.rot_frame
-            ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
+            ds = TwoDim(self.t2, self.pump_wn, self.probe_wn[ch_shift:], sig)
             out[k] = ds
         return out
 
