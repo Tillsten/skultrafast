@@ -490,5 +490,6 @@ class TwoDim:
             probe_max = self.probe_wn[max_pos[0]]
             pump_min = self.pump_wn[min_pos[1]]
             pump_max = self.pump_wn[max_pos[1]]
-        return {'ProbeMin': probe_min, 'ProbeMax': probe_max,
+        psamax = self.pump_wn[self.pump_slice_amp(t).argmax()]
+        return {'ProbeMin': probe_min, 'ProbeMax': probe_max, 'PSAMax': psamax,
                 'PumpMin': pump_min, 'PumpMax': pump_max}
