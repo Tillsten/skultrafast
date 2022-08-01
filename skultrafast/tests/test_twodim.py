@@ -91,6 +91,6 @@ def test_twodplot_contour(two_d_processed):
 
 def test_bg_correct(two_d_processed: TwoDim):
     tbg = two_d_processed.copy()
-    tbg.background_correction(2130, 2160)
+    tbg.background_correction((2130, 2160))
 
     

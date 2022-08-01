@@ -470,7 +470,7 @@ class TwoDim:
                 s = self.spec2d[ti, :, pi]
                 back = s[wn_range]
                 p = np.polyfit(self.probe_wn[wn_range], back, deg)
-                s -= np.polyval(p)(self.probe_wn)
+                s -= np.polyval(p, self.probe_wn)
 
     def get_minmax(self, t: float, com: int = 3) -> Dict[str, float]:
         """
