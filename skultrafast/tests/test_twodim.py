@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from numpy.testing import assert_almost_equal
 import pytest
 
 from skultrafast.data_io import get_twodim_dataset
@@ -60,15 +60,20 @@ def test_cls_subrange(two_d_processed):
     two_d.single_cls(3, pr_range=(2140, 2169), pu_range=(2140, 2169))
 
 
-def test_all_cls(two_d_processed):
+def test_all_cls(two_d_processed: TwoDim):
     cls_result = two_d_processed.cls()
-    cls_result.fit_exp([1])
-    assert cls_result.exp_fit_result_ is not None
-    cls_result.plot_cls()
+    for use_const in [True, False]:
+        for use_weights in [True, False]:
+            cls_result.exp_fit([1], use_const=use_const, use_weights=use_weights)
+            cls_result.exp_fit([1, 10], use_const=use_const, use_weights=use_weights)
+            assert cls_result.exp_fit_result_ is not None
+            cls_result.plot_cls()
 
 
 def test_diag(two_d_processed: TwoDim):
-    two_d_processed.diag_and_antidiag(3)
+    d1 = two_d_processed.diag_and_antidiag(3)
+    d2 = two_d_processed.diag_and_antidiag(1, offset=0)
+    
 
 
 def test_psa(two_d_processed):
@@ -83,3 +88,9 @@ def test_twodplot_contour(two_d_processed):
     two_d_processed.plot.contour(1)
     two_d_processed.plot.contour(1, 3, 5, )
     two_d_processed.plot.elp(1)
+
+def test_bg_correct(two_d_processed: TwoDim):
+    tbg = two_d_processed.copy()
+    tbg.background_correction(2130, 2160)
+
+    
