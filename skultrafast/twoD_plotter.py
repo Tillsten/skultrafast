@@ -180,8 +180,8 @@ class TwoDimPlotter:
         if ax is None:
             ax = plt.gca()
         l, = ax.plot(self.ds.t, s)
-        if symlog:
-            ax.set_xscale("symlog", linthresh=1.0, linscale=linscale)
+        if use_symlog:
+            ax.set_xscale("symlog", linthresh=1.0)
         plot_helpers.lbl_trans(ax, use_symlog)
         return l
 
