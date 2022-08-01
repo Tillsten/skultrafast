@@ -1,7 +1,7 @@
 """Module with various utility functions. Was called dv in older Versions."""
 import numpy as np
 from scipy.special import erf
-from scipy.stats import median_absolute_deviation
+from scipy.stats import median_abs_deviation
 from .unit_conversions import cm2THz
 
 import functools
@@ -66,7 +66,7 @@ def sigma_clip(data, sigma=3, max_iter=5, axis=-1, use_mad=False):
     for _ in range(max_iter):
         median = np.ma.median(data, axis, keepdims=1)
         if use_mad:
-            std = median_absolute_deviation(data, axis=1)
+            std = median_abs_deviation(data, axis=1)
         else:
             std = np.ma.std(data, axis, keepdims=1)
 
