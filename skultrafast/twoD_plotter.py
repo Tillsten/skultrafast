@@ -235,6 +235,27 @@ class TwoDimPlotter:
         return line
 
     def diagonal(self, *t: float, offset: Optional[float] = None, ax: Optional[plt.Axes] = None) -> List[plt.Line2D]:
+        """
+        Plots the signal along the diagonal. If offset is not None, the signal
+        is shifted by offset, otherwise the offset is determined from the signal
+        by shifting it to the maximal signal. 
+
+        Parameters
+        ----------
+        t : float
+            The waiting time
+        offset : float, optional
+            The offset from the signal, is the spectra is calibrated should be
+            0. If None, the offset is determined from the signal by looking for
+            maximal signal.
+        ax : matplotlib.axes.Axes, optional
+            The axes to plot on. If None, the current axes is used.
+
+        Returns
+        -------
+        List[matplotlib.lines.Line2D]
+            The plotted lines objects
+        """
         if ax is None:
             ax = plt.gca()
         l = []
@@ -244,13 +265,40 @@ class TwoDimPlotter:
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Diagonal Amplitude [AU]')
         return l
 
-    def anti_diagonal(self, *t: float, offset: Optional[float] = None, ax: Optional[plt.Axes] = None):
+    def anti_diagonal(self, *t: float, offset: Optional[float] = None, p: Optional[float] = None,
+                      ax: Optional[plt.Axes] = None) -> List[plt.Line2D]:
+        """
+        Plots the signal along a antidiagonal. If offset is not None, the digonal
+        goes through the to the maximal signal. If the frequency axes are
+        calibrated, the offset should be 0. p deterimines the position where the
+        anti-diagonal goes through. If None, again the position of the maxium is
+        used.
+
+        Parameters
+        ----------
+        t : float
+            The waiting time
+        offset : float, optional
+            The offset from the signal, is the spectra is calibrated should be
+            0. If None, the offset is determined from the signal by looking for
+            maximal signal.
+        p: float, optional
+            The position of the anti-diagonal. If None, the position of the
+            maximal signal is used.
+        ax : matplotlib.axes.Axes, optional
+            The axes to plot on. If None, the current axes is used.
+
+        Returns
+        -------
+        List[matplotlib.lines.Line2D]
+            The plotted lines objects
+        """
         if ax is None:
             ax = plt.gca()
         l = []
         for ti in t:
-            diag_data = self.ds.diag_and_antidiag(ti, offset)
+            diag_data = self.ds.diag_and_antidiag(ti, offset, p)
             l += ax.plot(diag_data.antidiag_coords,
                          diag_data.antidiag, label='%.1f ps' % ti)
-        ax.set(xlabel=plot_helpers.freq_label, ylabel='Diagonal Amplitude [AU]')
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Anti-diagonal Amplitude [AU]')
         return l
