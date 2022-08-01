@@ -95,11 +95,17 @@ class CLSResult:
 @attr.s(auto_attribs=True)
 class DiagResult:
     diag: np.ndarray
+    """Contains the diagonal signals of the 2d-spectra"""
     antidiag: np.ndarray
+    """Contains the antidiagonal signals of the 2d-spectra"""
     diag_coords: np.ndarray
+    """Contains the coordinates of the diagonal signals"""
     antidiag_coords: np.ndarray
+    """Contains the coordinates of the antidiagonal signals"""
     offset: float
+    """The offset of the diagonal signals"""
     p: float
+    """The position crossing the diagonals"""
 
 
 @attr.s(auto_attribs=True)

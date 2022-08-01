@@ -19,6 +19,7 @@ and may still have bugs.
 """
 # sphinx_gallery_thumbnail_number = 3
 # %%
+from skultrafast import dataset, data_io, plot_helpers
 import numpy as np
 from matplotlib import pyplot as plt
 from skultrafast.kinetic_model import Model
@@ -92,7 +93,6 @@ A_inv = np.linalg.inv(A)
 # return the time-depedence of the concentrations. Let's test that on some data.
 # Load test data and correct the dispersion.
 
-from skultrafast import dataset, data_io, plot_helpers
 plot_helpers.enable_style()
 
 wl, t, d = data_io.load_example()
@@ -104,7 +104,7 @@ res = dsb.estimate_dispersion(heuristic_args=(1.5, ), deg=3, shift_result=.15)
 # Fit the DAS first.
 
 ids = res.correct_ds
-fr = ids.fit_exp([0.0, 0.08, 1, 500000], 
+fr = ids.fit_exp([0.0, 0.08, 1, 500000],
                  model_coh=True, fix_sigma=False, fix_t0=False)
 ids.plot.das()
 
@@ -124,7 +124,7 @@ m.build_matrix()
 # later.
 
 func = m.build_mat_func()
-num_mat = func(1 / fr.lmfit_res.params['t0'], 
+num_mat = func(1 / fr.lmfit_res.params['t0'],
                1/fr.lmfit_res.params['t1'])
 vals, vecs = np.linalg.eig(num_mat)
 
@@ -150,7 +150,7 @@ ax[0].plot(dsb.wn, das)
 ax[0].set_title('DAS')
 plot_helpers.lbl_spec(ax[0])
 
-sas = A_inv @ das.T 
+sas = A_inv @ das.T
 edas = np.cumsum(das, axis=1)
 ax[1].plot(dsb.wn, sas.T)
 ax[1].set_title('SAS')
@@ -197,10 +197,3 @@ ct = fr.fitter.x_vec[:, :2] @ A
 ax[1].plot(dsb.t, ct)
 ax[1].set_title('Convoluted Concentrations')
 plot_helpers.lbl_trans(ax[1], use_symlog=False)
-
-
-
-
-# %%
-
-# %%

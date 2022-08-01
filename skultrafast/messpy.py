@@ -496,6 +496,8 @@ class Messpy25File:
         self.pump_wn += self.rot_frame
 
     def get_means(self):
+        if not '2d_data' in self.h5_file:
+            raise ValueError("No 2D data found in file")
         means = {}
         for name, l in self.h5_file['2d_data'].items():
             means[name] = []
@@ -507,6 +509,33 @@ class Messpy25File:
         para_means = np.stack(means[para], 0)
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
+
+    def get_all_ifr(self):
+        ifr = {}
+        for name, l in self.h5_file['ifr_data'].items():
+            ifr[name] = {}
+            for i in range(self.t2.size):
+                li = []
+                scans = [int(s) for s in l[str(i)].keys() if s != 'mean']
+                scans.sort()
+                for scan in scans:
+                    li.append(self.h5_file[f'ifr_data/{name}/{str(i)}/{scan}'][:])
+                ifr[name][str(i)] = li
+        return ifr
+
+    def ifr_means_and_stderr(self):
+        ifr = self.get_all_ifr()
+        means = {}
+        stderr = {}
+        for name in ifr:
+            for i in ifr[name]:
+                means[name] = []
+                stderr[name] = []
+                for i in range(self.t2.size):
+                    means[name].append(np.mean(ifr[name][str(i)], 0))
+                    stderr[name].append(np.std(ifr[name][str(i)], 0) /
+                                        np.sqrt(len(ifr[name][str(i)])))
+        return means, stderr
 
     def get_ifr(self, probe_filter=None, bg_correct=None, ch_shift: int = 0):
         """
@@ -590,7 +619,11 @@ class Messpy25File:
             self.pump_wn = THz2cm(
                 np.fft.rfftfreq(upsample * v.shape[2],
                                 (self.t1[1] - self.t1[0]))) + self.rot_frame
-            ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
+            if ch_shift > 0:
+                probe_wn = self.probe_wn[ch_shift:]
+            elif ch_shift < 0:
+                probe_wn = self.probe_wn[:ch_shift]
+            ds = TwoDim(self.t2, self.pump_wn, probe_wn, sig)
             out[k] = ds
         return out
 
