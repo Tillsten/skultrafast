@@ -81,7 +81,7 @@ class CLSResult:
         ax.set(xlabel=plot_helpers.time_label, ylabel='Slope')
         m_line = None
         if self.exp_fit_result_:
-            xu = np.linspace(min(self.wt), max(self.wt), 300)
+            xu = np.linspace(np.min(self.wt), np.max(self.wt), 300)
             yu = self.exp_fit_result_.eval(x=xu)
             style = dict(c='k', zorder=1.8)
             if model_style:
@@ -138,6 +138,7 @@ class TwoDim:
         self.spec2d = self.spec2d.copy()
         self.probe_wn = self.probe_wn.copy()
         self.pump_wn = self.pump_wn.copy()
+        self.t = self.t.copy()
 
         i1 = np.argsort(self.pump_wn)
         self.pump_wn = self.pump_wn[i1]
@@ -272,28 +273,28 @@ class TwoDim:
                 amp = np.trapz(s[i], pr[i])
                 result = mod.fit(s[i], sigma=3, center=cen_of_m, amplitude=amp, c=0,
                                  x=pr[i])
-                l.append(result.params['center'])
+                l.append((result.params['center'], result.params['center'].stderr))
             elif method == 'quad':
                 p: Polynomial = Polynomial.fit(pr[i], s[i], 2)  # type: Ignore
-                l.append(p.deriv().roots()[0])
+                l.append((p.deriv().roots()[0], 1))
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
                 p: Polynomial = Polynomial.fit(
                     pr[i & i2], np.log(-s[i & i2]), 2)  # type: Ignore
-                l.append(p.deriv().roots()[0])
+                l.append((p.deriv().roots()[0], 1))
             elif method == 'skew_fit':
                 mod = lmfit.models.GaussianModel()+lmfit.models.LinearModel()
                 amp = np.trapz(s[i], pr[i])
                 result = mod.fit(s[i], sigma=5, center=cen_of_m, amplitude=amp,
                                  x=pr[i], slope=0, intercept=0)
-                l.append(result.params['center'])
+                l.append((result.params['center'], result.params['center'].stderr))
 
             else:
-                l.append(cen_of_m)
+                l.append((cen_of_m, 1))
 
         x = pu[pu_idx]
-        y = np.array(l)
+        y, yerr = np.array(l).T
         r = linregress(x, y)
         return x, y, r
 

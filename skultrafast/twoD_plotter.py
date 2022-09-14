@@ -5,11 +5,12 @@ import attr
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 from scipy.interpolate import RegularGridInterpolator
-from typing import Any, TypedDict, Union, Literal, Optional, Tuple, TYPE_CHECKING
+from typing import Any, TypedDict, Union, Literal, Optional, Tuple, TYPE_CHECKING, Dict
 import matplotlib.pyplot as plt
 
 if TYPE_CHECKING:
     from skultrafast.twoD_dataset import TwoDim
+    f
 
 
 class ContourOptions(TypedDict):
@@ -25,8 +26,8 @@ class TwoDimPlotter:
     ds: 'TwoDim' = attr.ib()
 
     def contour(self, *times,  ax=None, ax_size: float = 1.5, subplots_kws={}, aspect=None, labels={'x': "Probe Freq. [cm-1]", 'y': "Pump Freq. [cm-1]"},
-                direction: Union[Tuple[int, int], str] = 'vertical', contour_params: dict = {},
-                scale: Literal['firstmax', 'fullmax', 'eachmax'] = "firstmax", average=None, fig_kws: dict = {}) -> dict[str, Any]:
+                direction: Union[Tuple[int, int], Literal['v', 'h']] = 'v', contour_params: Dict[str, Any] = {},
+                scale: Literal['firstmax', 'fullmax', 'eachmax'] = "firstmax", average=None, fig_kws: dict = {}) -> Dict[str, Any]:
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
@@ -35,12 +36,12 @@ class TwoDimPlotter:
             if direction[0] == 'v':
                 nrows = len(idx)
                 ncols = 1
-            elif direction[0] == 'h':
+            elif isinstance(direction, tuple):
+                nrows: int = direction[0]
+                ncols: int = direction[1]
+            else:
                 nrows = 1
                 ncols = len(idx)
-            else:
-                nrows = direction[0]
-                ncols = direction[1]
 
             if aspect > 1:
                 ax_size_x = ax_size
@@ -49,7 +50,7 @@ class TwoDimPlotter:
                 ax_size_x = ax_size*aspect
                 ax_size_y = ax_size
 
-            fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x),
+            fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x), # typing: ignore
                                                   xlabel=labels['x'], ylabel=labels['y'], left_margin=0.7, bot_margin=0.6,
                                                   hspace=0.15, vspace=0.15, padding=0.3, **fig_kws)
 
@@ -76,7 +77,7 @@ class TwoDimPlotter:
             ax = [ax]
 
         contour_ops: ContourOptions = ContourOptions(
-            levels=21,
+            levels=20,
             cmap='bwr',
             linewidth=0.5,
             add_lines=True,
@@ -169,7 +170,7 @@ class TwoDimPlotter:
     def plot_cls(self):
         pass
 
-    def plot_square(self, pump_range, probe_range=None, use_symlog=True, ax=None):
+    def plot_square(self, pump_range, probe_range=None, symlog=True, ax=None):
         if probe_range is None:
             probe_range = pump_range
         pr = inbetween(self.ds.probe_wn, min(probe_range), max(probe_range))
@@ -181,8 +182,8 @@ class TwoDimPlotter:
             ax = plt.gca()
         l, = ax.plot(self.ds.t, s)
         if symlog:
-            ax.set_xscale("symlog", linthresh=1.0, linscale=linscale)
-        plot_helpers.lbl_trans(ax, use_symlog)
+            ax.set_xscale("symlog", linthresh=1.0, linscale=1)
+        plot_helpers.lbl_trans(ax, symlog)
         return l
 
     def elp(self, t, offset=None, p=None):
