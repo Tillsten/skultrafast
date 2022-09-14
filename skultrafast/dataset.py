@@ -165,8 +165,8 @@ class TimeResSpec:
         """
 
         assert (
-                   t.shape[0], wl.shape[0]
-               ) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
+            t.shape[0], wl.shape[0]
+        ) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
         t = t.copy()
         wl = wl.copy()
         data = data.copy()
@@ -2205,7 +2205,7 @@ class PolTRSpecPlotter(PlotterMixin):
             aniso = (pa - pe) / (2 * pe + pa)
             l += ax.plot(ds.para.t,
                          aniso,
-                         label=ph.time_formatter(ds.t[idx], ph.time_unit))
+                         label="%.0f %s" % (x[idx], ph.freq_unit))
         ph.lbl_trans(use_symlog=symlog)
         if symlog:
             ax.set_xscale("symlog")

@@ -496,6 +496,8 @@ class Messpy25File:
         self.pump_wn += self.rot_frame
 
     def get_means(self):
+        if not '2d_data' in self.h5_file:
+            raise ValueError("No 2D data found in file")
         means = {}
         for name, l in self.h5_file['2d_data'].items():
             means[name] = []
@@ -508,7 +510,34 @@ class Messpy25File:
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def get_ifr(self, probe_filter=None, bg_correct=None):
+    def get_all_ifr(self):
+        ifr = {}
+        for name, l in self.h5_file['ifr_data'].items():
+            ifr[name] = {}
+            for i in range(self.t2.size):
+                li = []
+                scans = [int(s) for s in l[str(i)].keys() if s != 'mean']
+                scans.sort()
+                for scan in scans:
+                    li.append(self.h5_file[f'ifr_data/{name}/{str(i)}/{scan}'][:])
+                ifr[name][str(i)] = li
+        return ifr
+
+    def ifr_means_and_stderr(self):
+        ifr = self.get_all_ifr()
+        means = {}
+        stderr = {}
+        for name in ifr:
+            for i in ifr[name]:
+                means[name] = []
+                stderr[name] = []
+                for i in range(self.t2.size):
+                    means[name].append(np.mean(ifr[name][str(i)], 0))
+                    stderr[name].append(np.std(ifr[name][str(i)], 0) /
+                                        np.sqrt(len(ifr[name][str(i)])))
+        return means, stderr
+
+    def get_ifr(self, probe_filter=None, bg_correct=None, ch_shift: int = 0):
         """
         Returns the interferograms. If necessary, apply probefilter and background correction.
 
@@ -518,7 +547,8 @@ class Messpy25File:
             The probe filter width in channels. (Gaussian filter)
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
-
+        ch_shift: int
+            Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         Returns
         -------
         ifr: Tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -536,21 +566,31 @@ class Messpy25File:
         para_means = np.stack(ifr[para], 0)
         perp_means = np.stack(ifr[perp], 0)
         if probe_filter is not None:
-            para_means = gaussian_filter1d(para_means, probe_filter, 1, mode='nearest')
-            perp_means = gaussian_filter1d(perp_means, probe_filter, 1, mode='nearest')
+            para_means = gaussian_filter1d(
+                para_means, probe_filter, 1, mode='nearest')
+            perp_means = gaussian_filter1d(
+                perp_means, probe_filter, 1, mode='nearest')
+        if ch_shift > 0:
+            para_means = para_means[:, :-ch_shift, :]
+            perp_means = perp_means[:, ch_shift:, :]
+            wn = self.probe_wn[ch_shift:]
+        elif ch_shift < 0:
+            para_means = para_means[:, -ch_shift:, :]
+            perp_means = perp_means[:, :ch_shift, :]
+            wn = self.probe_wn[:ch_shift]
+        else:
+            wn = self.probe_wn
         if bg_correct is not None:
             for i in range(para_means.shape[0]):
-                poly_bg_correction(self.probe_wn, para_means[i].T, bg_correct[0],
-                                   bg_correct[1])
-                poly_bg_correction(self.probe_wn, perp_means[i].T, bg_correct[0],
-                                   bg_correct[1])
+                poly_bg_correction(
+                    wn, para_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(
+                    wn, perp_means[i].T, bg_correct[0], bg_correct[1])
+
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self,
-                   upsample: int = 4,
-                   window_fcn: Optional[Callable] = np.hanning,
-                   probe_filter: Optional[float] = None,
-                   bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
+    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning, ch_shift: int = 1,
+                   probe_filter: Optional[float] = None, bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
         """
         Calculates the 2D spectra from the interferograms and returns it as a
         dictionary. The dictorary contains messpy 2D-objects for paralllel,
@@ -565,10 +605,13 @@ class Messpy25File:
             If given, apply a window function to the FFT.
         probe_filter: float
             The probe filter width in channels. (Gaussian filter)
+        ch_shift: int
+            Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
         """
-        means = self.get_ifr(probe_filter=probe_filter, bg_correct=bg_correct)
+        means = self.get_ifr(probe_filter=probe_filter,
+                             bg_correct=bg_correct, ch_shift=ch_shift)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
@@ -579,7 +622,11 @@ class Messpy25File:
             self.pump_wn = THz2cm(
                 np.fft.rfftfreq(upsample * v.shape[2],
                                 (self.t1[1] - self.t1[0]))) + self.rot_frame
-            ds = TwoDim(self.t2, self.pump_wn, self.probe_wn, sig)
+            if ch_shift >= 0:
+                probe_wn = self.probe_wn[ch_shift:]
+            elif ch_shift < 0:
+                probe_wn = self.probe_wn[:ch_shift]
+            ds = TwoDim(self.t2, self.pump_wn, probe_wn, sig)
             out[k] = ds
         return out
 
@@ -598,7 +645,7 @@ class Messpy25File:
             folder = p / pol
             folder.mkdir(parents=True, exist_ok=True)
             for i, t in enumerate(self.t2):
-                fname = folder / (name + '_%f.txt'%t)
+                fname = folder / (name + '_%f.txt' % t)
                 d = data[pol][i, idx, :]
 
                 np.savetxt(fname, d)
