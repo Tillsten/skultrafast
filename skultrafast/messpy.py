@@ -573,16 +573,19 @@ class Messpy25File:
         if ch_shift > 0:
             para_means = para_means[:, :-ch_shift, :]
             perp_means = perp_means[:, ch_shift:, :]
+            wn = self.probe_wn[ch_shift:]
         elif ch_shift < 0:
             para_means = para_means[:, -ch_shift:, :]
-            perp_means = perp_means[:, :-ch_shift, :]
-
+            perp_means = perp_means[:, :ch_shift, :]
+            wn = self.probe_wn[:ch_shift]
+        else:
+            wn = self.probe_wn
         if bg_correct is not None:
             for i in range(para_means.shape[0]):
                 poly_bg_correction(
-                    self.probe_wn[ch_shift:], para_means[i].T, bg_correct[0], bg_correct[1])
+                    wn, para_means[i].T, bg_correct[0], bg_correct[1])
                 poly_bg_correction(
-                    self.probe_wn[ch_shift:], perp_means[i].T, bg_correct[0], bg_correct[1])
+                    wn, perp_means[i].T, bg_correct[0], bg_correct[1])
 
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
@@ -619,7 +622,7 @@ class Messpy25File:
             self.pump_wn = THz2cm(
                 np.fft.rfftfreq(upsample * v.shape[2],
                                 (self.t1[1] - self.t1[0]))) + self.rot_frame
-            if ch_shift > 0:
+            if ch_shift >= 0:
                 probe_wn = self.probe_wn[ch_shift:]
             elif ch_shift < 0:
                 probe_wn = self.probe_wn[:ch_shift]
