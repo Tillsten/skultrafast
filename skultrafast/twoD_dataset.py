@@ -420,6 +420,11 @@ class TwoDim:
             Which filter to use. Supported are uniform and gaussian.
         size: tuple[float, float, float]
             Kernel of the filter
+
+        Returns
+        -------
+        TwoDim
+            Filtered dataset.
         """
         filtered = self.copy()
         if len(size) == 2:
@@ -470,6 +475,17 @@ class TwoDim:
         """
         Fits and subtracts a background for each pump-frequency. Done for each
         waiting time. Does the subtraction inplace, e.g. modifies the dataset.
+
+        Parameters
+        ----------        
+        excluded_range: Tuple[float, float]
+            The range of the pump axis which is excluded from the fit, e.g.
+            contains the signal.
+        deg: int
+            Degree of the polynomial fit.
+        Returns
+        -------
+        None
         """
         wn_range = ~inbetween(self.probe_wn, excluded_range[0], excluded_range[1])
         for ti in range(self.spec2d.shape[0]):
@@ -509,7 +525,22 @@ class TwoDim:
 
     def integrate_reg(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float] = None) -> np.ndarray:
         """	
-        Integrates the 2D spectra over a given range, using the trapezoidal rule.
+        Integrates the 2D spectra over a given range, using the trapezoidal
+        rule.
+
+        Parameters
+        ----------
+
+        pump_range: tuple[float, float]
+            The range of the pump axis to be integrated over.
+        probe_range: tuple[float, float]
+            The range of the probe axis to be integrated over. If None, the
+            probe range is used.           
+
+        Returns
+        -------
+        np.ndarray 
+            The integrated spectral signal for all waiting times.
         """
         if probe_range is None:
             probe_range = pump_range
