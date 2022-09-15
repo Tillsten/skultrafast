@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
+from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 import attr
 import lmfit
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial import Polynomial
 from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import uniform_filter, gaussian_filter
+from scipy.ndimage import gaussian_filter, uniform_filter
 from scipy.stats import linregress
 
 from skultrafast import dv, plot_helpers
@@ -485,7 +485,7 @@ class TwoDim:
         it return the center of mass around the minimum and maximum. The com argument gives
         the number of points to be used for the center of mass.
         """
-        from scipy.ndimage import minimum_position, maximum_position
+        from scipy.ndimage import maximum_position, minimum_position
         spec_i = self.spec2d[self.t_idx(t), :, :]
         min_pos = minimum_position(spec_i)
         max_pos = maximum_position(spec_i)
@@ -506,3 +506,17 @@ class TwoDim:
         psamax = self.pump_wn[self.pump_slice_amp(t).argmax()]
         return {'ProbeMin': probe_min, 'ProbeMax': probe_max, 'PSAMax': psamax,
                 'PumpMin': pump_min, 'PumpMax': pump_max}
+
+    def integrate_reg(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float] = None) -> np.ndarray:
+        """	
+        Integrates the 2D spectra over a given range, using the trapezoidal rule.
+        """
+        if probe_range is None:
+            probe_range = pump_range
+        pr = inbetween(self.probe_wn, min(probe_range), max(probe_range))
+        reg = self.spec2d[:, pr, :]
+        pu = inbetween(self.pump_wn, min(pump_range), max(pump_range))
+        reg = reg[:, :, pu]
+        s = np.trapz(reg, self.pump_wn[pu], axis=2)
+        s = np.trapz(s, self.probe_wn[pr], axis=1)
+        return s
