@@ -178,7 +178,10 @@ class TwoDimPlotter:
         reg = self.ds.spec2d[:, pr, :]
         pu = inbetween(self.ds.pump_wn, min(pump_range), max(pump_range))
         reg = reg[:, :, pu]
-        s = reg.sum(1).sum(1)
+
+        s = np.trapz(reg, self.ds.pump_wn[pu], axis=2)
+        s = np.trapz(s, self.ds.probe_wn[pr], axis=1)
+
         if ax is None:
             ax = plt.gca()
         l, = ax.plot(self.ds.t, s)

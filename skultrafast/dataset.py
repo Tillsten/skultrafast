@@ -3,6 +3,7 @@ import typing
 from collections import namedtuple
 from pathlib import Path
 from typing import Callable, List, Optional, Type, Union, Iterable, Dict, cast
+import warnings
 
 import attr
 import lmfit
@@ -1421,8 +1422,10 @@ class TimeResSpecPlotter(PlotterMixin):
                 label = ph.time_formatter(ds.t[idx], ph.time_unit)
             if upsample > 1:
                 x, dat = self.upsample_spec(dat, factor=upsample)
-            if isinstance(norm, float):
-                dat /= dat[dv.fi(x, norm)]
+            if isinstance(norm, float, int):
+                if norm == 0:
+                    warnings.warn("0 is not intpreted as a bool here")
+                dat = dat / dat[dv.fi(x, norm)]
             elif isinstance(norm, bool) and norm:
                 dat = dat / abs(dat).max()
             markevery = None if upsample == 1 else upsample + 1
