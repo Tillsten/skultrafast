@@ -2168,7 +2168,7 @@ class PolTRSpecPlotter(PlotterMixin):
         return palines, pelines
 
     def trans_anisotropy(self, *wls: float, symlog: bool = True, ax: Optional[plt.Axes] = None,
-                         freq_unit=typing.Literal['auto', 'nm', 'cm']):
+                         freq_unit=typing.Literal['auto', 'nm', 'cm'], mode: typing.Literal['aniso', 'dichro']):
         """
         Plots the anisotropy over time for given frequencies.
         Parameters
@@ -2181,6 +2181,8 @@ class PolTRSpecPlotter(PlotterMixin):
             Matplotlib Axes, if `None`, defaults to `plt.gca()`.
         freq_unit: ['auto', 'nm', 'cm']
             Unit of the frequecies.
+        mode: ['aniso', 'dichro']
+            Plot anisotropy or dichroism.
 
         Returns
         -------
@@ -2203,8 +2205,13 @@ class PolTRSpecPlotter(PlotterMixin):
             idx = dv.fi(x, i)
             pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
             aniso = (pa - pe) / (2 * pe + pa)
+            dichro = pa/pe
+            if mode == "aniso":
+                data = aniso
+            elif mode == "dichro":
+                data = dichro
             l += ax.plot(ds.para.t,
-                         aniso,
+                         data,
                          label="%.0f %s" % (x[idx], ph.freq_unit))
         ph.lbl_trans(use_symlog=symlog)
         if symlog:

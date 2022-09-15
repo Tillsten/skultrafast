@@ -75,7 +75,6 @@ def test_diag(two_d_processed: TwoDim):
     d2 = two_d_processed.diag_and_antidiag(1, offset=0)
     
 
-
 def test_psa(two_d_processed):
     two_d_processed.pump_slice_amp(3)
 
