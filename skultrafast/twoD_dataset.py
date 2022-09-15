@@ -299,7 +299,10 @@ class TwoDim:
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp, c=0,
                                  x=pr[pr_idx])
-                l.append((result.params['center'], result.params['center'].stderr))
+                val, err = (result.params['center'].value, result.params['center'].stderr)
+                if err is None:
+                    err = np.nan
+                l.append((val, err))
             elif method == 'quad':
                 p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: Ignore
                 l.append((p.deriv().roots()[0], 1))
@@ -314,7 +317,10 @@ class TwoDim:
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp,
                                  x=pr[pr_idx], slope=0, intercept=0)
-                l.append((result.params['center'], result.params['center'].stderr))
+                val, err = (result.params['center'].value, result.params['center'].stderr)
+                if err is None:
+                    err = np.nan
+                l.append((val, err))
 
             else:
                 l.append((cen_of_m, 1))
@@ -500,4 +506,3 @@ class TwoDim:
         psamax = self.pump_wn[self.pump_slice_amp(t).argmax()]
         return {'ProbeMin': probe_min, 'ProbeMax': probe_max, 'PSAMax': psamax,
                 'PumpMin': pump_min, 'PumpMax': pump_max}
-                

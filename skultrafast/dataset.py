@@ -1359,8 +1359,9 @@ class TimeResSpecPlotter(PlotterMixin):
         ----------
         *args : list or ndarray
             List of the times where the spectra are plotted.
-        norm : bool
-            If true, each spectral will be normalized.
+        norm : bool or float
+            If true, each spectral will be normalized. If given a float, each
+            spectrum will be normalized to given position.
         ax : plt.Axis or None.
             Axis where the spectra are plotted. If none, the current axis will
             be used.
@@ -1372,11 +1373,12 @@ class TimeResSpecPlotter(PlotterMixin):
             If upsample is >1, it will plot an upsampled version of the spectrum
             using cubic spline interplotation.
         use_weights : bool
-            If given a tuple, the function will plot the average of the given range.
-            use_weights determines if error weights are in calculating the average.
+            If given a tuple, the function will plot the average of the given
+            range. use_weights determines if error weights are in calculating
+            the average.
         offset: float or 'auto'
-            If non-zero, each spectrum will be shifted by 'offset' relatively to the last one.
-            'auto' is not yet implemented.
+            If non-zero, each spectrum will be shifted by 'offset' relatively to
+            the last one. 'auto' is not yet implemented.
         add_offset : bool
             Weather to add an legend
         Returns
@@ -1419,7 +1421,9 @@ class TimeResSpecPlotter(PlotterMixin):
                 label = ph.time_formatter(ds.t[idx], ph.time_unit)
             if upsample > 1:
                 x, dat = self.upsample_spec(dat, factor=upsample)
-            if norm:
+            if isinstance(norm, float):
+                dat /= dat[dv.fi(x, norm)]
+            elif isinstance(norm, bool) and norm:
                 dat = dat / abs(dat).max()
             markevery = None if upsample == 1 else upsample + 1
 

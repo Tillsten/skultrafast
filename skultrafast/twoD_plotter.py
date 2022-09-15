@@ -1,12 +1,14 @@
-from skultrafast import plot_helpers
-from skultrafast.utils import inbetween
+from typing import (TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple,
+                    TypedDict, Union)
 
 import attr
-import numpy as np
-from scipy.ndimage import uniform_filter1d
-from scipy.interpolate import RegularGridInterpolator
-from typing import Any, TypedDict, Union, Literal, Optional, Tuple, TYPE_CHECKING, Dict
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import uniform_filter1d
+
+from skultrafast import plot_helpers
+from skultrafast.utils import inbetween
 
 if TYPE_CHECKING:
     from skultrafast.twoD_dataset import TwoDim
@@ -49,7 +51,7 @@ class TwoDimPlotter:
                 ax_size_x = ax_size*aspect
                 ax_size_y = ax_size
 
-            fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x), # typing: ignore
+            fig, ax = plot_helpers.fig_fixed_axes((nrows, ncols), (ax_size_y, ax_size_x),  # typing: ignore
                                                   xlabel=labels['x'], ylabel=labels['y'], left_margin=0.7, bot_margin=0.6,
                                                   hspace=0.15, vspace=0.15, padding=0.3, **fig_kws)
 
