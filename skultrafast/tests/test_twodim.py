@@ -73,7 +73,7 @@ def test_all_cls(two_d_processed: TwoDim):
 def test_diag(two_d_processed: TwoDim):
     d1 = two_d_processed.diag_and_antidiag(3)
     d2 = two_d_processed.diag_and_antidiag(1, offset=0)
-    
+
 
 def test_psa(two_d_processed):
     two_d_processed.pump_slice_amp(3)
@@ -88,8 +88,11 @@ def test_twodplot_contour(two_d_processed):
     two_d_processed.plot.contour(1, 3, 5, )
     two_d_processed.plot.elp(1)
 
+
 def test_bg_correct(two_d_processed: TwoDim):
     tbg = two_d_processed.copy()
     tbg.background_correction((2130, 2160))
 
-    
+
+def test_reg_integration(two_d_processed: TwoDim):
+    two_d_processed.reg_integration((2130, 2160), (2130, 2160))
