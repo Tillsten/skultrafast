@@ -1422,12 +1422,13 @@ class TimeResSpecPlotter(PlotterMixin):
                 label = ph.time_formatter(ds.t[idx], ph.time_unit)
             if upsample > 1:
                 x, dat = self.upsample_spec(dat, factor=upsample)
-            if isinstance(norm, float, int):
-                if norm == 0:
-                    warnings.warn("0 is not intpreted as a bool here")
-                dat = dat / dat[dv.fi(x, norm)]
-            elif isinstance(norm, bool) and norm:
+            if isinstance(norm, bool) and norm:
                 dat = dat / abs(dat).max()
+            elif isinstance(norm, (float, int)):
+                if norm in (0, 1):
+                    warnings.warn(
+                        "0 and 1 are not intpreted as a bool here. Use True and False")
+                dat = dat / dat[dv.fi(x, norm)]
             markevery = None if upsample == 1 else upsample + 1
 
             li += ax.plot(x, dat + cur_offset, markevery=markevery, label=label, **kwargs)
