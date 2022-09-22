@@ -1424,7 +1424,7 @@ class TimeResSpecPlotter(PlotterMixin):
                 x, dat = self.upsample_spec(dat, factor=upsample)
             if isinstance(norm, bool) and norm:
                 dat = dat / abs(dat).max()
-            elif isinstance(norm, (float, int)):
+            elif isinstance(norm, (float, int)) and not isinstance(norm, bool):
                 if norm in (0, 1):
                     warnings.warn(
                         "0 and 1 are not intpreted as a bool here. Use True and False")

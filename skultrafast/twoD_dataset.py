@@ -1,3 +1,4 @@
+from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
 from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
@@ -12,7 +13,7 @@ from scipy.ndimage import gaussian_filter, uniform_filter
 from scipy.stats import linregress
 
 from skultrafast import dv, plot_helpers
-from skultrafast.dataset import TimeResSpec
+from skultrafast.dataset import FitExpResult, TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
 from skultrafast.utils import inbetween
 
@@ -108,6 +109,22 @@ class DiagResult:
     """The position crossing the diagonals"""
 
 
+@attr.dataclass
+class ExpFitResult:
+    minimizer: MinimizerResult
+    """Lmfit minimizer result"""
+    model: np.ndarray
+    """The fit data"""
+    residuals: np.ndarray
+    """The residuals of the fit"""
+    das: np.ndarray
+    """The decay amplitudes aka the DAS of the 2D-spectra"""
+    basis: np.ndarray
+    """The basis functions used for the fit"""
+    taus: np.ndarray
+    """The decay times of the fit"""
+
+
 @attr.s(auto_attribs=True)
 class TwoDim:
     """
@@ -130,6 +147,9 @@ class TwoDim:
     plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True)  # typing: Ignore
     "Plot object offering plotting methods"
     interpolator_: Optional[RegularGridInterpolator] = None  # typing: Ignore
+    "Contains the interpolator for the 2d-spectra"
+    exp_fit_result_: Optional[ExpFitResult] = None
+    "Contains the result of the exponential fit"
 
     def _make_int(self):
         intp = RegularGridInterpolator((self.t, self.probe_wn, self.pump_wn),
@@ -551,3 +571,43 @@ class TwoDim:
         s = np.trapz(reg, self.pump_wn[pu], axis=2)
         s = np.trapz(s, self.probe_wn[pr], axis=1)
         return s
+
+    def fit_taus(self: TwoDim, taus: np.ndarray):
+        """
+        Given a set of decay times, fit the data to a sum of the exponentials.
+        Used by the `fit_taus` method.
+        """
+        nt, npu, npr = self.spec2d.shape
+        basis = np.exp(-self.t[:, None]/taus[None, :])
+        coef = np.linalg.lstsq(basis, self.spec2d.reshape(nt, -1), rcond=None)
+        model = basis @ coef[0]
+        resi = self.spec2d.reshape(nt, -1) - model
+        return coef[0].reshape(taus.size, npu, npr), basis, resi, model, taus
+
+    def fit_das(self: TwoDim, taus, fix_last_decay=False) -> FitExpResult:
+        """
+        Fit the data to a sum of exponentials (DAS), starting from the given decay
+        constants. The results are stored in the `fit_exp_result` attribute.
+        """
+
+        params = lmfit.Parameters()
+        for i, val in enumerate(taus):
+            params.add(f'tau{i}', value=val, vary=True)
+        if fix_last_decay:
+            params['tau%d' % i].vary = False
+
+        def fcn(params, res_only=True):
+            tau_arr = np.array([params[f'tau{i}'].value for i in range(len(taus))])
+            fit_res = fit_taus(self, tau_arr)
+            if res_only:
+                return fit_res[2]
+            else:
+                return fit_res
+
+        mini = lmfit.Minimizer(fcn, params)
+        res = mini.minimize()
+        fit_res = fcn(res.params, res_only=False)
+        self.fit_exp_result_ = ExpFitResult(minimizer=res, model=fit_res[-1], residuals=resi, das=fit_res[0],
+                                            basis=fit_res[1], taus=fit_res[4])
+
+        return self.fit_exp_result_
