@@ -572,7 +572,7 @@ class TwoDim:
         s = np.trapz(s, self.probe_wn[pr], axis=1)
         return s
 
-    def fit_taus(self: TwoDim, taus: np.ndarray):
+    def fit_taus(self, taus: np.ndarray):
         """
         Given a set of decay times, fit the data to a sum of the exponentials.
         Used by the `fit_taus` method.
@@ -584,7 +584,7 @@ class TwoDim:
         resi = self.spec2d.reshape(nt, -1) - model
         return coef[0].reshape(taus.size, npu, npr), basis, resi, model, taus
 
-    def fit_das(self: TwoDim, taus, fix_last_decay=False) -> FitExpResult:
+    def fit_das(self, taus, fix_last_decay=False) -> FitExpResult:
         """
         Fit the data to a sum of exponentials (DAS), starting from the given decay
         constants. The results are stored in the `fit_exp_result` attribute.
