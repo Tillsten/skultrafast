@@ -315,8 +315,11 @@ class TwoDimPlotter:
         points = []
 
         if which in ['both', 'min']:
-            points += [minmax['ProbeMin'], minmax['PumpMin']]
+            points += [(minmax['ProbeMin'], minmax['PumpMin'])]
         if which in ['both', 'max']:
-            points += [minmax['ProbeMax'], minmax['PumpMax']]
+            points += [(minmax['ProbeMax'], minmax['PumpMax'])]
         plotkws = {'color': 'k', 'marker': '+', 'ls': 'none', 'markersize': 5, **kwargs}
         return ax.plot(*zip(*points), **plotkws)
+
+    def trans(self, pump_wn, probe_wn):
+        dat = self.ds.data_at()

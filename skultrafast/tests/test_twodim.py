@@ -96,11 +96,11 @@ def test_bg_correct(two_d_processed: TwoDim):
 
 def test_psa(two_d_processed: TwoDim):
     two_d_processed.pump_slice_amp(3)
-    two_d.plot.psa(3)
+    two_d_processed.plot.psa(3)
 
 
-def test_reg_integration(two_d_processed: TwoDim):
-    two_d_processed.reg_integration((2130, 2160), (2130, 2160))
+def test_integrate_reg(two_d_processed: TwoDim):
+    two_d_processed.integrate_reg((2130, 2160), (2130, 2160))
 
 
 def test_exp_fit(two_d_processed: TwoDim):

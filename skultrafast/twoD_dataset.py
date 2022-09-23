@@ -324,13 +324,13 @@ class TwoDim:
                     err = np.nan
                 l.append((val, err))
             elif method == 'quad':
-                p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: Ignore
+                p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
                 p: Polynomial = Polynomial.fit(
-                    pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: Ignore
+                    pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'skew_fit':
                 mod = lmfit.models.PseudoVoigtModel() + lmfit.models.LinearModel()
@@ -598,7 +598,7 @@ class TwoDim:
 
         def fcn(params, res_only=True):
             tau_arr = np.array([params[f'tau{i}'].value for i in range(len(taus))])
-            fit_res = fit_taus(self, tau_arr)
+            fit_res = self.fit_taus(tau_arr)
             if res_only:
                 return fit_res[2]
             else:
@@ -607,6 +607,7 @@ class TwoDim:
         mini = lmfit.Minimizer(fcn, params)
         res = mini.minimize()
         fit_res = fcn(res.params, res_only=False)
+        resi = fit_res[2].reshape(self.spec2d.shape)
         self.fit_exp_result_ = ExpFitResult(minimizer=res, model=fit_res[-1], residuals=resi, das=fit_res[0],
                                             basis=fit_res[1], taus=fit_res[4])
 
