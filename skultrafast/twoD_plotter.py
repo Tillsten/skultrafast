@@ -255,7 +255,7 @@ class TwoDimPlotter:
             maximum value, by default not normalized.
         ax : Optional[matplotlib.axes.Axes], optional
             The axes to plot on. If None, the current axes is used.
-        """"
+        """
         if ax is None:
             ax = plt.gca()
         ds = self.ds
@@ -342,7 +342,8 @@ class TwoDimPlotter:
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Anti-diagonal Amplitude [AU]')
         return l
 
-    def mark_minmax(self, t: float, which: Literal['both', 'min', 'max'] = 'both',  ax: Optional[plt.Axes] = None, **kwargs):
+    def mark_minmax(self, t: float, which: Literal['both', 'min', 'max'] = 'both',
+                    ax: Optional[plt.Axes] = None, **kwargs):
         """
         Marks the position of the minimum and maxium of a given time t.
         """
@@ -356,10 +357,12 @@ class TwoDimPlotter:
             points += [(minmax['ProbeMin'], minmax['PumpMin'])]
         if which in ['both', 'max']:
             points += [(minmax['ProbeMax'], minmax['PumpMax'])]
-        plotkws = {'color': 'k', 'marker': '+', 'ls': 'none', 'markersize': 5, **kwargs}
+        plotkws = {'color': 'yellow', 'marker': '+',
+                   'ls': 'none', 'markersize': 9, **kwargs}
         return ax.plot(*zip(*points), **plotkws)
 
-    def trans(self, pump_wn: Union[float, list[float]], probe_wn: Union[float, list[float]], ax: Optional[plt.Axes] = None, symlog=True) -> List[plt.Line2D]:
+    def trans(self, pump_wn: Union[float, list[float]], probe_wn: Union[float, list[float]],
+              ax: Optional[plt.Axes] = None, symlog=True, **kwargs) -> List[plt.Line2D]:
         """
         Plot the 2D signal of single point over the waiting time.
 
@@ -367,15 +370,16 @@ class TwoDimPlotter:
         ----------
         pump_wn : float or list of float
             The pump frequency. Also takes a list. If a list is given, the length 
-            of the list must be the same as the length of probe_wn.
+            of the list must be the same as the length of probe_wn or of length 1.
         probe_wn : float or list of float
             The probe frequency. Also takes a list. If a list is given, the length 
-            of the list must be the same as the length of pump_wn.
+            of the list must be the same as the length of pump_wn or of length 1.
         ax : matplotlib.axes.Axes, optional
             The axes to plot on. If None, the current axes is used.
         symlog : bool, optional
             If True, apply symlog scaling to the plot.
-
+        kwargs : dict
+            Additional keyword arguments are passed to the plot function.
         Returns
         -------
         List[matplotlib.lines.Line2D]
@@ -387,10 +391,20 @@ class TwoDimPlotter:
             pump_wn = [pump_wn]
         if isinstance(probe_wn, (float, int)):
             probe_wn = [probe_wn]
-        assert(len(pump_wn) == len(probe_wn))
+
+        if not len(pump_wn) == len(probe_wn):
+            if len(pump_wn) == 1:
+                pump_wn = pump_wn * len(probe_wn)
+            elif len(probe_wn) == 1:
+                probe_wn = probe_wn * len(pump_wn)
+            else:
+                raise ValueError(
+                    'The length of pump_wn and probe_wn must be the same or one of them must be 1.')
         l = []
         for x, y in zip(pump_wn, probe_wn):
-            dat = self.ds.data_at(pump_wn=y, probe_wn=x)
-            l += ax.plot(self.ds.t, dat, label='%.1f, %.1f' % (x, y))
+            dat = self.ds.data_at(pump_wn=x, probe_wn=y)
+            l += ax.plot(self.ds.t, dat, label='%.1f, %.1f' % (x, y), **kwargs)
+        if symlog:
+            ax.set_xscale('symlog', linthresh=1)
         plot_helpers.lbl_trans(ax, use_symlog=symlog)
         return l

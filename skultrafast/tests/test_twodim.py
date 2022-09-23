@@ -75,10 +75,6 @@ def test_diag(two_d_processed: TwoDim):
     d2 = two_d_processed.diag_and_antidiag(1, offset=0)
 
 
-def test_psa(two_d_processed):
-    two_d_processed.pump_slice_amp(3)
-
-
 def test_savetext(two_d_processed, tmp_path_factory):
     two_d_processed.save_txt(tmp_path_factory.mktemp('data'))
 
@@ -104,10 +100,11 @@ def test_integrate_reg(two_d_processed: TwoDim):
 
 
 def test_exp_fit(two_d_processed: TwoDim):
-    two_d_processed.fit_das([1, 10])
+    res = two_d_processed.fit_das([1, 10])
     assert two_d_processed.fit_exp_result_ is not None
     two_d_processed.fit_das([1, 10], fix_last_decay=True)
     assert two_d_processed.fit_exp_result_ is not None
+    assert res.taus.size == 2
 
 
 def test_min_max(two_d_processed: TwoDim):
@@ -133,5 +130,8 @@ def test_data_at(two_d_processed: TwoDim):
 
 
 def test_plot_trans(two_d_processed: TwoDim):
-    two_d_processed.plot.trans(2160, 2160)
+    two_d_processed.plot.trans(2160, 2160, color='k')
     two_d_processed.plot.trans([2160, 2180], [2160, 2160])
+    l = two_d_processed.plot.trans(2160, [2160, 2160])
+    assert len(l) == 2
+    

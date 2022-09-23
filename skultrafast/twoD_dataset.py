@@ -110,10 +110,10 @@ class DiagResult:
 
 
 @attr.dataclass
-class ExpFitResult:
+class ExpFit2DResult:
     minimizer: MinimizerResult
     """Lmfit minimizer result"""
-    model: np.ndarray
+    model: 'TwoDim'
     """The fit data"""
     residuals: np.ndarray
     """The residuals of the fit"""
@@ -148,7 +148,7 @@ class TwoDim:
     "Plot object offering plotting methods"
     interpolator_: Optional[RegularGridInterpolator] = None  # typing: Ignore
     "Contains the interpolator for the 2d-spectra"
-    exp_fit_result_: Optional[ExpFitResult] = None
+    exp_fit_result_: Optional[ExpFit2DResult] = None
     "Contains the result of the exponential fit"
 
     def _make_int(self):
@@ -541,7 +541,7 @@ class TwoDim:
             pump_max = self.pump_wn[max_pos[1]]
         psamax = self.pump_wn[self.pump_slice_amp(t).argmax()]
         return {'ProbeMin': probe_min, 'ProbeMax': probe_max, 'PSAMax': psamax,
-                'PumpMin': pump_min, 'PumpMax': pump_max, 'Anh': probe_max - probe_min}
+                'PumpMin': pump_min, 'PumpMax': pump_max, 'Anh': probe_min - probe_max}
 
     def integrate_reg(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float] = None) -> np.ndarray:
         """	
@@ -584,7 +584,7 @@ class TwoDim:
         resi = self.spec2d.reshape(nt, -1) - model
         return coef[0].reshape(taus.size, npu, npr), basis, resi, model, taus
 
-    def fit_das(self, taus, fix_last_decay=False) -> FitExpResult:
+    def fit_das(self, taus, fix_last_decay=False) -> ExpFit2DResult:
         """
         Fit the data to a sum of exponentials (DAS), starting from the given decay
         constants. The results are stored in the `fit_exp_result` attribute.
@@ -608,7 +608,9 @@ class TwoDim:
         res = mini.minimize()
         fit_res = fcn(res.params, res_only=False)
         resi = fit_res[2].reshape(self.spec2d.shape)
-        self.fit_exp_result_ = ExpFitResult(minimizer=res, model=fit_res[-1], residuals=resi, das=fit_res[0],
-                                            basis=fit_res[1], taus=fit_res[4])
-
+        model = fit_res[3].reshape(self.spec2d.shape)
+        dsc = self.copy()
+        dsc.spec2d = model
+        self.fit_exp_result_ = ExpFit2DResult(minimizer=res, model=dsc, residuals=resi, das=fit_res[0],
+                                              basis=fit_res[1], taus=fit_res[4])
         return self.fit_exp_result_
