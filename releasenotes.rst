@@ -28,3 +28,14 @@ Release notes
     * Diagonal extraction
     * Plotting
 - Support for quick-control files
+
+
+4.1 2022-09-23
+--------------
+- More 2D support:
+    * More Plotting
+    * Exponential fitting
+    * Expanded cls methods
+    * Background subtraction
+
+- Support for messpy 2D-files
