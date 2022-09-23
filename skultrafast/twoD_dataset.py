@@ -200,7 +200,7 @@ class TwoDim:
             pr_idx = self.probe_idx(probe_wn)
             spec2d = spec2d[..., pr_idx, :]
         if pump_wn is not None:
-            pu_idx = self.pump_wn(pump_wn)
+            pu_idx = self.pump_idx(pump_wn)
             spec2d = spec2d[..., pu_idx]
         return spec2d
 
@@ -398,10 +398,10 @@ class TwoDim:
         d = self.spec2d[spec_i, ...].T
 
         if offset is None:
-            offset: float = self.pump_wn[np.argmin(
+            offset = self.pump_wn[np.argmin(
                 np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
         if p is None:
-            p: float = self.probe_wn[np.argmin(np.min(d, 0))]
+            p = self.probe_wn[np.argmin(np.min(d, 0))]
 
         y_diag = self.probe_wn + offset
         y_antidiag = -self.probe_wn + 2 * p + offset

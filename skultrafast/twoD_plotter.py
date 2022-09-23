@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import (TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple,
                     TypedDict, Union)
 
@@ -171,7 +172,26 @@ class TwoDimPlotter:
     def plot_cls(self):
         pass
 
-    def plot_square(self, pump_range, probe_range=None, symlog=True, ax=None):
+    def plot_square(self, pump_range: Tuple[float, float], probe_range: Optional[Tuple[float, float]] = None,
+                    symlog: bool = True, ax: Optional[plt.Axes] = None):
+        """
+        Plot the integrated signal of given region over the waiting time.
+
+        Parameters
+        ----------
+        pump_range: Tuple[float, float]
+            The range of the pump frequency in cm-1
+        probe_range: Tuple[float, float]
+            The range of the probe frequency in cm-1. If not given uses the same
+            as the pump range.
+        symlog: bool
+            If True, use symlog scale for the time axis.
+        ax: plt.Axes
+            The axes to plot on. If None, the current axes is used.
+        """
+
+        if ax is None:
+            ax = plt.gca()
         if probe_range is None:
             probe_range = pump_range
         pr = inbetween(self.ds.probe_wn, min(probe_range), max(probe_range))
@@ -182,8 +202,6 @@ class TwoDimPlotter:
         s = np.trapz(reg, self.ds.pump_wn[pu], axis=2)
         s = np.trapz(s, self.ds.probe_wn[pr], axis=1)
 
-        if ax is None:
-            ax = plt.gca()
         l, = ax.plot(self.ds.t, s)
         if symlog:
             ax.set_xscale("symlog", linthresh=1.0, linscale=1)
@@ -221,7 +239,23 @@ class TwoDimPlotter:
         return
 
     def psa(self, t: float, bg_correct: bool = True,
-            normalize: Optional[Union[float, Literal['max']]] = None, ax=None, **kwargs):
+            normalize: Optional[Union[float, Literal['max']]] = None, ax: Optional[plt.Axes] = None, **kwargs):
+        """
+        Plot the pump-slice amplitude spectrum for a given waiting time.
+
+        Parameters
+        ----------
+        t : float
+            Waiting time in ps.
+        bg_correct : bool, optional
+            Whether to subtract a constant background, by default True.
+        normalize : Optional[Union[float, Literal['max']]], optional
+            Whether to normalize the spectrum. If a float is given, the spectrum is divided by
+            the value at that pump frequency. If 'max' is given, the spectrum is divided by its
+            maximum value, by default not normalized.
+        ax : Optional[matplotlib.axes.Axes], optional
+            The axes to plot on. If None, the current axes is used.
+        """"
         if ax is None:
             ax = plt.gca()
         ds = self.ds
@@ -309,6 +343,10 @@ class TwoDimPlotter:
         return l
 
     def mark_minmax(self, t: float, which: Literal['both', 'min', 'max'] = 'both',  ax: Optional[plt.Axes] = None, **kwargs):
+        """
+        Marks the position of the minimum and maxium of a given time t.
+        """
+
         if ax is None:
             ax = plt.gca()
         minmax = self.ds.get_minmax(t)
@@ -321,5 +359,38 @@ class TwoDimPlotter:
         plotkws = {'color': 'k', 'marker': '+', 'ls': 'none', 'markersize': 5, **kwargs}
         return ax.plot(*zip(*points), **plotkws)
 
-    def trans(self, pump_wn, probe_wn):
-        dat = self.ds.data_at()
+    def trans(self, pump_wn: Union[float, list[float]], probe_wn: Union[float, list[float]], ax: Optional[plt.Axes] = None, symlog=True) -> List[plt.Line2D]:
+        """
+        Plot the 2D signal of single point over the waiting time.
+
+        Parameters
+        ----------
+        pump_wn : float or list of float
+            The pump frequency. Also takes a list. If a list is given, the length 
+            of the list must be the same as the length of probe_wn.
+        probe_wn : float or list of float
+            The probe frequency. Also takes a list. If a list is given, the length 
+            of the list must be the same as the length of pump_wn.
+        ax : matplotlib.axes.Axes, optional
+            The axes to plot on. If None, the current axes is used.
+        symlog : bool, optional
+            If True, apply symlog scaling to the plot.
+
+        Returns
+        -------
+        List[matplotlib.lines.Line2D]
+            The plotted lines objects        
+        """
+        if ax is None:
+            ax = plt.gca()
+        if isinstance(pump_wn, (float, int)):
+            pump_wn = [pump_wn]
+        if isinstance(probe_wn, (float, int)):
+            probe_wn = [probe_wn]
+        assert(len(pump_wn) == len(probe_wn))
+        l = []
+        for x, y in zip(pump_wn, probe_wn):
+            dat = self.ds.data_at(pump_wn=y, probe_wn=x)
+            l += ax.plot(self.ds.t, dat, label='%.1f, %.1f' % (x, y))
+        plot_helpers.lbl_trans(ax, use_symlog=symlog)
+        return l

@@ -119,3 +119,19 @@ def test_min_max(two_d_processed: TwoDim):
 def test_mark_minmax(two_d_processed: TwoDim):
     two_d_processed.plot.mark_minmax(3)
     two_d_processed.plot.mark_minmax(3, marker='o')
+
+
+def test_data_at(two_d_processed: TwoDim):
+    ret = two_d_processed.data_at(t=1, pump_wn=2160)
+    assert(ret.size == two_d_processed.probe_wn.size)
+    ret = two_d_processed.data_at(t=1, probe_wn=2160)
+    assert(ret.size == two_d_processed.pump_wn.size)
+    ret = two_d_processed.data_at(probe_wn=2160, pump_wn=2160)
+    assert(ret.size == two_d_processed.t.size)
+    ret = two_d_processed.data_at(t=1, probe_wn=2160, pump_wn=2160)
+    assert ret.size == 1
+
+
+def test_plot_trans(two_d_processed: TwoDim):
+    two_d_processed.plot.trans(2160, 2160)
+    two_d_processed.plot.trans([2160, 2180], [2160, 2160])
