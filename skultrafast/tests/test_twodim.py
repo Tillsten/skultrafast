@@ -94,6 +94,11 @@ def test_bg_correct(two_d_processed: TwoDim):
     tbg.background_correction((2130, 2160))
 
 
+def test_psa(two_d_processed: TwoDim):
+    two_d_processed.pump_slice_amp(3)
+    two_d.plot.psa(3)
+
+
 def test_reg_integration(two_d_processed: TwoDim):
     two_d_processed.reg_integration((2130, 2160), (2130, 2160))
 
@@ -103,3 +108,14 @@ def test_exp_fit(two_d_processed: TwoDim):
     assert two_d_processed.fit_exp_result_ is not None
     two_d_processed.fit_das([1, 10], fix_last_decay=True)
     assert two_d_processed.fit_exp_result_ is not None
+
+
+def test_min_max(two_d_processed: TwoDim):
+    minmax = two_d_processed.get_minmax(3)
+    assert minmax['ProbeMin'] > minmax['ProbeMax']
+    assert minmax['PumpMin'] > minmax['PumpMax']
+
+
+def test_mark_minmax(two_d_processed: TwoDim):
+    two_d_processed.plot.mark_minmax(3)
+    two_d_processed.plot.mark_minmax(3, marker='o')

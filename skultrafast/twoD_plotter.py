@@ -307,3 +307,16 @@ class TwoDimPlotter:
                          diag_data.antidiag, label='%.1f ps' % ti)
         ax.set(xlabel=plot_helpers.freq_label, ylabel='Anti-diagonal Amplitude [AU]')
         return l
+
+    def mark_minmax(self, t: float, which: Literal['both', 'min', 'max'] = 'both',  ax: Optional[plt.Axes] = None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+        minmax = self.ds.get_minmax(t)
+        points = []
+
+        if which in ['both', 'min']:
+            points += [minmax['ProbeMin'], minmax['PumpMin']]
+        if which in ['both', 'max']:
+            points += [minmax['ProbeMax'], minmax['PumpMax']]
+        plotkws = {'color': 'k', 'marker': '+', 'ls': 'none', 'markersize': 5, **kwargs}
+        return ax.plot(*zip(*points), **plotkws)
