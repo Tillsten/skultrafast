@@ -136,7 +136,7 @@ class MessPyFile:
         fname,
         invert_data=False,
         is_pol_resolved=False,
-        pol_first_scan="unknown",
+        pol_first_scan: Literal['magic', 'para', 'perp', 'unknown']="unknown",
         valid_channel=None,
     ):
         """Class for working with data files from MessPy v1.
