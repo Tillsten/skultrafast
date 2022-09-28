@@ -82,7 +82,6 @@ def test_sas_pol_plots():
     m = Model()
     m.add_transition('S1', 'S1*', 'k1')
     m.add_transition('S1', 'zero', 'k2')
-
     pds.plot.sas(m)
 
 

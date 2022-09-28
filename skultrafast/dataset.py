@@ -3,6 +3,7 @@ import typing
 from collections import namedtuple
 from pathlib import Path
 from typing import Callable, List, Optional, Type, Union, Iterable, Dict, cast
+import warnings
 
 import attr
 import lmfit
@@ -1359,8 +1360,9 @@ class TimeResSpecPlotter(PlotterMixin):
         ----------
         *args : list or ndarray
             List of the times where the spectra are plotted.
-        norm : bool
-            If true, each spectral will be normalized.
+        norm : bool or float
+            If true, each spectral will be normalized. If given a float, each
+            spectrum will be normalized to given position.
         ax : plt.Axis or None.
             Axis where the spectra are plotted. If none, the current axis will
             be used.
@@ -1372,11 +1374,12 @@ class TimeResSpecPlotter(PlotterMixin):
             If upsample is >1, it will plot an upsampled version of the spectrum
             using cubic spline interplotation.
         use_weights : bool
-            If given a tuple, the function will plot the average of the given range.
-            use_weights determines if error weights are in calculating the average.
+            If given a tuple, the function will plot the average of the given
+            range. use_weights determines if error weights are in calculating
+            the average.
         offset: float or 'auto'
-            If non-zero, each spectrum will be shifted by 'offset' relatively to the last one.
-            'auto' is not yet implemented.
+            If non-zero, each spectrum will be shifted by 'offset' relatively to
+            the last one. 'auto' is not yet implemented.
         add_offset : bool
             Weather to add an legend
         Returns
@@ -1419,8 +1422,13 @@ class TimeResSpecPlotter(PlotterMixin):
                 label = ph.time_formatter(ds.t[idx], ph.time_unit)
             if upsample > 1:
                 x, dat = self.upsample_spec(dat, factor=upsample)
-            if norm:
+            if isinstance(norm, bool) and norm:
                 dat = dat / abs(dat).max()
+            elif isinstance(norm, (float, int)) and not isinstance(norm, bool):
+                if norm in (0, 1):
+                    warnings.warn(
+                        "0 and 1 are not intpreted as a bool here. Use True and False")
+                dat = dat / dat[dv.fi(x, norm)]
             markevery = None if upsample == 1 else upsample + 1
 
             li += ax.plot(x, dat + cur_offset, markevery=markevery, label=label, **kwargs)
@@ -2168,7 +2176,7 @@ class PolTRSpecPlotter(PlotterMixin):
         return palines, pelines
 
     def trans_anisotropy(self, *wls: float, symlog: bool = True, ax: Optional[plt.Axes] = None,
-                         freq_unit=typing.Literal['auto', 'nm', 'cm']):
+                         freq_unit=typing.Literal['auto', 'nm', 'cm'], mode: typing.Literal['aniso', 'dichro']):
         """
         Plots the anisotropy over time for given frequencies.
         Parameters
@@ -2181,6 +2189,8 @@ class PolTRSpecPlotter(PlotterMixin):
             Matplotlib Axes, if `None`, defaults to `plt.gca()`.
         freq_unit: ['auto', 'nm', 'cm']
             Unit of the frequecies.
+        mode: ['aniso', 'dichro']
+            Plot anisotropy or dichroism.
 
         Returns
         -------
@@ -2203,8 +2213,13 @@ class PolTRSpecPlotter(PlotterMixin):
             idx = dv.fi(x, i)
             pa, pe = ds.para.data[:, idx], ds.perp.data[:, idx]
             aniso = (pa - pe) / (2 * pe + pa)
+            dichro = pa/pe
+            if mode == "aniso":
+                data = aniso
+            elif mode == "dichro":
+                data = dichro
             l += ax.plot(ds.para.t,
-                         aniso,
+                         data,
                          label="%.0f %s" % (x[idx], ph.freq_unit))
         ph.lbl_trans(use_symlog=symlog)
         if symlog:

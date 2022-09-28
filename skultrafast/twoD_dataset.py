@@ -1,6 +1,7 @@
+from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Literal
+from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 import attr
 import lmfit
@@ -8,11 +9,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial import Polynomial
 from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import uniform_filter, gaussian_filter
+from scipy.ndimage import gaussian_filter, uniform_filter
 from scipy.stats import linregress
 
 from skultrafast import dv, plot_helpers
-from skultrafast.dataset import TimeResSpec
+from skultrafast.dataset import FitExpResult, TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
 from skultrafast.utils import inbetween
 
@@ -108,6 +109,22 @@ class DiagResult:
     """The position crossing the diagonals"""
 
 
+@attr.dataclass
+class ExpFit2DResult:
+    minimizer: MinimizerResult
+    """Lmfit minimizer result"""
+    model: 'TwoDim'
+    """The fit data"""
+    residuals: np.ndarray
+    """The residuals of the fit"""
+    das: np.ndarray
+    """The decay amplitudes aka the DAS of the 2D-spectra"""
+    basis: np.ndarray
+    """The basis functions used for the fit"""
+    taus: np.ndarray
+    """The decay times of the fit"""
+
+
 @attr.s(auto_attribs=True)
 class TwoDim:
     """
@@ -130,6 +147,9 @@ class TwoDim:
     plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True)  # typing: Ignore
     "Plot object offering plotting methods"
     interpolator_: Optional[RegularGridInterpolator] = None  # typing: Ignore
+    "Contains the interpolator for the 2d-spectra"
+    exp_fit_result_: Optional[ExpFit2DResult] = None
+    "Contains the result of the exponential fit"
 
     def _make_int(self):
         intp = RegularGridInterpolator((self.t, self.probe_wn, self.pump_wn),
@@ -180,7 +200,7 @@ class TwoDim:
             pr_idx = self.probe_idx(probe_wn)
             spec2d = spec2d[..., pr_idx, :]
         if pump_wn is not None:
-            pu_idx = self.pump_wn(pump_wn)
+            pu_idx = self.pump_idx(pump_wn)
             spec2d = spec2d[..., pu_idx]
         return spec2d
 
@@ -299,22 +319,28 @@ class TwoDim:
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp, c=0,
                                  x=pr[pr_idx])
-                l.append((result.params['center'], result.params['center'].stderr))
+                val, err = (result.params['center'].value, result.params['center'].stderr)
+                if err is None:
+                    err = np.nan
+                l.append((val, err))
             elif method == 'quad':
-                p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: Ignore
+                p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
                 p: Polynomial = Polynomial.fit(
-                    pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: Ignore
+                    pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'skew_fit':
                 mod = lmfit.models.PseudoVoigtModel() + lmfit.models.LinearModel()
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp,
                                  x=pr[pr_idx], slope=0, intercept=0)
-                l.append((result.params['center'], result.params['center'].stderr))
+                val, err = (result.params['center'].value, result.params['center'].stderr)
+                if err is None:
+                    err = np.nan
+                l.append((val, err))
 
             else:
                 l.append((cen_of_m, 1))
@@ -372,10 +398,10 @@ class TwoDim:
         d = self.spec2d[spec_i, ...].T
 
         if offset is None:
-            offset: float = self.pump_wn[np.argmin(
+            offset = self.pump_wn[np.argmin(
                 np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
         if p is None:
-            p: float = self.probe_wn[np.argmin(np.min(d, 0))]
+            p = self.probe_wn[np.argmin(np.min(d, 0))]
 
         y_diag = self.probe_wn + offset
         y_antidiag = -self.probe_wn + 2 * p + offset
@@ -414,6 +440,11 @@ class TwoDim:
             Which filter to use. Supported are uniform and gaussian.
         size: tuple[float, float, float]
             Kernel of the filter
+
+        Returns
+        -------
+        TwoDim
+            Filtered dataset.
         """
         filtered = self.copy()
         if len(size) == 2:
@@ -464,6 +495,17 @@ class TwoDim:
         """
         Fits and subtracts a background for each pump-frequency. Done for each
         waiting time. Does the subtraction inplace, e.g. modifies the dataset.
+
+        Parameters
+        ----------        
+        excluded_range: Tuple[float, float]
+            The range of the pump axis which is excluded from the fit, e.g.
+            contains the signal.
+        deg: int
+            Degree of the polynomial fit.
+        Returns
+        -------
+        None
         """
         wn_range = ~inbetween(self.probe_wn, excluded_range[0], excluded_range[1])
         for ti in range(self.spec2d.shape[0]):
@@ -479,7 +521,7 @@ class TwoDim:
         it return the center of mass around the minimum and maximum. The com argument gives
         the number of points to be used for the center of mass.
         """
-        from scipy.ndimage import minimum_position, maximum_position
+        from scipy.ndimage import maximum_position, minimum_position
         spec_i = self.spec2d[self.t_idx(t), :, :]
         min_pos = minimum_position(spec_i)
         max_pos = maximum_position(spec_i)
@@ -499,4 +541,76 @@ class TwoDim:
             pump_max = self.pump_wn[max_pos[1]]
         psamax = self.pump_wn[self.pump_slice_amp(t).argmax()]
         return {'ProbeMin': probe_min, 'ProbeMax': probe_max, 'PSAMax': psamax,
-                'PumpMin': pump_m
+                'PumpMin': pump_min, 'PumpMax': pump_max, 'Anh': probe_min - probe_max}
+
+    def integrate_reg(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float] = None) -> np.ndarray:
+        """	
+        Integrates the 2D spectra over a given range, using the trapezoidal
+        rule.
+
+        Parameters
+        ----------
+
+        pump_range: tuple[float, float]
+            The range of the pump axis to be integrated over.
+        probe_range: tuple[float, float]
+            The range of the probe axis to be integrated over. If None, the
+            probe range is used.           
+
+        Returns
+        -------
+        np.ndarray 
+            The integrated spectral signal for all waiting times.
+        """
+        if probe_range is None:
+            probe_range = pump_range
+        pr = inbetween(self.probe_wn, min(probe_range), max(probe_range))
+        reg = self.spec2d[:, pr, :]
+        pu = inbetween(self.pump_wn, min(pump_range), max(pump_range))
+        reg = reg[:, :, pu]
+        s = np.trapz(reg, self.pump_wn[pu], axis=2)
+        s = np.trapz(s, self.probe_wn[pr], axis=1)
+        return s
+
+    def fit_taus(self, taus: np.ndarray):
+        """
+        Given a set of decay times, fit the data to a sum of the exponentials.
+        Used by the `fit_taus` method.
+        """
+        nt, npu, npr = self.spec2d.shape
+        basis = np.exp(-self.t[:, None]/taus[None, :])
+        coef = np.linalg.lstsq(basis, self.spec2d.reshape(nt, -1), rcond=None)
+        model = basis @ coef[0]
+        resi = self.spec2d.reshape(nt, -1) - model
+        return coef[0].reshape(taus.size, npu, npr), basis, resi, model, taus
+
+    def fit_das(self, taus, fix_last_decay=False) -> ExpFit2DResult:
+        """
+        Fit the data to a sum of exponentials (DAS), starting from the given decay
+        constants. The results are stored in the `fit_exp_result` attribute.
+        """
+
+        params = lmfit.Parameters()
+        for i, val in enumerate(taus):
+            params.add(f'tau{i}', value=val, vary=True)
+        if fix_last_decay:
+            params['tau%d' % i].vary = False
+
+        def fcn(params, res_only=True):
+            tau_arr = np.array([params[f'tau{i}'].value for i in range(len(taus))])
+            fit_res = self.fit_taus(tau_arr)
+            if res_only:
+                return fit_res[2]
+            else:
+                return fit_res
+
+        mini = lmfit.Minimizer(fcn, params)
+        res = mini.minimize()
+        fit_res = fcn(res.params, res_only=False)
+        resi = fit_res[2].reshape(self.spec2d.shape)
+        model = fit_res[3].reshape(self.spec2d.shape)
+        dsc = self.copy()
+        dsc.spec2d = model
+        self.fit_exp_result_ = ExpFit2DResult(minimizer=res, model=dsc, residuals=resi, das=fit_res[0],
+                                              basis=fit_res[1], taus=fit_res[4])
+        return self.fit_exp_result_
