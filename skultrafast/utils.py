@@ -44,7 +44,7 @@ def simulate_binning(wrapped=None, *, fac=5):
     return wrapper(wrapped)
 
 
-def sigma_clip(data, sigma=3, max_iter=5, axis=-1, use_mad=False):
+def sigma_clip(data, sigma: float =3, max_iter: int=5, axis: int=-1, use_mad: bool =False):
     """Masks outliers by iteratively removing points outside given
     standard deviations.
 
