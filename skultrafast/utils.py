@@ -1,4 +1,6 @@
 """Module with various utility functions. Was called dv in older Versions."""
+from typing import Optional
+from attr import field, dataclass
 import numpy as np
 from scipy.special import erf
 from scipy.stats import median_abs_deviation
@@ -203,6 +205,62 @@ def pfid(T, om, om_10, fac, om_21, T_2):
     num = (1/T_2) * cos - dom2*sin
     r6 = dec * num / (dom2**2 + (1 / T_2**2))
     return r4 + fac*r6
+
+
+@dataclass
+class LinRegResult:
+    """
+    Linear regression result.
+    """
+    data: np.ndarray
+    weights: Optional[np.ndarray]
+    fit: np.ndarray
+    residuals: np.ndarray
+    sol: np.ndarray
+    r2: np.ndarray
+    var: np.ndarray
+    stderr: np.ndarray
+    rel_err: np.ndarray
+
+    @classmethod
+    def fit_data(cls, A, y, weights: Optional[np.ndarray] = None):
+        """
+        Fit data to a linear model.
+
+        Parameters
+        ----------
+        A : array_like
+            The design matrix.
+        y : array_like
+            The data to fit.
+
+        Returns
+        -------
+        LinRegResult
+        """
+
+        if y.ndim == 1:
+            y = y[:, np.newaxis]
+        if weights is not None:
+            if weights.ndim == 1:
+                weights = weights[:, np.newaxis]
+            A = A * weights
+            y = y * weights
+
+        x = np.linalg.lstsq(A, y, rcond=None)
+        fit = np.ma.dot(A, x[0])
+        resi = y - fit
+
+        r2 = 1 - (resi * resi).sum(0) / (y.shape[0] * y.var(0))
+        vcv = A.T @ A
+        epsvar = np.var(resi, axis=0, ddof=2)
+        bvar = np.linalg.inv(vcv) * epsvar[:, None, None]
+        bstd = np.zeros_like(x[0])
+        for i in range(bstd.shape[1]):
+            bstd[:, i] = np.sqrt(np.diag(bvar[i]))
+
+        bstd, bvar, r2, bstd, sol = linreg_std_errors(A, y)
+        return cls(y, fit, resi, sol, r2, bvar, bstd, bstd/abs(sol))
 
 
 def linreg_std_errors(A, y):

@@ -1,3 +1,4 @@
+from audioop import add
 from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
@@ -11,11 +12,13 @@ from numpy.polynomial import Polynomial
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter, uniform_filter
 from scipy.stats import linregress
+from statsmodels.api import OLS, WLS, add_constant
+
 
 from skultrafast import dv, plot_helpers
-from skultrafast.dataset import FitExpResult, TimeResSpec
+from skultrafast.dataset import TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
-from skultrafast.utils import inbetween
+from skultrafast.utils import inbetween, LinRegResult
 
 PathLike = Union[str, bytes, os.PathLike]
 
@@ -35,7 +38,7 @@ class CLSResult:
     """Errors of the intercepts"""
     slope_errors: Optional[np.ndarray] = None
     """Errors of slopes, as determined from the linear fit"""
-    lines: Optional[np.ndarray] = None
+    lines: Optional[List[np.ndarray]] = None
     """Contains the x and y values used for the linear """
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
 
@@ -265,8 +268,8 @@ class TwoDim:
                    pr_range: Union[float, Tuple[float, float]] = 9.0,
                    pu_range: Union[float, Tuple[float, float]] = 7.0,
                    mode: Literal['neg', 'pos'] = 'neg',
-                   method: Literal['com', 'quad', 'fit', 'log_quad'] = 'com'
-                   ) -> Tuple[np.ndarray, np.ndarray, object]:
+                   method: Literal['com', 'quad', 'fit', 'log_quad', 'skew_fit'] = 'com'
+                   ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, object, ]:
         """
         Calculate the CLS for single 2D spectrum.
 
@@ -303,9 +306,9 @@ class TwoDim:
             pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
         else:
             pu_idx = inbetween(pu, pu_range[0], pu_range[1])
+        x = pu[pu_idx] - pu[pu_idx].mean()
         spec = spec[pu_idx, :]
         l = []
-
         for s in spec:
             m = np.argmin(s)
             if not isinstance(pr_range, tuple):
@@ -316,6 +319,7 @@ class TwoDim:
             cen_of_m = np.average(pr[pr_idx], weights=s[pr_idx])
             if method == 'fit':
                 mod = lmfit.models.GaussianModel()+lmfit.models.ConstantModel()
+                mod.set_param_hint('center', min=pr[pr_idx].min(), max=pr[pr_idx].max())
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp, c=0,
                                  x=pr[pr_idx])
@@ -329,11 +333,11 @@ class TwoDim:
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
-                p: Polynomial = Polynomial.fit(
+                p = Polynomial.fit(
                     pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'skew_fit':
-                mod = lmfit.models.PseudoVoigtModel() + lmfit.models.LinearModel()
+                mod = lmfit.models.GaussianModel() + lmfit.models.LinearModel()
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp,
                                  x=pr[pr_idx], slope=0, intercept=0)
@@ -345,10 +349,13 @@ class TwoDim:
             else:
                 l.append((cen_of_m, 1))
 
-        x = pu[pu_idx]
         y, yerr = np.array(l).T
-        r = linregress(x, y)
-        return x, y, r
+        all_err_valid = np.isfinite(yerr).all()
+        if all_err_valid:
+            r = WLS(y, add_constant(x), weights=1/yerr**2).fit()
+        else:
+            r = OLS(y, add_constant(x)).fit()
+        return x+pu[pu_idx].mean(), y, yerr, r
 
     def cls(self, **cls_args) -> CLSResult:
         """Calculates the CLS for all 2d-spectra. The arguments are given
@@ -357,13 +364,15 @@ class TwoDim:
         lines = []
         intercept = []
         intercept_errs = []
-        for d in self.t:
-            x, y, r = self.single_cls(d, **cls_args)
-            slopes.append(r.slope)
-            slope_errs.append(r.stderr)
-            lines.append(np.column_stack((x, y)))
-            intercept.append(r.intercept)
-            intercept_errs.append(r.intercept_stderr)
+        import joblib
+        with joblib.Parallel(n_jobs=-1) as p:
+            res = p(joblib.delayed(self.single_cls)(t, **cls_args) for t in self.t)
+        for x, y, yerr, r in res:
+            slopes.append(r.params[1])
+            slope_errs.append(r.bse[1])
+            lines.append(np.column_stack((x, y, yerr)))
+            intercept.append(r.params[0])
+            intercept_errs.append(r.bse[0])
         res = CLSResult(self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
                         lines=lines, intercepts=np.array(intercept), intercept_errors=np.array(intercept_errs))
         self.cls_result_ = res
