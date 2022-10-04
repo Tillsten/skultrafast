@@ -25,7 +25,7 @@ from skultrafast.data_io import get_twodim_dataset
 
 # %%
 # The following line returns a path to a folder containing the sample data. If
-# necessary, it will try to download the data from the internet.
+# necessary, it will try downloading the data from the internet.
 
 p = get_twodim_dataset()
 
@@ -52,7 +52,7 @@ infos
 plot_helpers.enable_style()
 
 data2d_info_path = list(p.glob('*#320.info'))[0]
-qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=4)
+qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=4, probe_filter=0.5)
 
 # %%
 # To create a dataset to work with form the raw data, we call the `make_ds`
@@ -62,6 +62,8 @@ qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=4)
 
 ds_all = qc_file.make_ds()
 ds_iso = ds_all['iso']
+
+ds_iso.pump_wn *= 2162.5 / 2159.35
 
 # %%
 # The `TwoDim`-objects are the core structure to work with. They contain both
@@ -129,7 +131,7 @@ plt.legend()
 # minima, maxima and the anharmonicity for a given wainting time.
 
 minmax = ds.get_minmax(0.5)
-minmax['Anh']
+minmax
 
 # %%
 # Simliary we can also mark the positions in a contour plot.
@@ -152,18 +154,18 @@ ds.plot.mark_minmax(1, color='white', markersize=9)
 # the center-of-mass.
 
 # sphinx_gallery_thumbnail_number = 4
-y_cls, x_cls, lin_fit = ds.single_cls(1, pr_range=10, pu_range=10)
+single_cls = ds.single_cls(1, pr_range=10, pu_range=10)
 
 # Plot the result
 artists = ds.plot.contour(1)
 ax = artists[0]['ax']
 
 # First plot the maxima
-ax.plot(x_cls, y_cls, color='yellow', marker='o', markersize=3, lw=0)
+ax.plot(single_cls.max_pos, single_cls.pump_wn, color='w', marker='o', markersize=3, lw=0)
 
 # Plot the resulting fit. Since the slope is a function of the pump frequencies,
 # we have to use y-values as x-coordinatetes for the slope.
-ax.plot(y_cls * lin_fit.slope + lin_fit.intercept, y_cls, color='w')
+ax.plot(single_cls.linear_fit, single_cls.pump_wn, color='r', lw=1)
 
 # %%
 # To determine the full CLS-decay, we can use the `cls`-method. It takes the
@@ -173,13 +175,14 @@ ax.plot(y_cls * lin_fit.slope + lin_fit.intercept, y_cls, color='w')
 cls_result = ds.cls(pr_range=10, pu_range=10)
 
 ti = ds.t_idx(1)
-artists = ds.plot.contour(1, aspect=1)
+artists = ds.plot.contour(1)
 ax = artists[0]['ax']
 
-x_cls, y_cls = cls_result.lines[ti][:, 1], cls_result.lines[ti][:, 0]
+x_cls, y_cls, x_fit = cls_result.lines[ti][:,
+                                           1], cls_result.lines[ti][:, 0], cls_result.lines[ti][:, 3]
 ax.plot(x_cls, y_cls,
         marker='o', markersize=3, lw=0, color='yellow', )
-ax.plot(cls_result.slopes[ti] * y_cls + cls_result.intercepts[ti], y_cls, c='w')
+ax.plot(x_fit, y_cls, c='purple', lw=1)
 
 # %%
 # Lets look at the time-dependence of the slope.
@@ -251,7 +254,7 @@ ax.legend()
 # diagonal used for extraction. If not given, it goes through the position of
 # the minimum.
 
-diag_result = ds.diag_and_antidiag(0.2)
+diag_result = ds.diag_and_antidiag(0.5)
 
 fig, ax = plt.subplots()
 ax.plot(ds.probe_wn, diag_result.diag)

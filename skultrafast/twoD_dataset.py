@@ -2,7 +2,7 @@ from audioop import add
 from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
-from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union, Any
 
 import attr
 import lmfit
@@ -14,13 +14,31 @@ from scipy.ndimage import gaussian_filter, uniform_filter
 from scipy.stats import linregress
 from statsmodels.api import OLS, WLS, add_constant
 
-
 from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
 from skultrafast.utils import inbetween, LinRegResult
 
 PathLike = Union[str, bytes, os.PathLike]
+
+
+@attr.s(auto_attribs=True)
+class SingleCLSResult:
+    """Result of a single CLS fit."""
+    pump_wn: np.ndarray
+    """Pump wavenumbers."""
+    max_pos: np.ndarray
+    """Maximum positions for each pump-slice."""
+    max_pos_err: np.ndarray
+    """Standard error of the maximum positions. Nan if not available"""
+    slope: float
+    """Slope of the linear fit."""
+    reg_result: Any
+    """Result of the linear regression using statsmodels."""
+    recentered_pump_wn: np.ndarray
+    """Recentered pump wavenumbers by mean subtraction. Used in the linear regression."""
+    linear_fit: np.ndarray
+    """Linear fit of the CLS data."""
 
 
 @attr.s(auto_attribs=True)
@@ -34,12 +52,13 @@ class CLSResult:
     """Contains the determined slops, the dimension as wt"""
     intercepts: np.ndarray
     """Contains the intercepts, useful for plotting mostly"""
-    intercept_errors: Optional[np.ndarray] = None
+    intercept_errors: Optional[np.ndarray]
     """Errors of the intercepts"""
-    slope_errors: Optional[np.ndarray] = None
+    slope_errors: Optional[np.ndarray]
     """Errors of slopes, as determined from the linear fit"""
-    lines: Optional[List[np.ndarray]] = None
-    """Contains the x and y values used for the linear """
+    lines: Optional[List[np.ndarray]]
+    """Contains the x and y, yerr-values used for the linear fit"""
+
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
 
     def exp_fit(self, start_taus: List[float], use_const=True, use_weights=True):
@@ -269,7 +288,7 @@ class TwoDim:
                    pu_range: Union[float, Tuple[float, float]] = 7.0,
                    mode: Literal['neg', 'pos'] = 'neg',
                    method: Literal['com', 'quad', 'fit', 'log_quad', 'skew_fit'] = 'com'
-                   ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, object, ]:
+                   ) -> SingleCLSResult:
         """
         Calculate the CLS for single 2D spectrum.
 
@@ -355,7 +374,7 @@ class TwoDim:
             r = WLS(y, add_constant(x), weights=1/yerr**2).fit()
         else:
             r = OLS(y, add_constant(x)).fit()
-        return x+pu[pu_idx].mean(), y, yerr, r
+        return SingleCLSResult(x+pu[pu_idx].mean(), y, yerr, r.params[0], r, x, r.predict())
 
     def cls(self, **cls_args) -> CLSResult:
         """Calculates the CLS for all 2d-spectra. The arguments are given
@@ -366,17 +385,19 @@ class TwoDim:
         intercept_errs = []
         import joblib
         with joblib.Parallel(n_jobs=-1) as p:
-            res = p(joblib.delayed(self.single_cls)(t, **cls_args) for t in self.t)
-        for x, y, yerr, r in res:
+            res: List[SingleCLSResult] = p(joblib.delayed(
+                self.single_cls)(t, **cls_args) for t in self.t)
+        for c in res:
+            r = c.reg_result
             slopes.append(r.params[1])
             slope_errs.append(r.bse[1])
-            lines.append(np.column_stack((x, y, yerr)))
+            lines += [np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, r.predict()))]
             intercept.append(r.params[0])
             intercept_errs.append(r.bse[0])
-        res = CLSResult(self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
+        ret = CLSResult(self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
                         lines=lines, intercepts=np.array(intercept), intercept_errors=np.array(intercept_errs))
-        self.cls_result_ = res
-        return res
+        self.cls_result_ = ret
+        return ret
 
     def diag_and_antidiag(self, t: float, offset: Optional[float] = None, p: Optional[float] = None) -> DiagResult:
         """
@@ -506,7 +527,7 @@ class TwoDim:
         waiting time. Does the subtraction inplace, e.g. modifies the dataset.
 
         Parameters
-        ----------        
+        ----------
         excluded_range: Tuple[float, float]
             The range of the pump axis which is excluded from the fit, e.g.
             contains the signal.
@@ -553,7 +574,7 @@ class TwoDim:
                 'PumpMin': pump_min, 'PumpMax': pump_max, 'Anh': probe_min - probe_max}
 
     def integrate_reg(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float] = None) -> np.ndarray:
-        """	
+        """
         Integrates the 2D spectra over a given range, using the trapezoidal
         rule.
 
@@ -564,11 +585,11 @@ class TwoDim:
             The range of the pump axis to be integrated over.
         probe_range: tuple[float, float]
             The range of the probe axis to be integrated over. If None, the
-            probe range is used.           
+            probe range is used.
 
         Returns
         -------
-        np.ndarray 
+        np.ndarray
             The integrated spectral signal for all waiting times.
         """
         if probe_range is None:
