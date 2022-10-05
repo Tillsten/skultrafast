@@ -74,7 +74,7 @@ class CLSResult:
         for p in mod.param_names:
             if p.endswith('decay'):
                 mod.set_param_hint(p, min=0)
-            if p[:3] == 'amp':
+            if p.endswith('amplitude'):
                 mod.set_param_hint(p, min=0)
         # mod.set_param_hint('c', min=-0)
         if use_const:
