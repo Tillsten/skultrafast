@@ -56,3 +56,20 @@ def delta_inf(sigma_inf, fwhm):
 
 
 CAFE(amps=[0.5, 0.2, 0], taus=[1, 5], fwhm=50)[1]
+# %%
+
+
+def line_shape_function(t, T2, taus, deltas):
+    t = np.asarray(t)
+    T2 = np.asarray(T2)
+    taus = np.asarray(taus)
+    deltas = np.asarray(deltas)
+
+    assert(len(taus) == len(deltas))
+    a = t/T2
+    a += np.sum(deltas**2 * (taus**2 * (np.exp(-t/taus) - 1) + t*taus))
+    return a
+
+
+line_shape_function([3], [0.2], [1], [0.2])
+# %%
