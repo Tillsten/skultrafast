@@ -1,4 +1,3 @@
-from audioop import add
 from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
@@ -108,10 +107,10 @@ class CLSResult:
         if self.exp_fit_result_:
             xu = np.linspace(np.min(self.wt), np.max(self.wt), 300)
             yu = self.exp_fit_result_.eval(x=xu)
-            style = dict(c='k', zorder=1.8)
+            style = dict(color='k', zorder=1.8)
             if model_style:
                 style.update(model_style)
-            m_line = ax.plot(xu, yu, color='k', zorder=1.8)
+            m_line = ax.plot(xu, yu, **style)
         return ec, m_line
 
 
