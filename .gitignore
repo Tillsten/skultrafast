@@ -11,3 +11,5 @@ dist/*
 docs/api/*
 .mypy_cache/
 skultrafast/.mypy_cache/*
+__pycache__/
+

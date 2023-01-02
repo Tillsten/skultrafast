@@ -3,13 +3,13 @@
 Numba implementation of the base matrix building functions.
 """
 import numpy as np
-from numba import  vectorize, njit, jit, prange
+from numba import vectorize, njit, jit, prange
 import math
-#from lmmv
+# from lmmv
 sq2 = math.sqrt(2)
 
 
-@jit
+@jit(cache=True)
 def _coh_gaussian(ta, w, tz):
     """
     Models coherent artifacts proportional to a gaussian and it's first three derivatives.
@@ -45,7 +45,7 @@ def _coh_gaussian(ta, w, tz):
 exp_half = np.exp(0.5)
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def _coh_loop(y, ta, w, n, m):
     for i in prange(n):
         for j in prange(m):
@@ -59,7 +59,7 @@ def _coh_loop(y, ta, w, n, m):
                 #y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
 
-@njit(parallel=True, fastmath=True)
+@njit(parallel=True, fastmath=True, cache=True)
 def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
     a = _fold_exp(t_arr, w, tz, tau_arr)
     b = _coh_gaussian(t_arr, w, tz)
@@ -67,7 +67,7 @@ def _fold_exp_and_coh(t_arr, w, tz, tau_arr):
 
 
 @njit
-def fast_erfc(x):
+def fast_erfc(x, cache=True):
     """
     Calculates the erfc near zero faster than
     the libary function, but has a bigger error, which
@@ -99,7 +99,7 @@ def fast_erfc(x):
     return ret
 
 
-@njit(fastmath=True, parallel=True)
+@njit(fastmath=True, parallel=True, cache=True)
 def folded_fit_func(t, tz, w, k):
     """
     Returns the value of a folded exponentials.
@@ -127,7 +127,7 @@ def folded_fit_func(t, tz, w, k):
         return np.exp(k * (w * w * k / (4.0) - t))
 
 
-@njit
+@njit(cache=True)
 def _fold_exp(t_arr, w, tz, tau_arr):
     """
     Returns the values of the folded exponentials for given parameters.
@@ -160,7 +160,7 @@ def _fold_exp(t_arr, w, tz, tau_arr):
         return out
 
 
-@njit(fastmath=True)
+@njit(fastmath=True, cache=True)
 def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
     for tau_idx in range(l):
         k = 1 / tau_arr[tau_idx]
