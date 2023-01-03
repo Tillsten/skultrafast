@@ -134,4 +134,8 @@ def test_plot_trans(two_d_processed: TwoDim):
     two_d_processed.plot.trans([2160, 2180], [2160, 2160])
     l = two_d_processed.plot.trans(2160, [2160, 2160])
     assert len(l) == 2
-    
+
+
+def test_gaussfit(two_d_processed: TwoDim):
+    fr = two_d_processed.fit_gauss()
+    fr.plot_cls()

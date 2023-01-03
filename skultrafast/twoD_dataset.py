@@ -1,3 +1,4 @@
+from collections import defaultdict
 from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
@@ -16,7 +17,7 @@ from statsmodels.api import OLS, WLS, add_constant
 from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
-from skultrafast.utils import inbetween, LinRegResult
+from skultrafast.utils import gauss2D, inbetween, LinRegResult
 
 PathLike = Union[str, bytes, os.PathLike]
 
@@ -41,23 +42,16 @@ class SingleCLSResult:
 
 
 @attr.s(auto_attribs=True)
-class CLSResult:
-    """
-    Class holding the data of CLS-analysis. Has methods to analyze and plot them.
-    """
-    wt: np.ndarray
-    """Containts the waiting times"""
-    slopes: np.ndarray
-    """Contains the determined slops, the dimension as wt"""
-    intercepts: np.ndarray
-    """Contains the intercepts, useful for plotting mostly"""
-    intercept_errors: Optional[np.ndarray]
-    """Errors of the intercepts"""
-    slope_errors: Optional[np.ndarray]
-    """Errors of slopes, as determined from the linear fit"""
-    lines: Optional[List[np.ndarray]]
-    """Contains the x and y, yerr-values used for the linear fit"""
+class FFCFResult:
+    """Baseclass for FFCF determination methods. 
 
+    For backwards compatibility, the values are always called slopes"""
+
+    wt: np.ndarray
+    """Wait times."""
+    slopes: np.ndarray
+    """Values """
+    slope_errors: Optional[np.ndarray] = None
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
 
     def exp_fit(self, start_taus: List[float], use_const=True, use_weights=True):
@@ -75,7 +69,6 @@ class CLSResult:
                 mod.set_param_hint(p, min=0)
             if p.endswith('amplitude'):
                 mod.set_param_hint(p, min=0)
-        # mod.set_param_hint('c', min=-0)
         if use_const:
             c = max(np.min(self.slopes), 0)
         else:
@@ -114,6 +107,21 @@ class CLSResult:
         return ec, m_line
 
 
+@attr.s(auto_attribs=True, kw_only=True)
+class CLSResult(FFCFResult):
+    """
+    Class holding the data of CLS-analysis. Has methods to analyze and plot them.
+    """
+    intercepts: np.ndarray
+    """Contains the intercepts, useful for plotting mostly"""
+    intercept_errors: Optional[np.ndarray]
+    """Errors of the intercepts"""
+    lines: Optional[List[np.ndarray]]
+    """Contains the x and y, yerr-values used for the linear fit"""
+
+    exp_fit_result_: Optional[lmfit.model.ModelResult] = None
+
+
 @attr.s(auto_attribs=True)
 class DiagResult:
     diag: np.ndarray
@@ -146,11 +154,20 @@ class ExpFit2DResult:
     """The decay times of the fit"""
 
 
+@attr.s(auto_attribs=True, kw_only=True)
+class GaussResult(FFCFResult):
+    """
+    A dataclass to hold the results of the Gaussian fit.
+    """
+    results: List[lmfit.model.ModelResult]
+    fit_out: 'TwoDim'
+
+
 @attr.s(auto_attribs=True)
 class TwoDim:
     """
     Dataset for an two dimensional dataset. Requires the t- (waiting times),the
-    probe- and pump-axes in addtition to the three dimensional spec2d data.
+    probe- and pump-axes in addition to the three dimensional spec2d data.
     """
 
     t: np.ndarray
@@ -393,7 +410,7 @@ class TwoDim:
             lines += [np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, r.predict()))]
             intercept.append(r.params[0])
             intercept_errs.append(r.bse[0])
-        ret = CLSResult(self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
+        ret = CLSResult(wt=self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
                         lines=lines, intercepts=np.array(intercept), intercept_errors=np.array(intercept_errs))
         self.cls_result_ = ret
         return ret
@@ -643,3 +660,44 @@ class TwoDim:
         self.fit_exp_result_ = ExpFit2DResult(minimizer=res, model=dsc, residuals=resi, das=fit_res[0],
                                               basis=fit_res[1], taus=fit_res[4])
         return self.fit_exp_result_
+
+    def fit_gauss(self) -> GaussResult:
+        """
+        Fits the 2D spectra using two gaussians peaks.
+        """
+        # from skultrafast.utils import gauss2D
+
+        mm = self.get_minmax(0.3)
+        psa = self.pump_slice_amp(0.3)
+        gmod = lmfit.models.GaussianModel()
+        gres = gmod.fit(psa, x=self.pump_wn)
+        results = []
+        val_dict: Dict[str, np.ndarray] = defaultdict(list)
+        fit_out = self.copy()
+
+        mod = lmfit.Model(gauss2D, independent_vars=['pu', 'pr'])
+        mod.set_param_hint('x01', min=self.pump_wn.min(),
+                           max=self.pump_wn.max(), value=mm['PumpMax'])
+        spec = self.data_at(t=0.3)
+        mod.set_param_hint('A0', min=0, value=-spec.min())
+        mod.set_param_hint('ah', min=0, value=mm['Anh'])
+        mod.set_param_hint('sigma_pu', min=0, value=gres.params['sigma'].value)
+        mod.set_param_hint('sigma_pr', min=0,
+                           value=gres.params['sigma'].value/2)
+        mod.set_param_hint('corr', value=0.0, min=-1, max=1)
+
+        last_params = {}
+
+        for i, t in enumerate(self.t):
+            spec = self.data_at(t=t)
+            res = mod.fit(spec, pu=self.pump_wn, pr=self.probe_wn, **last_params)
+            results.append(res)
+            p = res.params
+            for pname in p:
+                val_dict[pname].append(p[pname].value)
+                val_dict[pname+'_stderr'].append(p[pname].stderr)
+            fit_out.spec2d[i] = res.best_fit.reshape(self.spec2d.shape[1:])
+            last_params = res.params.copy()
+
+        val_dict = {k: np.array(v) for k, v in val_dict.items()}
+        return GaussResult(results=results, fit_out=fit_out, slopes=val_dict['corr'], slope_errors=val_dict['corr_stderr'], wt=self.t)

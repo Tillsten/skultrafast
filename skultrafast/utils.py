@@ -44,7 +44,7 @@ def simulate_binning(wrapped=None, *, fac=5):
     return wrapper(wrapped)
 
 
-def sigma_clip(data, sigma: float =3, max_iter: int=5, axis: int=-1, use_mad: bool =False):
+def sigma_clip(data, sigma: float = 3, max_iter: int = 5, axis: int = -1, use_mad: bool = False):
     """Masks outliers by iteratively removing points outside given
     standard deviations.
 
@@ -340,3 +340,16 @@ def inbetween(a: np.ndarray, lower: float, upper: float):
     Returns index-array where a is between upper and lower
     """
     return np.logical_and(a >= lower, a <= upper)
+
+
+def gauss2D(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr):
+    pr = pr[:, None]
+    pu = pu[None, :]
+    c_pr = ((pr-x01)/sigma_pr)
+    c_pu = ((pu-x01)/sigma_pu)
+    y = -A0*np.exp(-1/(2-2*corr**2)*(c_pr**2-2*corr*c_pr*c_pu+c_pu**2))
+    x12 = x01 - ah
+    c_pr = ((pr-x12)/sigma_pr)
+    c_pu = ((pu-x01)/sigma_pu)
+    y += A0*np.exp(-1/(2*(1-corr**2))*(c_pr**2-2*corr*c_pr*c_pu+c_pu**2))
+    return y
