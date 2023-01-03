@@ -32,7 +32,7 @@ The package was created and is maintained by *Till Stensitzki*. The package was
 created while being employed in the `Heyne group <http://www.physik.fu-berlin
 .de/einrichtungen/ag/ag-heyne/>`_ and was therefore founded by the DFG via `SFB
 1078 <www.sfb1078.de/>`_ and `SFB 1114 <www.sfb1114.de/>`_. Recent development
-focussed on 2D-spectroscopy is part my stay in `Ultrafast Structual Dynamics
+focussed on 2D-spectroscopy is part of my stay in the `Ultrafast Structual Dynamics
 Group <https://www.uni-potsdam.de/usd>`_ in Potsdam under Müller-Werkmeister.
 
 
@@ -60,13 +60,17 @@ The current releases centers around working with time-resolved spectra:
   `lmfit <http://lmfit.github.io/lmfit-py/>`_.
 * Lifetime-density analyses using regularized regression.
 * 2D spectroscopy: CLS-decay, digonal extraction, pump-slice-amplidude
-  spectrum, integration.
+  spectrum, integration, gaussian fitting.
 
 Users
 -----
 
 At the moment it is mostly me and other people in my groups. I would be happy
 if anyone would like to join the project!
+
+Citiation
+---------
+If you use this package in your research, please cite the zenodo entry at the top.
 
 
 License

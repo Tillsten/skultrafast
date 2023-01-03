@@ -226,16 +226,50 @@ ax.legend()
 # What is often more problematic is the sensitivity to the chosen region.
 # It is often suggested taking only a small region around the peak, but this
 # makes the determination of the slope more error-prone. In most settings,
-# the resolution of the pump axis is rather limited.
+# the resolution of the pump axis is rather limited, when using the correct
+# factor of two for oversampling.
 
 fig, ax = plt.subplots()
 pump_range = 5, 7, 10, 12,
 for r in pump_range:
-    cls_result_fit = ds.cls(pr_range=r, pu_range=r, method='com')
+    cls_result_fit = ds.cls(pr_range=r, pu_range=r, method='fit')
     data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
     data_line.set_label(r)
 
 ax.legend()
+
+
+# %%
+# Gaussian Fit
+# ------------
+# Another method to determine the FFCF is to fit a 2D-gaussian to the 2D spectrum.
+# The correlation factor between pump and probe-axis is then also proportional to
+# the FFCF. The method is implemented in the `fit_gauss`-method.
+
+fr = ds.fit_gauss()
+res_gauss = fr.exp_fit([0.3, 3], use_const=False)
+cls_result_fit = ds.cls(pr_range=8, pu_range=10, method='fit')
+fr.plot_cls(symlog=True)
+res_cls = cls_result_fit.exp_fit([0.3, 3], use_const=False)
+cls_result_fit.plot_cls(symlog=True)
+
+# %%
+# Lets compare the time constants of the two methods.
+# Gauss fit
+res_gauss
+
+# %%
+# Cls fit
+res_cls
+
+# %%
+# Amp ratios
+
+r1 = res_gauss.params['a_decay'].value / res_gauss.params['b_decay'].value
+r2 = res_cls.params['a_decay'].value / res_cls.params['b_decay'].value
+# Both ratios and and time-constants are in good agreement.
+print('Gauss: %.2f, Cls: %.2f' % (r1, r2))
+
 
 # %%
 # Diagonal
