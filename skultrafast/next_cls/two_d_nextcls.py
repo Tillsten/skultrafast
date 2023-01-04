@@ -8,6 +8,8 @@
 import numpy as np
 import json
 from pathlib import Path
+from scipy.constants import c
+
 
 p = Path(__file__).parent
 
@@ -46,5 +48,15 @@ Sigma2NN = funcs['Sigma2']
 SigmaInfNN = funcs['SigmaInf']
 
 Sigma1NN([0.5, 0.5, 0.5, 0, 0])
+
+# %%
+
+
+def FWHM_from_FFCF(delta_cm, tau_ps, gamma_cm):
+    """Compute the FWHM from the FFCF, as defined in the nextcls paper."""
+    c_ps = c*100/1e12
+    delta_radps = delta_cm * 2 * np.pi * c_ps
+    T2 = 1/(gamma_cm*np.pi*c_ps)
+    4
 
 # %%
