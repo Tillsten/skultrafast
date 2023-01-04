@@ -21,17 +21,6 @@ def test_fast_erfc():
     y = np.array([fast_erfc(i) for i  in x])
     assert_array_almost_equal(erfc_s(x), y, 3)
 
-
-def test_fold_exp():
-    taus = np.array([1., 20., 30.])
-    t_array = np.subtract.outer(np.linspace(-1, 50, 300),
-                                np.linspace(3, 3, 400))
-    w = 0.1
-    dt = np.diff(t_array, 1, 0)[0, 0]
-
-    y = _fold_exp(t_array, w, 0, taus)
-    return y
-
 def test_exp():
     taus = np.array([1., 20., 30.])
     t_array = np.subtract.outer(np.linspace(0, 50, 300),
