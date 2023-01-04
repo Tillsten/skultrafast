@@ -9,11 +9,6 @@ Created on Sun Apr 21 20:34:15 2013
 from skultrafast.base_funcs.base_functions_numba import fast_erfc, _fold_exp, _exp
 
 import skultrafast.base_funcs.base_functions_np as bnp
-try:
-    import skultrafast.base_funcs.base_functions_cl as bcl
-except ImportError:
-    print('Warning, pyopencl was not found. OpenCL backend ist not tested')
-    bcl = bnp
 import skultrafast.base_funcs.base_functions_numba as bnb
 
 from numpy.testing import assert_array_almost_equal
@@ -66,9 +61,6 @@ def test_compare_fold_funcs():
                                 np.linspace(-1, 3, 400))
     w = 0.1
     y1 = bnp._fold_exp(t_array, w, 0, taus)
-    y2 = bcl._fold_exp(t_array, w, 0, taus)
-    np.testing.assert_array_almost_equal(y1, y2, 4)
-
     y3 = bnb._fold_exp(t_array, w, 0, taus)
     np.testing.assert_array_almost_equal(y1, y3, 3)
 
@@ -78,7 +70,7 @@ def test_compare_coh_funcs():
                                 np.linspace(3, 3, 400))
     w = 0.1
     y1 = bnb._coh_gaussian(t_array,  w, 0.)
-    y2 = bcl._coh_gaussian(t_array,  w, 0.)
+    y2 = bnp._coh_gaussian(t_array,  w, 0.)
     np.testing.assert_array_almost_equal(y1, y2, 4)
 
 if __name__ == '__main__':
