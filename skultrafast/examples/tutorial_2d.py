@@ -244,7 +244,7 @@ ax.legend()
 # ------------
 # Another method to determine the FFCF is to fit a 2D-gaussian to the 2D spectrum.
 # The correlation factor between pump and probe-axis is then also proportional to
-# the FFCF. The method is implemented in the `fit_gauss`-method.
+# the FFCF. The method is implemented in the `fit_gauss`-method. 
 
 fr = ds.fit_gauss()
 res_gauss = fr.exp_fit([0.3, 3], use_const=False)
@@ -323,6 +323,7 @@ ax['B'].set_xlabel(plot_helpers.freq_label)
 for t in [0.5, 1, 10, 30]:
     ds.plot.psa(t, normalize=2160)
 
+# %%
 # Exponential Fitting
 # -------------------
 #
