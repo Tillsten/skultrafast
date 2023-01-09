@@ -663,10 +663,7 @@ class TwoDim:
                                               basis=fit_res[1], taus=fit_res[4])
         return self.fit_exp_result_
 
-    def fit_gauss(self,
-                  mode=Literal['two_shared_all', 'single_neg',
-                               'single_pos', 'two_shared_corr', 'two']
-                  ) -> GaussResult:
+    def fit_gauss(self) -> GaussResult:
         """
         Fits the 2D spectra using two gaussians peaks.
         """
@@ -691,7 +688,7 @@ class TwoDim:
                            value=gres.params['sigma'].value/2)
         mod.set_param_hint('corr', value=0.0, min=-1, max=1)
 
-        last_params = {}
+        last_params: Union[dict, lmfit.Parameters] = {}
 
         for i, t in enumerate(self.t):
             spec = self.data_at(t=t)
