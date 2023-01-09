@@ -18,7 +18,7 @@ def gaussian(x, A, w, xc):
 
 def gauss_step(x, amp: float, center: float, sigma: float):
     """Returns the stepfunction (erf-style) for given arguments.
-    
+
     Parameters
     ----------
     x : array
@@ -29,10 +29,33 @@ def gauss_step(x, amp: float, center: float, sigma: float):
         Position of the step 
     sigma : float
         Width of the step
-    
+
     Returns
     -------
     array
         The step functions
     """
     return amp * 0.5 * (1 + erf((x - center) / sigma / np.sqrt(2)))
+
+
+def gauss2d(pu, pr, A0, x01, sigma_pu, sigma_pr, corr):
+    pr = pr[:, None]
+    pu = pu[None, :]
+    c_pr = ((pr-x01)/sigma_pr)
+    c_pu = ((pu-x01)/sigma_pu)
+    y = -A0*np.exp(-1/(2-2*corr**2)*(c_pr**2-2*corr*c_pr*c_pu+c_pu**2))
+    return y
+
+
+def two_gauss2D_shared(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr):
+    y = gauss2d(pu, pr, A0, x01, sigma_pu, sigma_pr, corr)
+    x12 = x01 - ah
+    y -= gauss2d(pu, pr, A0, x12, sigma_pu, sigma_pr, corr)
+    return y
+
+
+def two_gauss2D(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr, A1, sigma_pu2, sigma_pr2, corr2):
+    y = gauss2d(pu, pr, A0, x01, sigma_pu, sigma_pr, corr)
+    x12 = x01 - ah
+    y -= gauss2d(pu, pr, A1, x12, sigma_pu2, sigma_pr2, corr2)
+    return y

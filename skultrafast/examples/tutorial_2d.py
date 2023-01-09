@@ -63,7 +63,7 @@ qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=4, probe_fi
 ds_all = qc_file.make_ds()
 ds_iso = ds_all['iso']
 
-ds_iso.pump_wn *= 2162.5 / 2159.35
+ds_iso.pump_wn *= 2162.5 / 2159.35  # correct pump calibration
 
 # %%
 # The `TwoDim`-objects are the core structure to work with. They contain both
@@ -178,8 +178,8 @@ ti = ds.t_idx(1)
 artists = ds.plot.contour(1)
 ax = artists[0]['ax']
 
-x_cls, y_cls, x_fit = cls_result.lines[ti][:,
-                                           1], cls_result.lines[ti][:, 0], cls_result.lines[ti][:, 3]
+cls_at_1ps = cls_result.lines[ti]
+x_cls, y_cls, x_fit = cls_at_1ps[:, 1], cls_at_1ps[:, 0], cls_at_1ps[ti][:, 3]
 ax.plot(x_cls, y_cls,
         marker='o', markersize=3, lw=0, color='yellow', )
 ax.plot(x_fit, y_cls, c='purple', lw=1)

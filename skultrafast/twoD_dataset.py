@@ -17,7 +17,9 @@ from statsmodels.api import OLS, WLS, add_constant
 from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
-from skultrafast.utils import gauss2D, inbetween, LinRegResult
+from skultrafast.utils import inbetween, LinRegResult
+from skultrafast.base_funcs.lineshapes import gauss2d, two_gauss2D_shared, two_gauss2D
+
 
 PathLike = Union[str, bytes, os.PathLike]
 
@@ -116,7 +118,7 @@ class CLSResult(FFCFResult):
     """Contains the intercepts, useful for plotting mostly"""
     intercept_errors: Optional[np.ndarray]
     """Errors of the intercepts"""
-    lines: Optional[List[np.ndarray]]
+    lines: List[np.ndarray]
     """Contains the x and y, yerr-values used for the linear fit"""
 
     exp_fit_result_: Optional[lmfit.model.ModelResult] = None
@@ -661,7 +663,10 @@ class TwoDim:
                                               basis=fit_res[1], taus=fit_res[4])
         return self.fit_exp_result_
 
-    def fit_gauss(self) -> GaussResult:
+    def fit_gauss(self,
+                  mode=Literal['two_shared_all', 'single_neg',
+                               'single_pos', 'two_shared_corr', 'two']
+                  ) -> GaussResult:
         """
         Fits the 2D spectra using two gaussians peaks.
         """
@@ -672,10 +677,10 @@ class TwoDim:
         gmod = lmfit.models.GaussianModel()
         gres = gmod.fit(psa, x=self.pump_wn)
         results = []
-        val_dict: Dict[str, np.ndarray] = defaultdict(list)
+        val_dict: Dict[str, list] = defaultdict(list)
         fit_out = self.copy()
 
-        mod = lmfit.Model(gauss2D, independent_vars=['pu', 'pr'])
+        mod = lmfit.Model(two_gauss2D_shared, independent_vars=['pu', 'pr'])
         mod.set_param_hint('x01', min=self.pump_wn.min(),
                            max=self.pump_wn.max(), value=mm['PumpMax'])
         spec = self.data_at(t=0.3)
@@ -699,5 +704,6 @@ class TwoDim:
             fit_out.spec2d[i] = res.best_fit.reshape(self.spec2d.shape[1:])
             last_params = res.params.copy()
 
-        val_dict = {k: np.array(v) for k, v in val_dict.items()}
-        return GaussResult(results=results, fit_out=fit_out, slopes=val_dict['corr'], slope_errors=val_dict['corr_stderr'], wt=self.t)
+        val_dict_arr = {k: np.array(v) for k, v in val_dict.items()}
+        return GaussResult(results=results, fit_out=fit_out, slopes=val_dict_arr['corr'],
+                           slope_errors=val_dict_arr['corr_stderr'], wt=self.t)
