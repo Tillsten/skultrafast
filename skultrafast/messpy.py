@@ -22,7 +22,6 @@ class MessPy2File:
     """
     Class for working with older messpy2 files.
     """
-
     def __init__(self, fname: os.PathLike):
         self.file = np.load(fname, allow_pickle=True)
 
@@ -130,13 +129,12 @@ class MessPy2File:
 
 
 class MessPyFile:
-
     def __init__(
         self,
         fname,
         invert_data=False,
         is_pol_resolved=False,
-        pol_first_scan: Literal['magic', 'para', 'perp', 'unknown']="unknown",
+        pol_first_scan: Literal['magic', 'para', 'perp', 'unknown'] = "unknown",
         valid_channel=None,
     ):
         """Class for working with data files from MessPy v1.
@@ -337,7 +335,6 @@ class MessPyFile:
 
 
 class MessPyPlotter(PlotterMixin):
-
     def __init__(self, messpyds):
         """
         Class to plot utility plots
@@ -464,9 +461,21 @@ class MessPyPlotter(PlotterMixin):
         ph.lbl_spec(ax)
 
 
+def _get_group_arr(grp: h5py.Group):
+    """Get array from group of datasets, assuming they are named 0, 1, 2, ... 
+    and have the same shape"""
+    keys = list(grp.keys())
+    n = len(keys)
+    dim = grp[keys[0]].shape
+    out = np.zeros((n, *dim))
+    for i in range(n):
+        out[i, ...] = grp[str(i)][:].astype(np.float32)
+    return out
+
+
 @attr.define
 class Messpy25File:
-    h5_file: h5py.File = attr.ib(init=True)
+    h5_file: Union[h5py.File, Path] = attr.ib(init=True)
     'h5py file object containing the 2D dataset, the only required parameter'
     is_para_array: Literal['Probe1', 'Probe2'] = 'Probe1'
     'which dataset has parallel polarisation'
@@ -483,6 +492,8 @@ class Messpy25File:
 
     @no_type_check
     def __attrs_post_init__(self):
+        if isinstance(self.h5_file, Path):
+            self.h5_file = h5py.File(self.h5_file, 'r')
         if 't1' in self.h5_file:
             self.t1 = self.h5_file['t1'][:]
             self.t2 = self.h5_file['t2'][:]
@@ -533,8 +544,8 @@ class Messpy25File:
                 stderr[name] = []
                 for i in range(self.t2.size):
                     means[name].append(np.mean(ifr[name][str(i)], 0))
-                    stderr[name].append(np.std(ifr[name][str(i)], 0) /
-                                        np.sqrt(len(ifr[name][str(i)])))
+                    stderr[name].append(
+                        np.std(ifr[name][str(i)], 0) / np.sqrt(len(ifr[name][str(i)])))
         return means, stderr
 
     def get_ifr(self, probe_filter=None, bg_correct=None, ch_shift: int = 0):
@@ -566,10 +577,8 @@ class Messpy25File:
         para_means = np.stack(ifr[para], 0)
         perp_means = np.stack(ifr[perp], 0)
         if probe_filter is not None:
-            para_means = gaussian_filter1d(
-                para_means, probe_filter, 1, mode='nearest')
-            perp_means = gaussian_filter1d(
-                perp_means, probe_filter, 1, mode='nearest')
+            para_means = gaussian_filter1d(para_means, probe_filter, 1, mode='nearest')
+            perp_means = gaussian_filter1d(perp_means, probe_filter, 1, mode='nearest')
         if ch_shift > 0:
             para_means = para_means[:, :-ch_shift, :]
             perp_means = perp_means[:, ch_shift:, :]
@@ -582,15 +591,17 @@ class Messpy25File:
             wn = self.probe_wn
         if bg_correct is not None:
             for i in range(para_means.shape[0]):
-                poly_bg_correction(
-                    wn, para_means[i].T, bg_correct[0], bg_correct[1])
-                poly_bg_correction(
-                    wn, perp_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(wn, para_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(wn, perp_means[i].T, bg_correct[0], bg_correct[1])
 
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def make_two_d(self, upsample: int = 4, window_fcn: Optional[Callable] = np.hanning, ch_shift: int = 1,
-                   probe_filter: Optional[float] = None, bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
+    def make_two_d(self,
+                   upsample: int = 4,
+                   window_fcn: Optional[Callable] = np.hanning,
+                   ch_shift: int = 1,
+                   probe_filter: Optional[float] = None,
+                   bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
         """
         Calculates the 2D spectra from the interferograms and returns it as a
         dictionary. The dictorary contains messpy 2D-objects for paralllel,
@@ -611,7 +622,8 @@ class Messpy25File:
             Number of left and right channels to use for background correction.
         """
         means = self.get_ifr(probe_filter=probe_filter,
-                             bg_correct=bg_correct, ch_shift=ch_shift)
+                             bg_correct=bg_correct,
+                             ch_shift=ch_shift)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
@@ -645,7 +657,7 @@ class Messpy25File:
             folder = p / pol
             folder.mkdir(parents=True, exist_ok=True)
             for i, t in enumerate(self.t2):
-                fname = folder / (name + '_%f.txt' % t)
+                fname = folder / (name + '_%f.txt'%t)
                 d = data[pol][i, idx, :]
 
                 np.savetxt(fname, d)

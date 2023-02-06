@@ -87,7 +87,7 @@ ds_iso.plot.contour(1, 2, 4)
 # time-points, 0.5, 1 and 7 ps.
 
 ds = ds_iso.select_range((2140, 2180), (2120, 2180))
-artists = ds.plot.contour(0.5, 1, 7,  direction='h')
+artists = ds.plot.contour(0.5, 1, 7, direction='h')
 
 # %%
 # There is also a `.select_t_range` method.
@@ -106,7 +106,6 @@ ds1d = ds.integrate_pump()
 fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4))
 ds1d.plot.spec(0.5, 1, 7, add_legend=True, ax=ax0)
 ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
-
 
 # %%
 # Plotting a single pixel
@@ -179,9 +178,15 @@ artists = ds.plot.contour(1)
 ax = artists[0]['ax']
 
 cls_at_1ps = cls_result.lines[ti]
-x_cls, y_cls, x_fit = cls_at_1ps[:, 1], cls_at_1ps[:, 0], cls_at_1ps[ti][:, 3]
-ax.plot(x_cls, y_cls,
-        marker='o', markersize=3, lw=0, color='yellow', )
+x_cls, y_cls, x_fit = cls_at_1ps[:, 1], cls_at_1ps[:, 0], cls_at_1ps[:, 3]
+ax.plot(
+    x_cls,
+    y_cls,
+    marker='o',
+    markersize=3,
+    lw=0,
+    color='yellow',
+)
 ax.plot(x_fit, y_cls, c='purple', lw=1)
 
 # %%
@@ -201,7 +206,10 @@ fr = cls_result.exp_fit(tau_estimate, use_const=True, use_weights=True)
 fig, ax = plt.subplots()
 cls_result.plot_cls(ax=ax)
 text = '(%.1f ± %.1f) ps' % (fr.params['a_decay'].value, fr.params['a_decay'].stderr)
-ax.annotate(text, (0.98, 0.98), xycoords='axes fraction', ha='right', va='top',
+ax.annotate(text, (0.98, 0.98),
+            xycoords='axes fraction',
+            ha='right',
+            va='top',
             fontsize='large')
 ax.set_xscale('log')
 
@@ -216,7 +224,7 @@ fig, ax = plt.subplots()
 methods = 'log_quad', 'quad', 'fit', 'com'
 for m in methods:
     cls_result_fit = ds.cls(pr_range=12, pu_range=10, method=m)
-    fr_fit = cls_result_fit.exp_fit(tau_estimate,  use_const=True, use_weights=True)
+    fr_fit = cls_result_fit.exp_fit(tau_estimate, use_const=True, use_weights=True)
     data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
     data_line.set_label(m)
 
@@ -238,13 +246,12 @@ for r in pump_range:
 
 ax.legend()
 
-
 # %%
 # Gaussian Fit
 # ------------
 # Another method to determine the FFCF is to fit a 2D-gaussian to the 2D spectrum.
 # The correlation factor between pump and probe-axis is then also proportional to
-# the FFCF. The method is implemented in the `fit_gauss`-method. 
+# the FFCF. The method is implemented in the `fit_gauss`-method.
 
 fr = ds.fit_gauss()
 res_gauss = fr.exp_fit([0.3, 3], use_const=False)
@@ -269,7 +276,6 @@ r1 = res_gauss.params['a_decay'].value / res_gauss.params['b_decay'].value
 r2 = res_cls.params['a_decay'].value / res_cls.params['b_decay'].value
 # Both ratios and and time-constants are in good agreement.
 print('Gauss: %.2f, Cls: %.2f' % (r1, r2))
-
 
 # %%
 # Diagonal
@@ -300,8 +306,11 @@ plot_helpers.lbl_spec(ax)
 
 fig, ax = plt.subplot_mosaic('AABB', figsize=(5, 2), constrained_layout=True)
 
-pm = ax['A'].pcolormesh(ds.probe_wn, ds.pump_wn, ds.spec2d[ds.t_idx(1), :, :].T,
-                        shading='auto', cmap='seismic')
+pm = ax['A'].pcolormesh(ds.probe_wn,
+                        ds.pump_wn,
+                        ds.spec2d[ds.t_idx(1), :, :].T,
+                        shading='auto',
+                        cmap='seismic')
 ax['A'].plot(ds.probe_wn, diag_result.diag_coords, lw=1, c="y", ls='--')
 ax['A'].plot(ds.probe_wn, diag_result.antidiag_coords, lw=1, c="c", ls='--')
 ax['A'].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), ylabel=plot_helpers.freq_label)
@@ -311,7 +320,6 @@ fig.colorbar(pm, ax=ax['A'], shrink=0.69, pad=0)
 ax['B'].plot(ds.probe_wn, diag_result.diag, c='y')
 ax['B'].plot(ds.probe_wn, diag_result.antidiag, c='c')
 ax['B'].set_xlabel(plot_helpers.freq_label)
-
 
 # %%
 # As an alternative, the pump-slice-amplitude method is also supported. Here we
@@ -340,7 +348,7 @@ exp_result.minimizer
 # We can plot the 2D-component spectra.
 
 n = len(exp_result.taus)
-fig, ax = plt.subplots(1, n, sharex=True, sharey=True, figsize=(n*2, 2.5))
+fig, ax = plt.subplots(1, n, sharex=True, sharey=True, figsize=(n * 2, 2.5))
 for i, tau in enumerate(exp_result.taus):
     ax[i].set_title(rf'$\tau_{i}$={tau:.1f} ps')
     ax[i].contourf(ds.probe_wn, ds.pump_wn, exp_result.das[i].T, 20, cmap='seismic')
@@ -355,7 +363,6 @@ fig, ax = plt.subplots()
 ds.plot.trans(2165, [2162, 2130], symlog=True, ax=ax)
 exp_result.model.plot.trans(2165, [2162, 2130], symlog=True, ax=ax, c='k')
 
-
 # %%
 # Exporting
 # ---------
@@ -365,4 +372,96 @@ exp_result.model.plot.trans(2165, [2162, 2130], symlog=True, ax=ax, c='k')
 
 # ds.save_txt(PATH)
 
+import lmfit
+from collections import defaultdict
+from skultrafast.twoD_dataset import gauss2d, two_gauss2D_shared, GaussResult
+
+
+def gauss2d(pu, pr, A0, x_pr, x_pu, sigma_pu, sigma_pr, corr):
+    print(x_pr, x_pu)
+    pr = pr[:, None]
+    pu = pu[None, :]
+    c_pr = ((pr-x_pr) / sigma_pr)
+    c_pu = ((pu-x_pu) / sigma_pu)
+    y = -A0 * np.exp(-1 / (2 - 2 * corr**2) * (c_pr**2 - 2*corr*c_pr*c_pu + c_pu**2))
+    #plt.imshow(y)
+    #raise
+    return y
+
+
+def single_gauss(pu, pr, A0, x01, sigma_pu, sigma_pr, corr):
+    return gauss2d(pu, pr, A0, x01, x01, sigma_pu, sigma_pr, corr)
+
+
+def two_gauss2D_shared(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr):
+    y = gauss2d(pu, pr, A0, x01, x01, sigma_pu, sigma_pr, corr)
+    x12 = x01 - ah
+    y += gauss2d(pu, pr, -A0, x12, x01, sigma_pu, sigma_pr, corr)
+    return y
+
+
+def fit_gauss(self, mode='both') -> GaussResult:
+    """
+    Fits the 2D spectra using two gaussians peaks.
+    """
+    # from skultrafast.utils import gauss2D
+
+    psa = self.pump_slice_amp(0.3)
+    gmod = lmfit.models.GaussianModel() + lmfit.models.ConstantModel()
+    gres = gmod.fit(psa, x=self.pump_wn, center=self.pump_wn[np.argmax(psa)])
+
+    results = []
+    val_dict: Dict[str, list] = defaultdict(list)
+    fit_out = self.copy()
+    if mode == 'both':
+        func = two_gauss2D_shared
+    elif mode == 'single':
+        func = gauss2d
+    mod = lmfit.Model(func, independent_vars=['pu', 'pr'])
+    mod.set_param_hint(
+        'x_pu',
+        #min=self.pump_wn.min(),
+        #max=self.pump_wn.max(),
+        value=gres.params['center'].value)
+    mod.set_param_hint(
+        'x_pr',
+        #min=self.pump_wn.min(),
+        #max=self.pump_wn.max(),
+        value=gres.params['center'].value - 20)
+    spec = self.data_at(t=0.3)
+    mod.set_param_hint('A0', value=-np.abs(spec).max())
+    if 'ah' in mod.param_names:
+        mm = self.get_minmax(0.3)
+        mod.set_param_hint('ah', min=0, value=mm['Anh'])
+    mod.set_param_hint('sigma_pu', min=0, value=6)
+    mod.set_param_hint('sigma_pr', min=0, value=6)
+    mod.set_param_hint('corr', value=0.3, min=-1, max=1)
+
+    last_params: Union[dict, lmfit.Parameters] = {}
+
+    for i, t in enumerate(self.t):
+        spec = self.data_at(t=t)
+        res = mod.fit(spec, pu=self.pump_wn, pr=self.probe_wn, **last_params)
+        results.append(res)
+        p = res.params
+        for pname in p:
+            val_dict[pname].append(p[pname].value)
+            val_dict[pname + '_stderr'].append(p[pname].stderr)
+        fit_out.spec2d[i] = res.best_fit.reshape(self.spec2d.shape[1:])
+        last_params = res.params.copy()
+
+    val_dict_arr = {k: np.array(v) for k, v in val_dict.items()}
+    return GaussResult(results=results,
+                       fit_out=fit_out,
+                       slopes=val_dict_arr['corr'],
+                       slope_errors=val_dict_arr['corr_stderr'],
+                       wt=self.t)
+
+
+fr_single = fit_gauss(ds.select_range((2145, 2180), (0, 2145)), mode='single')
+fr_both = fit_gauss(ds, mode='both')
+fr_single.plot_cls(symlog=True)
+fr_both.plot_cls()
+fr  # %%
+#Please reopen the issues, since this this changed the behavior without deprecation warning.
 # %%

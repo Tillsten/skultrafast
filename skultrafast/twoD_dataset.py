@@ -18,8 +18,7 @@ from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
 from skultrafast.utils import inbetween, LinRegResult
-from skultrafast.base_funcs.lineshapes import gauss2d, two_gauss2D_shared, two_gauss2D
-
+from skultrafast.base_funcs.lineshapes import gauss2d, two_gauss2D_shared, two_gauss2D, single_gauss
 
 PathLike = Union[str, bytes, os.PathLike]
 
@@ -81,11 +80,7 @@ class FFCFResult:
             weights = 1 / np.array(self.slope_errors)
         else:
             weights = None
-        res = mod.fit(self.slopes,
-                      weights=weights,
-                      x=self.wt,
-                      c=c,
-                      **vals)
+        res = mod.fit(self.slopes, weights=weights, x=self.wt, c=c, **vals)
         self.exp_fit_result_ = res
         return res
 
@@ -162,7 +157,9 @@ class GaussResult(FFCFResult):
     A dataclass to hold the results of the Gaussian fit.
     """
     results: List[lmfit.model.ModelResult]
+    """List of lmfit results from the gaussian fits"""
     fit_out: 'TwoDim'
+    """TwoDim object with the fit data, useful for plotting"""
 
 
 @attr.s(auto_attribs=True)
@@ -230,8 +227,13 @@ class TwoDim:
         """Return the dataset nearest to the given time t"""
         return self.spec2d[self.t_idx(t), :, :]
 
-    def data_at(self, t: Optional[float] = None, probe_wn: Optional[float] = None,
+    def data_at(self,
+                t: Optional[float] = None,
+                probe_wn: Optional[float] = None,
                 pump_wn: Optional[float] = None) -> np.ndarray:
+        """
+        Extracts the data at given coordinates.         
+        """
         spec2d = self.spec2d
         if t is not None:
             t_idx = self.t_idx(t)
@@ -252,7 +254,9 @@ class TwoDim:
         """Return nearest idx to nearest pump_wn value"""
         return dv.fi(self.pump_wn, wn)
 
-    def select_range(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float],
+    def select_range(self,
+                     pump_range: Tuple[float, float],
+                     probe_range: Tuple[float, float],
                      invert: bool = False) -> 'TwoDim':
         """
         Return a dataset containing only the selected region.
@@ -280,9 +284,13 @@ class TwoDim:
         ds.spec2d = ds.spec2d[idx, :, :]
         return ds
 
-    def integrate_pump(self, lower: float = -np.inf, upper: float = np.inf) -> TimeResSpec:
+    def integrate_pump(self,
+                       lower: float = -np.inf,
+                       upper: float = np.inf) -> TimeResSpec:
         """
         Calculate and return 1D Time-resolved spectra for given range.
+
+        Uses trapezoidal integration.
 
         Parameters
         ----------
@@ -300,13 +308,14 @@ class TwoDim:
         data = np.trapz(self.spec2d[:, :, pu_idx], self.pump_wn[pu_idx], axis=-1)
         return TimeResSpec(self.probe_wn, self.t, data, freq_unit='cm')
 
-    def single_cls(self,
-                   t: float,
-                   pr_range: Union[float, Tuple[float, float]] = 9.0,
-                   pu_range: Union[float, Tuple[float, float]] = 7.0,
-                   mode: Literal['neg', 'pos'] = 'neg',
-                   method: Literal['com', 'quad', 'fit', 'log_quad', 'skew_fit'] = 'com'
-                   ) -> SingleCLSResult:
+    def single_cls(
+        self,
+        t: float,
+        pr_range: Union[float, Tuple[float, float]] = 9.0,
+        pu_range: Union[float, Tuple[float, float]] = 7.0,
+        mode: Literal['neg', 'pos'] = 'neg',
+        method: Literal['com', 'quad', 'fit', 'log_quad', 'skew_fit'] = 'com'
+    ) -> SingleCLSResult:
         """
         Calculate the CLS for single 2D spectrum.
 
@@ -355,10 +364,14 @@ class TwoDim:
                 pr_idx = inbetween(pr, pr_range[0], pr_range[1])
             cen_of_m = np.average(pr[pr_idx], weights=s[pr_idx])
             if method == 'fit':
-                mod = lmfit.models.GaussianModel()+lmfit.models.ConstantModel()
+                mod = lmfit.models.GaussianModel() + lmfit.models.ConstantModel()
                 mod.set_param_hint('center', min=pr[pr_idx].min(), max=pr[pr_idx].max())
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
-                result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp, c=0,
+                result = mod.fit(s[pr_idx],
+                                 sigma=3,
+                                 center=cen_of_m,
+                                 amplitude=amp,
+                                 c=0,
                                  x=pr[pr_idx])
                 val, err = (result.params['center'].value, result.params['center'].stderr)
                 if err is None:
@@ -370,14 +383,19 @@ class TwoDim:
             elif method == 'log_quad':
                 s_min = s[m]
                 i2 = (s < s_min * 0.1)
-                p = Polynomial.fit(
-                    pr[pr_idx & i2], np.log(-s[pr_idx & i2]), 2)  # type: ignore
+                p = Polynomial.fit(pr[pr_idx & i2], np.log(-s[pr_idx & i2]),
+                                   2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'skew_fit':
                 mod = lmfit.models.GaussianModel() + lmfit.models.LinearModel()
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
-                result = mod.fit(s[pr_idx], sigma=3, center=cen_of_m, amplitude=amp,
-                                 x=pr[pr_idx], slope=0, intercept=0)
+                result = mod.fit(s[pr_idx],
+                                 sigma=3,
+                                 center=cen_of_m,
+                                 amplitude=amp,
+                                 x=pr[pr_idx],
+                                 slope=0,
+                                 intercept=0)
                 val, err = (result.params['center'].value, result.params['center'].stderr)
                 if err is None:
                     err = np.nan
@@ -389,10 +407,11 @@ class TwoDim:
         y, yerr = np.array(l).T
         all_err_valid = np.isfinite(yerr).all()
         if all_err_valid:
-            r = WLS(y, add_constant(x), weights=1/yerr**2).fit()
+            r = WLS(y, add_constant(x), weights=1 / yerr**2).fit()
         else:
             r = OLS(y, add_constant(x)).fit()
-        return SingleCLSResult(x+pu[pu_idx].mean(), y, yerr, r.params[0], r, x, r.predict())
+        return SingleCLSResult(x + pu[pu_idx].mean(), y, yerr, r.params[0], r, x,
+                               r.predict())
 
     def cls(self, **cls_args) -> CLSResult:
         """Calculates the CLS for all 2d-spectra. The arguments are given
@@ -403,8 +422,8 @@ class TwoDim:
         intercept_errs = []
         import joblib
         with joblib.Parallel(n_jobs=-1) as p:
-            res: List[SingleCLSResult] = p(joblib.delayed(
-                self.single_cls)(t, **cls_args) for t in self.t)
+            res: List[SingleCLSResult] = p(
+                joblib.delayed(self.single_cls)(t, **cls_args) for t in self.t)
         for c in res:
             r = c.reg_result
             slopes.append(r.params[1])
@@ -412,12 +431,19 @@ class TwoDim:
             lines += [np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, r.predict()))]
             intercept.append(r.params[0])
             intercept_errs.append(r.bse[0])
-        ret = CLSResult(wt=self.t, slopes=np.array(slopes), slope_errors=np.array(slope_errs),
-                        lines=lines, intercepts=np.array(intercept), intercept_errors=np.array(intercept_errs))
+        ret = CLSResult(wt=self.t,
+                        slopes=np.array(slopes),
+                        slope_errors=np.array(slope_errs),
+                        lines=lines,
+                        intercepts=np.array(intercept),
+                        intercept_errors=np.array(intercept_errs))
         self.cls_result_ = ret
         return ret
 
-    def diag_and_antidiag(self, t: float, offset: Optional[float] = None, p: Optional[float] = None) -> DiagResult:
+    def diag_and_antidiag(self,
+                          t: float,
+                          offset: Optional[float] = None,
+                          p: Optional[float] = None) -> DiagResult:
         """
         Extracts the diagonal and anti-diagonal.
 
@@ -446,13 +472,13 @@ class TwoDim:
         d = self.spec2d[spec_i, ...].T
 
         if offset is None:
-            offset = self.pump_wn[np.argmin(
-                np.min(d, 1))] - self.probe_wn[np.argmin(np.min(d, 0))]
+            offset = self.pump_wn[np.argmin(np.min(d, 1))] - self.probe_wn[np.argmin(
+                np.min(d, 0))]
         if p is None:
             p = self.probe_wn[np.argmin(np.min(d, 0))]
 
         y_diag = self.probe_wn + offset
-        y_antidiag = -self.probe_wn + 2 * p + offset
+        y_antidiag = -self.probe_wn + 2*p + offset
 
         ts = self.t[spec_i] * np.ones_like(y_diag)
         diag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_diag)))
@@ -534,12 +560,15 @@ class TwoDim:
         kwargs:
             Additional arguments for the `np.savetxt` function.
         """
-        arr = np.block([[0, self.pump_wn],
-                        [self.probe_wn[:, None], self.spec2d[i]]])
-        np.savetxt(fname, arr, **kwargs,
+        arr = np.block([[0, self.pump_wn], [self.probe_wn[:, None], self.spec2d[i]]])
+        np.savetxt(fname,
+                   arr,
+                   **kwargs,
                    header='# pump axis along rows, probe axis along columns')
 
-    def background_correction(self, excluded_range: Tuple[float, float], deg: int = 3) -> None:
+    def background_correction(self,
+                              excluded_range: Tuple[float, float],
+                              deg: int = 3) -> None:
         """
         Fits and subtracts a background for each pump-frequency. Done for each
         waiting time. Does the subtraction inplace, e.g. modifies the dataset.
@@ -574,13 +603,13 @@ class TwoDim:
         min_pos = minimum_position(spec_i)
         max_pos = maximum_position(spec_i)
         if com > 0:
-            idx = slice(min_pos[0]-com, min_pos[0]+com+1)
+            idx = slice(min_pos[0] - com, min_pos[0] + com + 1)
             probe_min = np.average(self.probe_wn[idx], weights=spec_i.min(1)[idx])
-            idx = slice(max_pos[0]-com, max_pos[0]+com+1)
+            idx = slice(max_pos[0] - com, max_pos[0] + com + 1)
             probe_max = np.average(self.probe_wn[idx], weights=spec_i.max(1)[idx])
-            idx = slice(min_pos[1]-com, min_pos[1]+com+1)
+            idx = slice(min_pos[1] - com, min_pos[1] + com + 1)
             pump_min = np.average(self.pump_wn[idx], weights=spec_i.min(0)[idx])
-            idx = slice(max_pos[1]-com, max_pos[1]+com+1)
+            idx = slice(max_pos[1] - com, max_pos[1] + com + 1)
             pump_max = np.average(self.pump_wn[idx], weights=spec_i.max(0)[idx])
         else:
             probe_min = self.probe_wn[min_pos[0]]
@@ -588,10 +617,18 @@ class TwoDim:
             pump_min = self.pump_wn[min_pos[1]]
             pump_max = self.pump_wn[max_pos[1]]
         psamax = self.pump_wn[self.pump_slice_amp(t).argmax()]
-        return {'ProbeMin': probe_min, 'ProbeMax': probe_max, 'PSAMax': psamax,
-                'PumpMin': pump_min, 'PumpMax': pump_max, 'Anh': probe_min - probe_max}
+        return {
+            'ProbeMin': probe_min,
+            'ProbeMax': probe_max,
+            'PSAMax': psamax,
+            'PumpMin': pump_min,
+            'PumpMax': pump_max,
+            'Anh': probe_min - probe_max
+        }
 
-    def integrate_reg(self, pump_range: Tuple[float, float], probe_range: Tuple[float, float] = None) -> np.ndarray:
+    def integrate_reg(self,
+                      pump_range: Tuple[float, float],
+                      probe_range: Tuple[float, float] = None) -> np.ndarray:
         """
         Integrates the 2D spectra over a given range, using the trapezoidal
         rule.
@@ -626,7 +663,7 @@ class TwoDim:
         Used by the `fit_taus` method.
         """
         nt, npu, npr = self.spec2d.shape
-        basis = np.exp(-self.t[:, None]/taus[None, :])
+        basis = np.exp(-self.t[:, None] / taus[None, :])
         coef = np.linalg.lstsq(basis, self.spec2d.reshape(nt, -1), rcond=None)
         model = basis @ coef[0]
         resi = self.spec2d.reshape(nt, -1) - model
@@ -659,11 +696,15 @@ class TwoDim:
         model = fit_res[3].reshape(self.spec2d.shape)
         dsc = self.copy()
         dsc.spec2d = model
-        self.fit_exp_result_ = ExpFit2DResult(minimizer=res, model=dsc, residuals=resi, das=fit_res[0],
-                                              basis=fit_res[1], taus=fit_res[4])
+        self.fit_exp_result_ = ExpFit2DResult(minimizer=res,
+                                              model=dsc,
+                                              residuals=resi,
+                                              das=fit_res[0],
+                                              basis=fit_res[1],
+                                              taus=fit_res[4])
         return self.fit_exp_result_
 
-    def fit_gauss(self) -> GaussResult:
+    def fit_gauss(self, mode='both') -> GaussResult:
         """
         Fits the 2D spectra using two gaussians peaks.
         """
@@ -671,21 +712,26 @@ class TwoDim:
 
         mm = self.get_minmax(0.3)
         psa = self.pump_slice_amp(0.3)
-        gmod = lmfit.models.GaussianModel()
-        gres = gmod.fit(psa, x=self.pump_wn)
+        gmod = lmfit.models.GaussianModel() + lmfit.models.ConstantModel()
+        gres = gmod.fit(psa, x=self.pump_wn, center=self.pump_wn[np.argmax(psa)])
         results = []
         val_dict: Dict[str, list] = defaultdict(list)
         fit_out = self.copy()
-
-        mod = lmfit.Model(two_gauss2D_shared, independent_vars=['pu', 'pr'])
-        mod.set_param_hint('x01', min=self.pump_wn.min(),
-                           max=self.pump_wn.max(), value=mm['PumpMax'])
+        if mode == 'both':
+            func = two_gauss2D_shared
+        elif mode == 'single':
+            func = single_gauss
+        mod = lmfit.Model(func, independent_vars=['pu', 'pr'])
+        mod.set_param_hint('x01',
+                           min=self.pump_wn.min(),
+                           max=self.pump_wn.max(),
+                           value=mm['PumpMax'])
         spec = self.data_at(t=0.3)
         mod.set_param_hint('A0', min=0, value=-spec.min())
-        mod.set_param_hint('ah', min=0, value=mm['Anh'])
+        if 'ah' in mod.param_names:
+            mod.set_param_hint('ah', min=0, value=mm['Anh'])
         mod.set_param_hint('sigma_pu', min=0, value=gres.params['sigma'].value)
-        mod.set_param_hint('sigma_pr', min=0,
-                           value=gres.params['sigma'].value/2)
+        mod.set_param_hint('sigma_pr', min=0, value=gres.params['sigma'].value)
         mod.set_param_hint('corr', value=0.0, min=-1, max=1)
 
         last_params: Union[dict, lmfit.Parameters] = {}
@@ -697,10 +743,13 @@ class TwoDim:
             p = res.params
             for pname in p:
                 val_dict[pname].append(p[pname].value)
-                val_dict[pname+'_stderr'].append(p[pname].stderr)
+                val_dict[pname + '_stderr'].append(p[pname].stderr)
             fit_out.spec2d[i] = res.best_fit.reshape(self.spec2d.shape[1:])
             last_params = res.params.copy()
 
         val_dict_arr = {k: np.array(v) for k, v in val_dict.items()}
-        return GaussResult(results=results, fit_out=fit_out, slopes=val_dict_arr['corr'],
-                           slope_errors=val_dict_arr['corr_stderr'], wt=self.t)
+        return GaussResult(results=results,
+                           fit_out=fit_out,
+                           slopes=val_dict_arr['corr'],
+                           slope_errors=val_dict_arr['corr_stderr'],
+                           wt=self.t)
