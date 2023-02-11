@@ -26,7 +26,7 @@ def gauss_step(x, amp: float, center: float, sigma: float):
     amp : float
         Amplitude of the step
     center : float
-        Position of the step 
+        Position of the step
     sigma : float
         Width of the step
 
@@ -38,20 +38,20 @@ def gauss_step(x, amp: float, center: float, sigma: float):
     return amp * 0.5 * (1 + erf((x - center) / sigma / np.sqrt(2)))
 
 
-def gauss2d(pu, pr, A0, x01, sigma_pu, sigma_pr, corr):
+def gauss2d(pu, pr, A0, x_pu, x_pr, sigma_pu, sigma_pr, corr):
     pr = pr[:, None]
     pu = pu[None, :]
-    c_pr = ((pr-x01)/sigma_pr)
-    c_pu = ((pu-x01)/sigma_pu)
-    y = -A0*np.exp(-1/(2-2*corr**2)*(c_pr**2-2*corr*c_pr*c_pu+c_pu**2))
+    c_pr = ((pr-x_pr)/sigma_pr)
+    c_pu = ((pu-x_pu)/sigma_pu)
+    y = A0*np.exp(-1/(2-2*corr**2)*(c_pr**2-2*corr*c_pr*c_pu+c_pu**2))
     return y
 
 
-def two_gauss2D_shared(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr):
-    y = gauss2d(pu, pr, A0, x01, sigma_pu, sigma_pr, corr)
+def two_gauss2D_shared(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr, offset=0, k=1):
+    y = gauss2d(pu, pr, A0, x01, x01, sigma_pu, sigma_pr, corr)
     x12 = x01 - ah
-    y -= gauss2d(pu, pr, A0, x12, sigma_pu, sigma_pr, corr)
-    return y
+    y += gauss2d(pu, pr, -k*A0, x01, x12, sigma_pu, sigma_pr, corr)
+    return y + offset
 
 
 def two_gauss2D(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr, A1, sigma_pu2, sigma_pr2, corr2):

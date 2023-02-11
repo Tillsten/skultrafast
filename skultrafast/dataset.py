@@ -1,9 +1,9 @@
 import functools
 import typing
+import warnings
 from collections import namedtuple
 from pathlib import Path
-from typing import Callable, List, Optional, Type, Union, Iterable, Dict, cast
-import warnings
+from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 
 import attr
 import lmfit
@@ -11,16 +11,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from lmfit.minimizer import MinimizerResult
 from matplotlib.lines import Line2D
-from scipy.interpolate import interp1d, UnivariateSpline
-
+from scipy.interpolate import UnivariateSpline, interp1d
 
 import skultrafast.dv as dv
 import skultrafast.plot_helpers as ph
-from skultrafast import filter
-from skultrafast import zero_finding, fitter, lifetimemap
+from skultrafast import filter, fitter, lifetimemap, zero_finding
 from skultrafast.data_io import save_txt
 from skultrafast.kinetic_model import Model
-from skultrafast.utils import sigma_clip, linreg_std_errors
+from skultrafast.utils import linreg_std_errors, sigma_clip
 
 ndarray: Type[np.ndarray] = np.ndarray
 
@@ -90,7 +88,7 @@ class FitExpResult:
         if y0 is None:
             y0 = np.zeros(len(taus))
             y0[0] = 1
-        comps = list(map(str, model.get_compartments()))
+
         func = model.build_mat_func()
         K = func(*kvals, **QYs)
         vals, vecs = np.linalg.eig(K)
@@ -165,10 +163,8 @@ class TimeResSpec:
         auto_plot : bool
             When True, some function will display their result automatically.
         """
-
-        assert (
-            t.shape[0], wl.shape[0]
-        ) == data.shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
+        correct_shape = (t.shape[0], wl.shape[0]) == data.shape
+        assert correct_shape, f"Data shapes do not match: {t.shape}, {wl.shape} != {data.shape}"
         t = t.copy()
         wl = wl.copy()
         data = data.copy()
@@ -413,7 +409,7 @@ class TimeResSpec:
         self.data = np.ma.MaskedArray(self.data)
         self.data[:, idx] = np.ma.masked
 
-    def mask_freqs(self, freq_ranges=None, invert_sel=False, freq_unit=None):
+    def mask_freqs(self, freq_ranges, invert_sel=False, freq_unit=None):
         """
         Mask channels inside of given frequency ranges.
 
@@ -780,6 +776,7 @@ class TimeResSpec:
             ds = self.cut_time(upper=from_t)
         f = fitter.Fitter(ds, model_coh=model_coh, model_disp=1)
         if use_error:
+            assert self.err is not None
             f.weights = 1 / self.err
         f.res(x0)
 

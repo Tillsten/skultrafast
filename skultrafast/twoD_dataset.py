@@ -45,7 +45,7 @@ class SingleCLSResult:
 
 @attr.s(auto_attribs=True)
 class FFCFResult:
-    """Baseclass for FFCF determination methods. 
+    """Baseclass for FFCF determination methods.
 
     For backwards compatibility, the values are always called slopes"""
 
@@ -672,7 +672,7 @@ class TwoDim:
         mm = self.get_minmax(0.3)
         psa = self.pump_slice_amp(0.3)
         gmod = lmfit.models.GaussianModel()
-        gres = gmod.fit(psa, x=self.pump_wn)
+        gres = gmod.fit(psa, x=self.pump_wn, center=mm['PSAMax'], sigma=2)
         results = []
         val_dict: Dict[str, list] = defaultdict(list)
         fit_out = self.copy()
@@ -680,15 +680,17 @@ class TwoDim:
         mod = lmfit.Model(two_gauss2D_shared, independent_vars=['pu', 'pr'])
         mod.set_param_hint('x01', min=self.pump_wn.min(),
                            max=self.pump_wn.max(), value=mm['PumpMax'])
-        spec = self.data_at(t=0.3)
-        mod.set_param_hint('A0', min=0, value=-spec.min())
+        spec = self.data_at(t=0.5)
+        mod.set_param_hint('A0', max=0, value=spec.min())
+        mod.set_param_hint('k', min=0, value=1, vary=False)
         mod.set_param_hint('ah', min=0, value=mm['Anh'])
         mod.set_param_hint('sigma_pu', min=0, value=gres.params['sigma'].value)
         mod.set_param_hint('sigma_pr', min=0,
                            value=gres.params['sigma'].value/2)
-        mod.set_param_hint('corr', value=0.0, min=-1, max=1)
+        mod.set_param_hint('corr', value=0.4, min=0, max=1)
 
-        last_params: Union[dict, lmfit.Parameters] = {}
+
+        last_params: Union[dict, lmfit.Parameters] = {'k': 1, 'offset': 0}
 
         for i, t in enumerate(self.t):
             spec = self.data_at(t=t)
@@ -697,7 +699,9 @@ class TwoDim:
             p = res.params
             for pname in p:
                 val_dict[pname].append(p[pname].value)
-                val_dict[pname+'_stderr'].append(p[pname].stderr)
+                err = p[pname].stderr or np.inf
+
+                val_dict[pname+'_stderr'].append(err)
             fit_out.spec2d[i] = res.best_fit.reshape(self.spec2d.shape[1:])
             last_params = res.params.copy()
 
