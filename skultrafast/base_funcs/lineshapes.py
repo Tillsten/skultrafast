@@ -9,11 +9,11 @@ from scipy.special import erf
 
 
 def lorentz(x, A, w, xc):
-    return A / (1 + ((x - xc) / w)**2)
+    return A / (1 + ((x-xc) / w)**2)
 
 
 def gaussian(x, A, w, xc):
-    return A * np.exp(((x - xc) / w)**2)
+    return A * np.exp(((x-xc) / w)**2)
 
 
 def gauss_step(x, amp: float, center: float, sigma: float):
@@ -35,7 +35,7 @@ def gauss_step(x, amp: float, center: float, sigma: float):
     array
         The step functions
     """
-    return amp * 0.5 * (1 + erf((x - center) / sigma / np.sqrt(2)))
+    return amp * 0.5 * (1 + erf((x-center) / sigma / np.sqrt(2)))
 
 
 def gauss2d(pu, pr, A0, x_pu, x_pr, sigma_pu, sigma_pr, corr):
@@ -54,7 +54,8 @@ def two_gauss2D_shared(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr, offset=0, 
     return y + offset
 
 
-def two_gauss2D(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr, A1, sigma_pu2, sigma_pr2, corr2):
+def two_gauss2D(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr, A1, sigma_pu2, sigma_pr2,
+                corr2):
     y = gauss2d(pu, pr, A0, x01, sigma_pu, sigma_pr, corr)
     x12 = x01 - ah
     y -= gauss2d(pu, pr, A1, x12, sigma_pu2, sigma_pr2, corr2)

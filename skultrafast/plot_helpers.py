@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import skultrafast.dv as dv
+from skultrafast.unit_conversions import fs2cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import Normalize, SymLogNorm
 import matplotlib.cbook as cbook
@@ -545,7 +546,7 @@ def plot_fft(x, y, min_amp=0.2, order=1, padding=2, power=1, ax=None):
     f = abs(np.fft.fft(y, padding * y.size))**power
     freqs = np.fft.fftfreq(padding * x.size, x[1] - x[0])
     n = freqs.size // 2 + 1
-    fr_cm = -dv.fs2cm(1000 / freqs[n:])
+    fr_cm = -fs2cm(1000 / freqs[n:])
 
     ax.plot(fr_cm, f[n:])
     ax.set_xlabel('Wavenumber / cm$^{-1}$')
