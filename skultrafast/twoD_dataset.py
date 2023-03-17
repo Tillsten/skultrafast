@@ -18,7 +18,7 @@ from skultrafast import dv, plot_helpers
 from skultrafast.dataset import TimeResSpec
 from skultrafast.twoD_plotter import TwoDimPlotter
 from skultrafast.utils import inbetween, LinRegResult
-from skultrafast.base_funcs.lineshapes import gauss2d, two_gauss2D_shared, two_gauss2D, single_gauss
+from skultrafast.base_funcs.lineshapes import gauss2d, two_gauss2D_shared, two_gauss2D
 
 PathLike = Union[str, bytes, os.PathLike]
 
@@ -215,7 +215,7 @@ class TwoDim:
         """
         Makes a copy of the dataset.
         """
-        cpy = attr.evolve(self)
+        cpy = TwoDim(self.t, self.pump_wn, self.probe_wn, self.spec2d)
         cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
 
@@ -323,12 +323,16 @@ class TwoDim:
         ----------
         t : float
             Delay time of the spectrum to analyse
-        pr_range : float, optional
+        pr_range : float or float, optional
             How many wavenumbers away from the maximum to use for
-            determining the exact position, by default 9
+            determining the exact position, by default 9, resulting 
+            a total range of 18 wavenumbers. Also accepts a tuple,
+            which is interpreted as (lower, upper) range.
         pu_range : float, optional
             The range around the pump-maxima used for calculating
-            the CLS.
+            the CLS. If given a float, the range is calculated
+            as (max - pu_range, max + pu_range). If given a tuple,
+            it is interpreted as (lower, upper) range.
         mode : ('neg', 'pos'), optional
             negative or positive maximum, by default 'neg'
         method: ('com', 'quad', 'fit')
@@ -364,14 +368,13 @@ class TwoDim:
                 pr_idx = inbetween(pr, pr_range[0], pr_range[1])
             cen_of_m = np.average(pr[pr_idx], weights=s[pr_idx])
             if method == 'fit':
-                mod = lmfit.models.GaussianModel() + lmfit.models.ConstantModel()
+                mod = lmfit.models.GaussianModel()
                 mod.set_param_hint('center', min=pr[pr_idx].min(), max=pr[pr_idx].max())
                 amp = np.trapz(s[pr_idx], pr[pr_idx])
                 result = mod.fit(s[pr_idx],
                                  sigma=3,
                                  center=cen_of_m,
                                  amplitude=amp,
-                                 c=0,
                                  x=pr[pr_idx])
                 val, err = (result.params['center'].value, result.params['center'].stderr)
                 if err is None:

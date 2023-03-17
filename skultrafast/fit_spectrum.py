@@ -4,10 +4,10 @@ Module to fit the whole spektrum by peak functions.
 """
 
 from __future__ import print_function
-import scipy.optimize as opt
 from scipy.special import wofz
+from skultrafast.utils import sigma_clip
 from . import unit_conversions
-from . import dv
+
 import numpy as np
 import lmfit
 pi = np.pi
@@ -85,18 +85,13 @@ def fit_spectrum(x,
             else:
                 paras.add('Amp_' + si + str(j), A, max=amp_bounds[1], min=0)
         paras.add('Angle_' + si, 54.2, max=90, min=0)
-        paras.add('x0_' + si, x0), print(x0)
+        paras.add('x0_' + si, x0)
         paras.add('width_' + si, w, min=wmin, max=wmax)
     p = paras
-    #print(p)
     x0 = np.array([i.value for i in p.values()])
 
-    #up_bounds = np.array([i.max for i in p.values()])
-    #min_bounds = np.array([i.min for i in p.values()])
-
     def residuals(p, x, y, peak_func):
-        fit = np.array([i.value for i in p.values()]).reshape((3 + n, -1), order='f')
-        #fit = p.reshape((3+n, -1), order='f')
+        fit = np.array([i.value for i in p.values()]).reshape((3 + n, -1), order='F')
         base_peak = peak_func(x, np.ones_like(fit[0, :]), *fit[[-2, -1], :])
 
         dichro = unit_conversions.angle2dichro(fit[-3, :])
@@ -127,15 +122,6 @@ def fit_spectrum(x,
     print(x.shape)
     mini = lmfit.Minimizer(residuals, paras, fcn_args=(x, y, peak_func))
     result = mini.leastsq()
-    #result = mini.scalar_minimize('BFGS')
-    #result = opt.least_squares(residuals, x0, bounds=(min_bounds, up_bounds),
-    #                           args=(x, y, peak_func), jac='3-point')
-    #for k, i in enumerate(paras):
-    #    paras[i].value = result.x[k]
-    return result, residuals, mini  # (up_bounds,  min_bounds)
-
-
-import astropy.stats as st
 
 
 def bin_every_n(x, start_idx, n=10, reduction_func=lambda x: np.mean(x, 0)):
@@ -144,5 +130,5 @@ def bin_every_n(x, start_idx, n=10, reduction_func=lambda x: np.mean(x, 0)):
         x = x[:, None]
     for i in range(start_idx, x.shape[0], n):
         end_idx = min(i + n, x.shape[0])
-        out.append(st.sigma_clip(x[i:end_idx, :], sigma=2.5, maxiters=1, axis=0).mean(0))
+        out.append(sigma_clip(x[i:end_idx, :], sigma=2.5, axis=0).mean(0))
     return np.array(out)

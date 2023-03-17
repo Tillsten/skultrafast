@@ -108,6 +108,25 @@ ds1d.plot.spec(0.5, 1, 7, add_legend=True, ax=ax0)
 ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
 
 # %%
+from skultrafast.quickcontrol import QC1DSpec
+
+data1d_info_path = list(p.glob('*#319.info'))[0]
+dsp = QC1DSpec(data1d_info_path).make_pol_ds()
+from skultrafast.utils import poly_bg_correction
+
+poly_bg_correction(dsp.wn, dsp.para.data, 40, 0, 1)
+poly_bg_correction(dsp.wn, dsp.perp.data, 40, 0, 1)
+
+dsp = dsp.apply_filter('gaussian', (0, 0.8))
+
+dsp.plot.spec(0.5, 1, 7, 100, add_legend=True)
+
+# %%
+dsc = dsp.cut_freq(0, 2145).cut_freq(2180, 1e8)
+dsc.fit_exp([0, 0, 1, 10, 300], from_t=1, fix_last_decay=False)
+dsc.plot.das()
+
+# %%
 # Plotting a single pixel
 # -----------------------
 #
@@ -274,7 +293,11 @@ res_cls
 
 r1 = res_gauss.params['a_decay'].value / res_gauss.params['b_decay'].value
 r2 = res_cls.params['a_decay'].value / res_cls.params['b_decay'].value
-# Both ratios and and time-constants are in good agreement.
+# %%
+# Both ratios and and time-constants are in good agreement. The absolute
+# amplitudes are not, but this is expected, since the gaussian fit ignores
+# motional narrowing since it kind of ignores the lorentzian part of the
+# lineshape.
 print('Gauss: %.2f, Cls: %.2f' % (r1, r2))
 
 # %%
@@ -371,97 +394,3 @@ exp_result.model.plot.trans(2165, [2162, 2130], symlog=True, ax=ax, c='k')
 # the path to an directory.
 
 # ds.save_txt(PATH)
-
-import lmfit
-from collections import defaultdict
-from skultrafast.twoD_dataset import gauss2d, two_gauss2D_shared, GaussResult
-
-
-def gauss2d(pu, pr, A0, x_pr, x_pu, sigma_pu, sigma_pr, corr):
-    print(x_pr, x_pu)
-    pr = pr[:, None]
-    pu = pu[None, :]
-    c_pr = ((pr-x_pr) / sigma_pr)
-    c_pu = ((pu-x_pu) / sigma_pu)
-    y = -A0 * np.exp(-1 / (2 - 2 * corr**2) * (c_pr**2 - 2*corr*c_pr*c_pu + c_pu**2))
-    #plt.imshow(y)
-    #raise
-    return y
-
-
-def single_gauss(pu, pr, A0, x01, sigma_pu, sigma_pr, corr):
-    return gauss2d(pu, pr, A0, x01, x01, sigma_pu, sigma_pr, corr)
-
-
-def two_gauss2D_shared(pu, pr, A0, x01, ah, sigma_pu, sigma_pr, corr):
-    y = gauss2d(pu, pr, A0, x01, x01, sigma_pu, sigma_pr, corr)
-    x12 = x01 - ah
-    y += gauss2d(pu, pr, -A0, x12, x01, sigma_pu, sigma_pr, corr)
-    return y
-
-
-def fit_gauss(self, mode='both') -> GaussResult:
-    """
-    Fits the 2D spectra using two gaussians peaks.
-    """
-    # from skultrafast.utils import gauss2D
-
-    psa = self.pump_slice_amp(0.3)
-    gmod = lmfit.models.GaussianModel() + lmfit.models.ConstantModel()
-    gres = gmod.fit(psa, x=self.pump_wn, center=self.pump_wn[np.argmax(psa)])
-
-    results = []
-    val_dict: Dict[str, list] = defaultdict(list)
-    fit_out = self.copy()
-    if mode == 'both':
-        func = two_gauss2D_shared
-    elif mode == 'single':
-        func = gauss2d
-    mod = lmfit.Model(func, independent_vars=['pu', 'pr'])
-    mod.set_param_hint(
-        'x_pu',
-        #min=self.pump_wn.min(),
-        #max=self.pump_wn.max(),
-        value=gres.params['center'].value)
-    mod.set_param_hint(
-        'x_pr',
-        #min=self.pump_wn.min(),
-        #max=self.pump_wn.max(),
-        value=gres.params['center'].value - 20)
-    spec = self.data_at(t=0.3)
-    mod.set_param_hint('A0', value=-np.abs(spec).max())
-    if 'ah' in mod.param_names:
-        mm = self.get_minmax(0.3)
-        mod.set_param_hint('ah', min=0, value=mm['Anh'])
-    mod.set_param_hint('sigma_pu', min=0, value=6)
-    mod.set_param_hint('sigma_pr', min=0, value=6)
-    mod.set_param_hint('corr', value=0.3, min=-1, max=1)
-
-    last_params: Union[dict, lmfit.Parameters] = {}
-
-    for i, t in enumerate(self.t):
-        spec = self.data_at(t=t)
-        res = mod.fit(spec, pu=self.pump_wn, pr=self.probe_wn, **last_params)
-        results.append(res)
-        p = res.params
-        for pname in p:
-            val_dict[pname].append(p[pname].value)
-            val_dict[pname + '_stderr'].append(p[pname].stderr)
-        fit_out.spec2d[i] = res.best_fit.reshape(self.spec2d.shape[1:])
-        last_params = res.params.copy()
-
-    val_dict_arr = {k: np.array(v) for k, v in val_dict.items()}
-    return GaussResult(results=results,
-                       fit_out=fit_out,
-                       slopes=val_dict_arr['corr'],
-                       slope_errors=val_dict_arr['corr_stderr'],
-                       wt=self.t)
-
-
-fr_single = fit_gauss(ds.select_range((2145, 2180), (0, 2145)), mode='single')
-fr_both = fit_gauss(ds, mode='both')
-fr_single.plot_cls(symlog=True)
-fr_both.plot_cls()
-fr  # %%
-#Please reopen the issues, since this this changed the behavior without deprecation warning.
-# %%

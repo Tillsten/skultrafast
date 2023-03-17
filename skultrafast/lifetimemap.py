@@ -6,16 +6,15 @@ from sklearn import linear_model as lm
 from skultrafast.base_funcs.base_functions_np import _fold_exp, _coh_gaussian
 
 
-def _make_base(tup, taus, w=0.1, add_coh=True, add_const=False, norm=False):
+def _make_base(tup, taus:np.ndarray, w=0.1, add_coh:bool =True, add_const: bool=False, norm: bool =False):
     if add_const:
-        taus = np.hstack((taus, 10000))
-    out = _fold_exp(tup.t.T[:, None], w, 0, taus[None, :]).squeeze()
+        taus = np.hstack((taus, 1000000)) #type: ignore
+    out: np.ndarray = _fold_exp(tup.t.T[:, None], w, 0, taus[None, :]).squeeze()
     if add_const:
-        print(out.shape)
         out[:, -1] *= 1000
     if add_coh:
         out = np.hstack(
-            (out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) * 10
+            (out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) * 10  #type: ignore
     if norm:
         out = out / np.abs(out).max(0)
 
@@ -66,7 +65,7 @@ def start_ltm(tup,
         mod = lm.ElasticNetCV(**kwargs, l1_ratio=0.98)
 
     mod.fit_intercept = not add_const
-    mod.warm_start = 1
+    mod.warm_start = True
 
     coefs = np.empty((X.shape[1], tup.data.shape[1]))
     fit = np.empty_like(tup.data)
@@ -86,10 +85,10 @@ def start_ltm(tup,
 def start_ltm_multi(tup, taus, w=0.1, alpha=0.001, **kwargs):
     X = _make_base(tup, taus, w=w)
     mod = lm.MultiTaskElasticNet(alpha=alpha, **kwargs)
-    mod.max_iter = 5e4
-    mod.verbose = 0
-    mod.fit_intercept = 0
-    mod.normalize = 1
+    mod.max_iter = 50_000
+    mod.verbose = True
+    mod.fit_intercept = False
+    mod.normalize = True
     mod.fit(X, tup.data)
 
     fit = mod.predict(X)

@@ -6,7 +6,7 @@ Created on Tue May 27 15:35:22 2014
 """
 import string
 import math
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import matplotlib.pyplot as plt
 import numpy as np
 import skultrafast.dv as dv
@@ -16,6 +16,7 @@ from matplotlib.colors import Normalize, SymLogNorm
 import matplotlib.cbook as cbook
 from scipy import interpolate
 import lmfit
+
 ma = np.ma
 
 linewidth = 2
@@ -177,7 +178,10 @@ def make_angle_plot(wl, t, para, senk, t_range):
     ax3 = plt.twinx()
     ax3.plot(wl, ang, lw=0)
     ax2.invert_xaxis()
-    def f(x): return "%.1f" % (to_dichro(float(x) / 180. * np.pi))
+
+    def f(x):
+        return "%.1f" % (to_dichro(float(x) / 180. * np.pi))
+
     ax2.set_ylim(0, 90)
 
     def to_angle(d):
@@ -577,6 +581,7 @@ def plot_coef_spec(taus, wl, coefs, div):
 
 
 class MidPointNorm(Normalize):
+
     def __init__(self, midpoint=0, vmin=None, vmax=None, clip=False):
         Normalize.__init__(self, vmin, vmax, clip)
         self.midpoint = midpoint
@@ -744,13 +749,16 @@ def nsf(num, n=1):
         return '%4.2f' % num
 
 
-def error_string(val: float, err: float, valname: Optional[str] = None, unit: Optional[str] = None) -> str:
+def error_string(val: float,
+                 err: float,
+                 valname: Optional[str] = None,
+                 unit: Optional[str] = None) -> str:
     """Returns a string with the value and error with correct siginificant figures"""
     digits = np.floor(np.log10(err))
-    rounded_up = np.ceil(err*10**(-digits))
+    rounded_up = np.ceil(err * 10**(-digits))
     fmt = f"{{:.{int(-digits)}f}}"
     val_str = fmt.format(val)
-    err_str = fmt.format(rounded_up*10**digits)
+    err_str = fmt.format(rounded_up * 10**digits)
     s = f"{val_str} ± {err_str}"
     if valname is not None:
         s = f"{valname} = {s}"
@@ -759,7 +767,9 @@ def error_string(val: float, err: float, valname: Optional[str] = None, unit: Op
     return s
 
 
-def error_string_lmfit(param: lmfit.Parameter, valname: Optional[str] = None, unit: Optional[str] = None) -> str:
+def error_string_lmfit(param: lmfit.Parameter,
+                       valname: Optional[str] = None,
+                       unit: Optional[str] = None) -> str:
     """Returns a string with the value and error with correct siginificant figures"""
     return error_string(param.value, param.stderr, valname, unit)
 
@@ -869,16 +879,16 @@ def ci_plot(ci_dict, trace):
         Trace dict
     """
     n = len(ci_dict)
-    fig, ax = plt.subplots(n, 1, figsize=(1.5, n*0.8), gridspec_kw=dict(hspace=0.5))
+    fig, ax = plt.subplots(n, 1, figsize=(1.5, n * 0.8), gridspec_kw=dict(hspace=0.5))
 
     for i, (pname, vals) in enumerate(ci_dict.items()):
         para_trace = trace[pname]
         idx = np.argsort(para_trace[pname])
 
-        center = vals[len(vals)//2][1]
+        center = vals[len(vals) // 2][1]
         arr = np.array(vals)
         b = -.2
-        x, y = trace[pname][pname][idx], 1-trace[pname]['prob'][idx]
+        x, y = trace[pname][pname][idx], 1 - trace[pname]['prob'][idx]
         u, l = arr[[0, -1], 1]
 
         r = (x > u) & (x < l)
@@ -887,12 +897,11 @@ def ci_plot(ci_dict, trace):
         un, idx = np.unique(x, return_index=True)
 
         yn = np.interp(xn, x[idx], y[idx])
-        yn = interpolate.interp1d(x[idx], y[idx], 'quadratic',
-                                  fill_value=0)(xn)
+        yn = interpolate.interp1d(x[idx], y[idx], 'quadratic', fill_value=0)(xn)
         ax[i].plot(arr[[0, -1], 1], [b, b], lw=1, c='k')
         ax[i].plot(arr[[1, -2], 1], [b, b], lw=3, c='k')
         ax[i].plot(arr[[2, -3], 1], [b, b], lw=5, c='k')
-        ax[i].plot(center,  b, 'wx')
+        ax[i].plot(center, b, 'wx')
         ax[i].plot(x[r], y[r], 'o', ms=3, mec='None', clip_on=False)
         ax[i].fill_between(xn, 0, yn, lw=0, alpha=0.8)
         ax[i].set_ylim(-.35, 1.03)
@@ -903,12 +912,24 @@ def ci_plot(ci_dict, trace):
     fig.tight_layout()
 
 
+def get_fonts() -> List[str]:
+    import matplotlib.font_manager
+    fpaths = matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
+    families = []
+    for i in fpaths:
+        f = matplotlib.font_manager.get_font(i)
+        families.append(f.name)
+    return families
+
+
 def enable_style():
     plt.rcParams['figure.facecolor'] = 'w'
     plt.rcParams['figure.dpi'] = 120
     plt.rcParams['figure.figsize'] = (3.2, 2.3)
     plt.rcParams['font.size'] = 9
-    plt.rcParams['font.family'] = ['Arial', 'Helvetica', 'Lato']
+    s = set('Arial', 'Helvetica').union(set(get_fonts()))
+    if len(s) > 0:
+        plt.rcParams['font.family'] = list(s)
     plt.rcParams['text.hinting'] = 'either'
     plt.rcParams['savefig.pad_inches'] = 0.05
     plt.rcParams['savefig.bbox'] = 'tight'
