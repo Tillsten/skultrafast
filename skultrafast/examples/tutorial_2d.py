@@ -45,14 +45,14 @@ infos
 # and open it by instancing an `QC2DSpec`-class. Given the info-file, the class
 # collects all necessary data from the folder. It is also responsible to turn
 # the saved data, which are still inferogramms, into 2D-spectra. This process
-# also includes some preprocessing. Below we we apply 4 times upsampling of pump
+# also includes some preprocessing. Below we we apply 2 times upsampling of pump
 # axis and use 10 pixel left and right to estimate and subtract an background
 # before taking the FFT. For apodization, we are use the default hamming window.
 
 plot_helpers.enable_style()
 
 data2d_info_path = list(p.glob('*#320.info'))[0]
-qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=4, probe_filter=0.5)
+qc_file = QC2DSpec(data2d_info_path, bg_correct=(10, 10), upsampling=2, probe_filter=0.5)
 
 # %%
 # To create a dataset to work with form the raw data, we call the `make_ds`
@@ -72,7 +72,8 @@ ds_iso.pump_wn *= 2162.5 / 2159.35  # correct pump calibration
 #
 # To start and to get an overview, we plot a contour-plot at 1 ps. Like for the
 # `TimeResSpec`-class, plotting functions are accessible under the plot
-# attribute.
+# attribute. In general, the plotting functions return all artists which were
+# created. This is useful for further customization.
 
 ds_iso.plot.contour(1, 2, 4)
 
@@ -106,25 +107,6 @@ ds1d = ds.integrate_pump()
 fig, (ax0, ax1) = plt.subplots(2, figsize=(3, 4))
 ds1d.plot.spec(0.5, 1, 7, add_legend=True, ax=ax0)
 ds1d.plot.trans(2160, 2135, add_legend=True, ax=ax1)
-
-# %%
-from skultrafast.quickcontrol import QC1DSpec
-
-data1d_info_path = list(p.glob('*#319.info'))[0]
-dsp = QC1DSpec(data1d_info_path).make_pol_ds()
-from skultrafast.utils import poly_bg_correction
-
-poly_bg_correction(dsp.wn, dsp.para.data, 40, 0, 1)
-poly_bg_correction(dsp.wn, dsp.perp.data, 40, 0, 1)
-
-dsp = dsp.apply_filter('gaussian', (0, 0.8))
-
-dsp.plot.spec(0.5, 1, 7, 100, add_legend=True)
-
-# %%
-dsc = dsp.cut_freq(0, 2145).cut_freq(2180, 1e8)
-dsc.fit_exp([0, 0, 1, 10, 300], from_t=1, fix_last_decay=False)
-dsc.plot.das()
 
 # %%
 # Plotting a single pixel
