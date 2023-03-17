@@ -88,3 +88,4 @@ class SingleSpecPlotter:
         ax.set_xlabel(ds.unit_freq)
         ax.set_ylabel(ds.unit_signal)
         ax.minorticks_on()
+        

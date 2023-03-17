@@ -914,11 +914,14 @@ def ci_plot(ci_dict, trace):
 
 def get_fonts() -> List[str]:
     import matplotlib.font_manager
-    fpaths = matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
     families = []
-    for i in fpaths:
-        f = matplotlib.font_manager.get_font(i)
-        families.append(f.family_name)
+    try:
+        fpaths = matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
+        for i in fpaths:
+            f = matplotlib.font_manager.get_font(i)
+            families.append(f.family_name)
+    except RuntimeError:
+        families = []
     return families
 
 
