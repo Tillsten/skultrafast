@@ -927,7 +927,7 @@ def enable_style():
     plt.rcParams['figure.dpi'] = 120
     plt.rcParams['figure.figsize'] = (3.2, 2.3)
     plt.rcParams['font.size'] = 9
-    s = set('Arial', 'Helvetica').union(set(get_fonts()))
+    s = set(('Arial', 'Helvetica')).union(set(get_fonts()))
     if len(s) > 0:
         plt.rcParams['font.family'] = list(s)
     plt.rcParams['text.hinting'] = 'either'
