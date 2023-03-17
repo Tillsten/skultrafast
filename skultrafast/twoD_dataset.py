@@ -722,17 +722,17 @@ class TwoDim:
         fit_out = self.copy()
 
         mod = lmfit.Model(two_gauss2D_shared, independent_vars=['pu', 'pr'])
-        mod.set_param_hint('x01', min=self.pump_wn.min(),
-                           max=self.pump_wn.max(), value=mm['PumpMax'])
+        mod.set_param_hint('x01',
+                           min=self.pump_wn.min(),
+                           max=self.pump_wn.max(),
+                           value=mm['PumpMax'])
         spec = self.data_at(t=0.5)
         mod.set_param_hint('A0', max=0, value=spec.min())
         mod.set_param_hint('k', min=0, value=1, vary=False)
         mod.set_param_hint('ah', min=0, value=mm['Anh'])
         mod.set_param_hint('sigma_pu', min=0, value=gres.params['sigma'].value)
-        mod.set_param_hint('sigma_pr', min=0,
-                           value=gres.params['sigma'].value/2)
+        mod.set_param_hint('sigma_pr', min=0, value=gres.params['sigma'].value / 2)
         mod.set_param_hint('corr', value=0.4, min=0, max=1)
-
 
         last_params: Union[dict, lmfit.Parameters] = {'k': 1, 'offset': 0}
 
