@@ -918,7 +918,7 @@ def get_fonts() -> List[str]:
     families = []
     for i in fpaths:
         f = matplotlib.font_manager.get_font(i)
-        families.append(f.name)
+        families.append(f.family_name)
     return families
 
 
