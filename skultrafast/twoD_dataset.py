@@ -345,8 +345,14 @@ class TwoDim:
 
         Returns
         -------
-        (x, y, r)
-            Return x, y and the regression result r
+        Returns SingleCLSResult object with attributes:
+                        pump_wn
+                        max_pos
+                        max_pos_err
+                        slope
+                        reg_result
+                        recentered_pump_wn
+                        linear_fit
         """
         pu = self.pump_wn
         pr = self.probe_wn
