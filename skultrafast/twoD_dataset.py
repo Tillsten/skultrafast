@@ -179,6 +179,8 @@ class TwoDim:
     "Array with the data, shape must be (t.size, wn_probe.size, wn_pump.size)"
     info: Dict = {}
     "Meta Info"
+    single_cls_result_: Optional[SingleCLSResult] = None
+    "Contains the data from a Single CLS analysis"
     cls_result_: Optional[CLSResult] = None
     "Contains the data from a CLS analysis"
     plot: 'TwoDimPlotter' = attr.Factory(TwoDimPlotter, True)  # typing: Ignore
@@ -343,8 +345,14 @@ class TwoDim:
 
         Returns
         -------
-        (x, y, r)
-            Return x, y and the regression result r
+        Returns SingleCLSResult object with attributes:
+                        pump_wn
+                        max_pos
+                        max_pos_err
+                        slope
+                        reg_result
+                        recentered_pump_wn
+                        linear_fit
         """
         pu = self.pump_wn
         pr = self.probe_wn
@@ -413,8 +421,18 @@ class TwoDim:
             r = WLS(y, add_constant(x), weights=1 / yerr**2).fit()
         else:
             r = OLS(y, add_constant(x)).fit()
-        return SingleCLSResult(x + pu[pu_idx].mean(), y, yerr, r.params[0], r, x,
-                               r.predict())
+        
+        ret = SingleCLSResult(pump_wn=x + pu[pu_idx].mean(),
+                        max_pos=y,
+                        max_pos_err=yerr,
+                        slope=r.params[0],
+                        reg_result=r,
+                        recentered_pump_wn=x,
+                        linear_fit=r.predict())
+        
+        self.single_cls_result_ = ret
+
+        return ret
 
     def cls(self, **cls_args) -> CLSResult:
         """Calculates the CLS for all 2d-spectra. The arguments are given
