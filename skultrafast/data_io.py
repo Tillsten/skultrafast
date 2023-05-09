@@ -49,12 +49,15 @@ def extract_freqs_from_gaussianlog(fname):
     for line in f:
         if line.lstrip().startswith('Frequencies --'):
 
-            fr += (map(float, re.sub(r'[^\d,.\d\d\d\d]', '', line).split()))
+            fr += (map(float, re.sub(r'[^\d,.\d\d\d\d]', ' ', line).split()))
         elif line.lstrip().startswith('IR Inten'):
-            ir += (map(float, re.sub(r'[^\d,.d\d\d\d]', '', line).split()))
+            ir += (map(float, re.sub(r'[^\d,.d\d\d\d]', ' ', line).split()))
         elif line.lstrip().startswith('Raman Activities'):
-            raman += (map(float, re.sub(r'[^\d,.\d\d\d\d ]', '', line).split()))
-    arrs = map(np.array, [fr, ir, raman])
+            raman += (map(float, re.sub(r'[^\d,.\d\d\d\d ]', ' ', line).split()))
+
+    arrs = map(np.array, [fr, ir])
+    if len(raman) > 0:
+        arrs.append(np.array(raman))
     return np.vstack([i.flatten() for i in arrs])
 
 
@@ -121,7 +124,7 @@ def get_twodim_dataset():
             name = d['name']
             durl = d['download_url']
         else:
-            raise IOError("Downloading example data filed")
+            raise IOError("Downloading example data failed")
         ans = urllib.request.urlopen(durl)
         if ans.status == 200:
             content = ans.read()
@@ -137,11 +140,11 @@ def get_twodim_dataset():
     if not data_dir.exists():
         if os.name == 'nt':
             # Somehow the file only works under windows
-            zipfile_deflate64.ZipFile((p / 'MeSCN_2D_data.zip')
-                                      ).extractall(p / 'MeSCN_2D_data')
+            zipfile_deflate64.ZipFile(
+                (p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
         else:
             cmd = 'unzip %s -d %s' % (p / 'MeSCN_2D_data.zip', p / 'MeSCN_2D_data/')
             output = os.popen(cmd).read()
     if len(list(data_dir.glob('*.*'))) != 1106:
-        raise IOError("Extract failed")
+        raise IOError("Extraction failed")
     return p / 'MeSCN_2D_data'
