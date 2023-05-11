@@ -581,7 +581,6 @@ def plot_coef_spec(taus, wl, coefs, div):
 
 
 class MidPointNorm(Normalize):
-
     def __init__(self, midpoint=0, vmin=None, vmax=None, clip=False):
         Normalize.__init__(self, vmin, vmax, clip)
         self.midpoint = midpoint
@@ -942,3 +941,30 @@ def enable_style():
     plt.rcParams['legend.fontsize'] = 'small'
     plt.rcParams['axes.unicode_minus'] = False
     plt.rcParams['axes.formatter.useoffset'] = False
+
+
+def scale_y(lines: List[plt.Line2D], scale: float, x_range: Tuple[float, float]):
+    """
+    Muliplies the y-data of the given lines by the given scale in the given range.
+    Also inserts a Nan at the beginning and end of the range to prevent the line
+    from being connected to the rest of the data.
+
+    Parameters
+    ----------
+    lines : List[plt.Line2D]
+        The lines to scale
+    scale : float
+        The scale factor
+    range : Tuple[float, float]
+        The range in which to scale
+    """
+
+    for l in lines:
+        x, y = l.get_data()
+        x_range = sorted(x_range)
+        idx = (x > x_range[0]) & (x < x_range[1])
+        y[idx] *= scale
+        first, last = np.argmax(idx), len(idx) - np.argmax(idx[::-1])
+        x = np.insert(x, [first, last], np.nan)
+        y = np.insert(y, [first, last], np.nan)
+        l.set_data(x, y)

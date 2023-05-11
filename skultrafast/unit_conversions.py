@@ -1,20 +1,23 @@
 """
-This module contains functions to covert between units.
+This module contains functions to covert between units of energy.
 """
 import numpy as np
 from scipy.constants import physical_constants, c
 
 c_cm = c * 100
-names = dict(cm="wavenumbers in 1/cm",
-             fs="period in femotoseconds",
-             nm="wavelength in nanometers",
-             eV="energy in electron Volt",
-             THz="frequency in THz",
-             dichro="Dichroic ratio (para/perp)",
-             angle="relative angle between transition dipole moments in degrees",
-             aniso="Anisotropy (para-perp)/(para+2*perp)",
-             kcal="energy in kcal/mol",
-             invps="energy in inverse picoseconds",)
+names = dict(
+    cm="wavenumbers in 1/cm",
+    fs="period in femotoseconds",
+    ps="period in picoseconds",
+    nm="wavelength in nanometers",
+    eV="energy in electron Volt",
+    THz="frequency in THz",
+    dichro="Dichroic ratio (para/perp)",
+    angle="relative angle between transition dipole moments in degrees",
+    aniso="Anisotropy (para-perp)/(para+2*perp)",
+    kcal="energy in kcal/mol",
+    invps="energy in inverse picoseconds",
+)
 
 
 def make_doc(func):
@@ -31,6 +34,16 @@ def fs2cm(t):
 @make_doc
 def cm2fs(cm):
     return 1e15 / (cm*c_cm)
+
+
+@make_doc
+def ps2cm(t):
+    return 1 / (t*1e-12*c_cm)
+
+
+@make_doc
+def cm2ps(cm):
+    return 1e12 / (cm*c_cm)
 
 
 @make_doc
@@ -55,6 +68,18 @@ def eV2cm(eV):
     eV_m = physical_constants['electron volt-inverse meter relationship'][0]
     eV_cm = eV_m / 100
     return eV * eV_cm
+
+
+@make_doc
+def THz2eV(THz):
+    hertz_eV = physical_constants['hertz-electron volt relationship'][0]
+    return THz * 1e12 * hertz_eV
+
+
+@make_doc
+def eV2THz(eV):
+    eV_Hertz = physical_constants['electron volt-hertz relationship'][0]
+    return eV * eV_Hertz * 1e-12
 
 
 @make_doc
@@ -101,9 +126,9 @@ def kcal2cm(kcal):
 
 @make_doc
 def invps2cm(invps):
-    return 1 / (invps * 1e-12 * c)
+    return 1 / (invps*1e-12*c)
 
 
 @make_doc
 def cm2invps(cm):
-    return 1 / (cm * 1e-12 * c)
+    return 1 / (cm*1e-12*c)

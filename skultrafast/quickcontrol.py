@@ -9,6 +9,7 @@ import numpy as np
 from scipy.constants import speed_of_light
 from scipy.ndimage import gaussian_filter1d
 
+from skultrafast.unit_conversions import THz2cm, cm2THz
 from skultrafast.dataset import PolTRSpec, TimeResSpec
 from skultrafast.twoD_dataset import TwoDim
 from skultrafast.utils import poly_bg_correction, inbetween
@@ -85,7 +86,6 @@ class QCFile:
 class QCBaserTimeRes(QCFile):
     wavelength: np.ndarray = attr.ib()
     """Wavelength data calculated from given grating and mono wavelength"""
-
     @wavelength.default
     def calc_wl(self, disp=None):
         if disp is None:
@@ -113,7 +113,6 @@ class QC1DSpec(QCBaserTimeRes):
 
     per_data: np.ndarray = attr.ib()
     """"Contains the data from one channel"""
-
     @par_data.default
     def _load_par(self):
         par_scan_files = self.path.glob(self.prefix + '*_PAR*.scan')
@@ -182,7 +181,6 @@ class QC2DSpec(QCBaserTimeRes):
     Window function used for apodization. The coded will the window-function with
     `2*len(t2)` and uses only the second half of the returned array.
     """
-
     @t.default
     def _t_default(self):
         t_list = np.array(self.info['Waiting Time Delays'])
@@ -231,8 +229,8 @@ class QC2DSpec(QCBaserTimeRes):
                 if self.probe_filter is not None:
                     d = gaussian_filter1d(d, self.probe_filter, -1, mode='nearest')
                 if self.bg_correct:
-                    poly_bg_correction(self.wavelength, d,
-                                       self.bg_correct[0], self.bg_correct[1])
+                    poly_bg_correction(self.wavelength, d, self.bg_correct[0],
+                                       self.bg_correct[1])
                 d[0, :] *= 0.5
                 if self.win_function is not None:
                     win = self.win_function(2 * len(self.t2))
@@ -256,7 +254,9 @@ class QC2DSpec(QCBaserTimeRes):
     def _calc_freqs(self):
         freqs = np.fft.rfftfreq(self.upsampling * len(self.t2), self.t2[1] - self.t2[0])
         om0 = self.info['Rotating Frame (Scanned)']
-        cm = 10 / ((1/freqs) * 1e-12 * speed_of_light) + om0
+        with np.errstate(divide='ignore'):
+            cm = 10 / ((1/freqs) * 1e-12 * speed_of_light) + om0
+            cm[0] = om0
         return cm
 
     def make_ds(self) -> Dict[str, TwoDim]:

@@ -55,9 +55,13 @@ def extract_freqs_from_gaussianlog(fname):
         elif line.lstrip().startswith('Raman Activities'):
             raman += (map(float, re.sub(r'[^\d,.\d\d\d\d ]', ' ', line).split()))
 
+    arrs = [fr]
+    if ir:
+        arrs.append(ir)
+    if raman:
+        arrs.append(raman)
+
     arrs = map(np.array, [fr, ir])
-    if len(raman) > 0:
-        arrs.append(np.array(raman))
     return np.vstack([i.flatten() for i in arrs])
 
 

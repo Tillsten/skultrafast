@@ -14,10 +14,12 @@
 
 What is skultrafast?
 --------------------
-Skultrafast stands for scikit.ultrafast and is an python package which aims to
-include everything needed to analyze data from time-resolved spectroscopy
-experiments in the femtosecond domain. Its current features are listed further
-down below.
+skultrafast is a Python package for ultrafast spectroscopy data analysis. It provides tools
+for analyzing various types of time-resolved spectroscopy data, including
+pump-probe, transient absorption, and two-dimensional infrared (2D-IR)
+spectroscopy. The package includes functionality for data import, visualization,
+processing, and fitting. It is built on top of the scientific Python ecosystem,
+including NumPy, SciPy, and Matplotlib.
 
 The latest version of the package is available on `github <https://github
 .com/Tillsten/skultrafast>`_. A build of the documentation can be found at `Read
@@ -51,16 +53,17 @@ Features
 --------
 The current releases centers around working with time-resolved spectra:
 
-* Publication ready plots with few lines.
-* Global fitting of transient Data: DAS, SAS and compartment modelling.
-* Support for polarization resovled datasets.
-* Easy data processing: Selection, filtering, recalibration of data.
-* Automatic dispersion correction of chriped spectra.
-* Modern error estimates of the fitting results via
-  `lmfit <http://lmfit.github.io/lmfit-py/>`_.
-* Lifetime-density analyses using regularized regression.
-* 2D spectroscopy: CLS-decay, digonal extraction, pump-slice-amplidude
-  spectrum, integration, gaussian fitting.
+  *  Generate publication-ready plots with minimal effort.
+  *  Perform global fitting of transient data, including DAS, SAS, and
+     compartment modeling.
+  *  Analyze polarization-resolved datasets.
+  *  Easily process data by selecting, filtering, and recalibrating it.
+  *  Correct dispersion automatically in the case of chirped spectra.
+  *  Obtain accurate error estimates for fitting results using lmfit
+     <http://lmfit.github.io/lmfit-py/>_.
+  *  Analyze lifetime-density using regularized regression.
+  *  Analyze 2D spectroscopy data, including CLS-decay, diagonal extraction,
+     pump-slice-amplitude spectrum, integration, and Gaussian fitting.
 
 Users
 -----

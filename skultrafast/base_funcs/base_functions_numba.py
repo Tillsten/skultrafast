@@ -9,7 +9,7 @@ import math
 sq2 = math.sqrt(2)
 
 
-@jit(cache=True)
+@jit(cache=True, nogil=True)
 def _coh_gaussian(ta, w, tz):
     """
     Models coherent artifacts proportional to a gaussian and it's first three derivatives.
@@ -51,11 +51,10 @@ def _coh_loop(y, ta, w, n, m):
         for j in prange(m):
             tt = ta[i, j]
             if tt / w < 3.:
-                y[i, j, 0] = np.exp(
-                    -0.5 * (tt / w) *
-                    (tt / w))  # / (w * np.sqrt(2 * 3.14159265))
+                y[i, j,
+                  0] = np.exp(-0.5 * (tt/w) * (tt/w))  # / (w * np.sqrt(2 * 3.14159265))
                 y[i, j, 1] = y[i, j, 0] * (-tt * exp_half / w)
-                y[i, j, 2] = y[i, j, 0] * (tt * tt / w / w - 1)
+                y[i, j, 2] = y[i, j, 0] * (tt*tt/w/w - 1)
                 #y[i, j, 2] = y[i, j, 0] * (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
 
 
@@ -90,8 +89,8 @@ def fast_erfc(x, cache=True):
     smaller = x < 0
     if smaller:
         x = x * -1.
-    bot = 1 + a1 * x + a2 * x * x + a3 * x * x * x + a4 * x * x * x * x
-    ret = 1. / (bot * bot * bot * bot)
+    bot = 1 + a1*x + a2*x*x + a3*x*x*x + a4*x*x*x*x
+    ret = 1. / (bot*bot*bot*bot)
 
     if smaller:
         ret = -ret + 2.
@@ -121,8 +120,7 @@ def folded_fit_func(t, tz, w, k):
         return 0.
     elif t < 5. * w:
         #print -t/w + w*k/2., w, k, t
-        return np.exp(
-            k * (w * w * k / 4.0 - t)) * 0.5 * fast_erfc(-t / w + w * k / 2.)
+        return np.exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t / w + w*k/2.)
     elif t > 5. * w:
         return np.exp(k * (w * w * k / (4.0) - t))
 
@@ -170,9 +168,7 @@ def _fold_exp_loop(out, tau_arr, t_arr, tz, w, l, m, n):
                 if t < -5. * w:
                     ret = 0
                 elif t < 5. * w:
-                    ret = np.exp(k *
-                                 (w * w * k / 4.0 -
-                                  t)) * 0.5 * fast_erfc(-t / w + w * k / 2.)
+                    ret = np.exp(k * (w*w*k/4.0 - t)) * 0.5 * fast_erfc(-t / w + w*k/2.)
                 elif t > 5. * w:
                     ret = np.exp(k * (w * w * k / (4.0) - t))
                 out[tau_idx, j, i] = ret

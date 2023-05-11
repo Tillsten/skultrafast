@@ -29,6 +29,7 @@ class SingleSpec:
         self.unit_signal = unit_signal
         self.back = np.zeros_like(self.x)
         self.fi = dv.make_fi(self.x)
+        self.plot = SingleSpecPlotter(self)
 
     def subtract_const(self, region: tuple):
         """
@@ -73,8 +74,6 @@ class SingleSpec:
         model = peak + back
 
 
-
-
 class SingleSpecPlotter:
     def __init__(self, single_spec: SingleSpec):
         self.ds = single_spec
@@ -88,4 +87,3 @@ class SingleSpecPlotter:
         ax.set_xlabel(ds.unit_freq)
         ax.set_ylabel(ds.unit_signal)
         ax.minorticks_on()
-        
