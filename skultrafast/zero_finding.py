@@ -124,7 +124,7 @@ def _fit_func(t, y, x0, w, tau):
     return (y_fit[:, 0] - y)
 
 
-def robust_fit_tz(wl, tn, degree=3, t=1.345):
+def robust_fit_tz(wl, tn, degree=3, t=1):
     """
     Apply a robust 3-degree fit to given tn-indexs.
     """
@@ -135,7 +135,7 @@ def robust_fit_tz(wl, tn, degree=3, t=1.345):
     def fit_func(p):
         return tn - X@p
 
-    o = least_squares(fit_func, c, loss='cauchy')
+    o = least_squares(fit_func, c, loss='cauchy', f_scale=t)
     zeros = X @ o.x
     return zeros, o.x[::-1]
 
