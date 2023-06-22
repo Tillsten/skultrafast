@@ -111,7 +111,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
+html_theme = 'furo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -271,8 +271,13 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
-autoclass_content = "init"
+autoclass_content = 'both'
 autodoc_member_order = 'bysource'
 autosummary_generate = True
 body_max_width = '100em'
 plot_formats = ['svg', ('png', 120)]
+extensions.append('autoapi.extension')
+
+autoapi_type = 'python'
+autoapi_dirs = ['../skultrafast']
+autoapi_ignore = ['*tests*', '*base_funcs*', '*kubo_fitting*', '*tutorial*', '*wip*']

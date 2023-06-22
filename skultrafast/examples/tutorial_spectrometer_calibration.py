@@ -6,17 +6,17 @@ In this tutorial we look at the calibration of an spectrograph. So what we
 looking for is a function which is mapping the index of our detector element to
 a wavelength.
 
-We discuss two cases: 
+We discuss two cases:
 
     1. The spectrograph grating is fixed.
-    2. The spectrograph grating is rotateable.    
+    2. The spectrograph grating is rotateable.
 
 For the first case, we need to have serveral identifiable feautres with known
 spectral positions. The can be a calibration pen lamp (ideal), a sample with
 known absorption peaks or known filters. The calibration than is done by fitting
 the result index vs. wavelength points with a function. For a typical grating
 spectrometer the function should be a linear function. Depending on the imaging
-geometry, a higher polynomial can be used. 
+geometry, a higher polynomial can be used.
 
 For the second case, we can get away with one known feature. For this, we must
 assume that grating information and stepper settings are correct, e.g. the
@@ -29,13 +29,13 @@ use the software of the spectrograph. We then record the spectrum by scanning
 the feature in a way, that it moves from one side of the detector to the other.
 Now by comparing the wavelength which has been set to feature position, we can
 directly see the dispersion per pixel. This, again, should be linear for most
-spectrographs. 
+spectrographs.
 
 Notice that tracking a feature over the whole range manually is not efficent, if
 possible it should be automated, e.g. by always looking for the lowest intensity.
 
-Lets look at an example. Here, we are looking at the calibartion of an 
-128 channels spectrometer in the mid-IR. W
+Lets look at an example. Here, we are looking at the calibartion of an
+128 channels spectrometer in the mid-IR.
 """
 # %%
 # Imports we will use later.
@@ -101,7 +101,7 @@ for ch in [63, 58]:
     idx[:200] = False
     idx[-100:] = False
     touching = back[idx]
-    f = interp1d(cwl[idx], touching, bounds_error=False, kind='linear')
+    f = interp1d(cwl[idx], touching, bounds_error=False, kind='cubic')
     plt.plot(cwl, f(cwl))
     plt.plot(cwl, pr[:, ch])
     plt.plot(cwl, np.interp(cwl, cwl[idx], touching) - pr[:, ch] + 5000, lw=1)
@@ -109,7 +109,7 @@ for ch in [63, 58]:
     # Load water vapor data
     p = data_io.get_example_path('vapor')
     ftir_x, ftir_vapor= np.load(p).T
-    
+
     # Convolve vapor spectrum with a gaussian
     ftir_vapor = nd.gaussian_filter(ftir_vapor, 5) * 52000
 
@@ -166,9 +166,5 @@ from scipy.stats import linregress
 
 x = np.arange(128) - 58
 y = cwl[np.argmin(tmp, 0)]
-res = linregress(x, y)
-ax2.plot(x, cwl[np.argmin(tmp, 0)], 'o', ms=3, label='Minium position')
-ax2.plot(x, x * res.slope + res.intercept, label='Linar fit')
-ax2.text(-40, 6000, 'Slope %.3f $\\pm %.3f$' % (res.slope, res.stderr))
-ax2.legend()
+res
 # %%
