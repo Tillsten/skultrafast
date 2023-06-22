@@ -107,10 +107,13 @@ class TwoDimPlotter:
         out = {'fig': fig, 'axs': ax}
         for i, k in enumerate(idx):
             out_i = {'ax': ax[i]}
+
             if scale == 'eachmax':
                 m = np.abs(s2d[k, ...]).max()
-
-            levels = np.linspace(-m, m, contour_ops['levels'])
+            if isinstance(contour_ops['levels'], int):
+                levels = np.linspace(-m, m, contour_ops['levels'])
+            else:
+                levels = np.array(contour_ops['levels'])
             c = ax[i].contourf(
                 ds.probe_wn,
                 ds.pump_wn,
