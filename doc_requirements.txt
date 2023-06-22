@@ -3,3 +3,4 @@ sphinx-gallery
 pytest
 docutils
 sphinx-autoapi
+furo
