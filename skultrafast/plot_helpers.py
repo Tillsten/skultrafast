@@ -729,12 +729,11 @@ def stack_ax(num_rows=2, num_cols=1, height_rations=[2, 1]):
             ax = plt.subplot(gs[r, c])
             row.append(ax)
             if r != num_rows:
-                ax.xaxis.tick_params(label_bottom=False)
+                ax.tick_params(label_bottom=False)
             if c != 0:
-                ax.yaxis.tick_params(label_left=False)
-
+                ax.tick_params(label_left=False)
         axes.append(row)
-
+    return axes
 
 def nsf(num, n=1):
     """n-Significant Figures"""
@@ -825,10 +824,10 @@ def symticks(ax, linthresh=1, linstep=0.2, axis='x'):
     m = max(l, r)
     k = min(l, r)
     major = int(np.floor(np.log10(m)))
+    log_start = int(np.floor(np.log10(linthresh)))
     lin_pos = np.arange(-linthresh, 0, linstep)[1:]
-
-    major_pos = 10**np.arange(major + 1)
-    minor_pos = [np.arange(2, 10) * 10**i for i in range(major)]
+    major_pos = 10.0**np.arange(log_start, major + 1, dtype=float)
+    minor_pos = [np.arange(2, 10) * 10**i for i in range(log_start, major)]
     rest = np.arange(np.ceil(m / 10**major)) * 10**major
     minor_pos = np.array(minor_pos).flat
 
@@ -836,6 +835,7 @@ def symticks(ax, linthresh=1, linstep=0.2, axis='x'):
                    minor=True)
     axis.set_ticks(np.hstack((0, major_pos)))
     axis.set_major_formatter(plt.ScalarFormatter())
+
 
 
 def lbl_axes(axs=None, pos=(-.2, -.2), fmt="(%s)", labels=None, **kwargs):
