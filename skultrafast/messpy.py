@@ -22,6 +22,7 @@ class MessPy2File:
     """
     Class for working with older messpy2 files.
     """
+
     def __init__(self, fname: os.PathLike):
         self.file = np.load(fname, allow_pickle=True)
 
@@ -601,7 +602,8 @@ class Messpy25File:
                    window_fcn: Optional[Callable] = np.hanning,
                    ch_shift: int = 1,
                    probe_filter: Optional[float] = None,
-                   bg_correct: Optional[Tuple[int, int]] = None) -> Dict[str, TwoDim]:
+                   bg_correct: Optional[Tuple[int, int]] = None,
+                   t0_factor: float = 0.5) -> Dict[str, TwoDim]:
         """
         Calculates the 2D spectra from the interferograms and returns it as a
         dictionary. The dictorary contains messpy 2D-objects for paralllel,
@@ -620,6 +622,9 @@ class Messpy25File:
             Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
+        t0_factor: float
+            Factor to multiply the first t1 point (zero-delay between the pumps) to 
+            correct for the integration. In general, the default should not be touched.
         """
         means = self.get_ifr(probe_filter=probe_filter,
                              bg_correct=bg_correct,
@@ -627,7 +632,7 @@ class Messpy25File:
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
-            v[:, :, 0] *= 0.5
+            v[:, :, 0] *= t0_factor
             if window_fcn is not None:
                 v = v * window_fcn(v.shape[2] * 2)[None, None, v.shape[2]:]
             sig = np.fft.rfft(v, axis=2, n=v.shape[2] * upsample).real
@@ -657,7 +662,7 @@ class Messpy25File:
             folder = p / pol
             folder.mkdir(parents=True, exist_ok=True)
             for i, t in enumerate(self.t2):
-                fname = folder / (name + '_%f.txt'%t)
+                fname = folder / (name + '_%f.txt' % t)
                 d = data[pol][i, idx, :]
 
                 np.savetxt(fname, d)
@@ -761,8 +766,8 @@ def get_t0(fname: str,
 
     idx = (t > t_range[0]) & (t < t_range[1])
     sig = sig.squeeze()[idx]
-    #from scipy.signal import savgol_filter
-    #dsig = savgol_filter(sig, 11, 2, 1)
+    # from scipy.signal import savgol_filter
+    # dsig = savgol_filter(sig, 11, 2, 1)
     dsig = gaussian_filter1d(sig, sigma=1, order=1)
 
     GaussStep = lmfit.Model(gauss_step)
@@ -794,7 +799,7 @@ def get_t0(fname: str,
         tw = axs[0].twinx()
         tw.plot(t[idx], dsig, c='r', label='Nummeric Diff')
         tw.legend()
-        #axs[1].plot(t[idx], dsig, color='red')
+        # axs[1].plot(t[idx], dsig, color='red')
         axs[1].set_xlabel('t')
         plt.sca(axs[1])
         result.plot_fit()
