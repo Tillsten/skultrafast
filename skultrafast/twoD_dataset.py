@@ -336,12 +336,16 @@ class TwoDim:
             as (max - pu_range, max + pu_range). If given a tuple,
             it is interpreted as (lower, upper) range.
         mode : ('neg', 'pos'), optional
-            negative or positive maximum, by default 'neg'
-        method: ('com', 'quad', 'fit')
+            negative or positive maximum, by default 'neg'.
+            Ignored when method is 'nodal'.
+        method: ('com', 'quad', 'fit', 'log_quad', 'skew_fit', 'nodal'), optional
             Selects the method used for determination of the
             maximum signal. `com` uses the center-of-mass,
             `quad` uses a quadratic fit and `fit` uses
-            a gaussian fit.
+            a gaussian fit. 'log_quad' uses a quadratic fit
+            on the logarithm of the signal. 'skew_fit' uses
+            a gaussian fit with a linear background. 'nodal'
+            finds the zero-crossing of the signal.
 
         Returns
         -------
@@ -360,6 +364,7 @@ class TwoDim:
         if mode == 'pos':
             spec = -spec
         pu_max = pu[np.argmin(np.min(spec, 1))]
+
         if not isinstance(pu_range, tuple):
             pu_idx = (pu < pu_max + pu_range) & (pu > pu_max - pu_range)
         else:
@@ -369,11 +374,17 @@ class TwoDim:
         l = []
         for s in spec:
             m = np.argmin(s)
-            if not isinstance(pr_range, tuple):
+            m1 = np.argmax(s)
+            if isinstance(pr_range, tuple):
+                pr_idx = inbetween(pr, pr_range[0], pr_range[1])
+            elif method == 'nodal':
+                between_range = inbetween(pr, min(pr[m], pr[m1]), max(pr[m], pr[m1]))
+                center = pr[between_range][np.argmin(np.abs(s)[between_range])]
+                pr_idx = (pr < center + pr_range) & (pr > center - pr_range)
+            else:
                 pr_max = pr[m]
                 pr_idx = (pr < pr_max + pr_range) & (pr > pr_max - pr_range)
-            else:
-                pr_idx = inbetween(pr, pr_range[0], pr_range[1])
+
             cen_of_m = np.average(pr[pr_idx], weights=s[pr_idx])
             if method == 'fit':
                 mod = lmfit.models.GaussianModel()
@@ -411,7 +422,11 @@ class TwoDim:
                 if err is None:
                     err = np.nan
                 l.append((val, err))
-
+            elif method == 'nodal':
+                p = Polynomial.fit(pr[pr_idx], s[pr_idx], 3)
+                r = p.roots()
+                ri = np.argmin(np.abs(r-center))
+                l.append((r[ri], 1))
             else:
                 l.append((cen_of_m, 1))
 
@@ -421,15 +436,15 @@ class TwoDim:
             r = WLS(y, add_constant(x), weights=1 / yerr**2).fit()
         else:
             r = OLS(y, add_constant(x)).fit()
-        
+
         ret = SingleCLSResult(pump_wn=x + pu[pu_idx].mean(),
-                        max_pos=y,
-                        max_pos_err=yerr,
-                        slope=r.params[0],
-                        reg_result=r,
-                        recentered_pump_wn=x,
-                        linear_fit=r.predict())
-        
+                              max_pos=y,
+                              max_pos_err=yerr,
+                              slope=r.params[0],
+                              reg_result=r,
+                              recentered_pump_wn=x,
+                              linear_fit=r.predict())
+
         self.single_cls_result_ = ret
 
         return ret

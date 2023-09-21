@@ -51,7 +51,7 @@ def test_integrate(two_d_processed):
 def test_cls(two_d_processed):
     two_d = two_d_processed.copy()
     two_d.single_cls(3)
-    for m in ['quad', 'fit', 'log_quad', 'skew_fit']:
+    for m in ['quad', 'fit', 'log_quad', 'skew_fit', 'nodal']:
         two_d.single_cls(3, method=m)
 
 
@@ -120,11 +120,11 @@ def test_mark_minmax(two_d_processed: TwoDim):
 
 def test_data_at(two_d_processed: TwoDim):
     ret = two_d_processed.data_at(t=1, pump_wn=2160)
-    assert(ret.size == two_d_processed.probe_wn.size)
+    assert (ret.size == two_d_processed.probe_wn.size)
     ret = two_d_processed.data_at(t=1, probe_wn=2160)
-    assert(ret.size == two_d_processed.pump_wn.size)
+    assert (ret.size == two_d_processed.pump_wn.size)
     ret = two_d_processed.data_at(probe_wn=2160, pump_wn=2160)
-    assert(ret.size == two_d_processed.t.size)
+    assert (ret.size == two_d_processed.t.size)
     ret = two_d_processed.data_at(t=1, probe_wn=2160, pump_wn=2160)
     assert ret.size == 1
 
