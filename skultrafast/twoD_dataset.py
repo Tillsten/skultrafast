@@ -426,7 +426,7 @@ class TwoDim:
                 p = Polynomial.fit(pr[pr_idx], s[pr_idx], 3)
                 r = p.roots()
                 ri = np.argmin(np.abs(r-center))
-                l.append((r[ri], 1))
+                l.append((r[ri].real, 1))
             else:
                 l.append((cen_of_m, 1))
 
