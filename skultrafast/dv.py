@@ -486,4 +486,4 @@ def calc_ratios(fitter, tmin=0.35, tmax=200):
 
 
 def make_fi(data_to_search):
-    return lambda x: fi(data_to_se
+    return lambda x: fi(data_to_search, x)
