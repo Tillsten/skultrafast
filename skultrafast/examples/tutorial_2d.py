@@ -243,6 +243,7 @@ cls_result_nodal = ds.cls(pr_range=5, pu_range=10, method='nodal')
 fr_fit = cls_result_nodal.exp_fit(tau_estimate, use_const=True, use_weights=True)
 data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
 
+# Contour to display the nodal line at 1 ps
 artists = ds.plot.contour(1)
 ax = artists[0]['ax']
 cls_at_1ps = cls_result_nodal.lines[ds.t_idx(1)]
@@ -253,7 +254,8 @@ ax.plot(
     marker='o',
     markersize=3,
     lw=0,
-    color='green',
+    color='lime',
+    markeredgecolor='k',
 )
 ax.plot(x_fit, y_cls, c='purple', lw=1)
 
