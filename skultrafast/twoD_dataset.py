@@ -449,22 +449,28 @@ class TwoDim:
 
         return ret
 
-    def cls(self, **cls_args) -> CLSResult:
+    def cls(self, joblib_kws=None, **cls_args) -> CLSResult:
         """Calculates the CLS for all 2d-spectra. The arguments are given
-        to the single cls function. Returns as `CLSResult`."""
+        to the single cls function, except joblib_kw, which is forwarded to
+        joblib.Parallel. 
+
+        Returns as `CLSResult`."""
         slopes, slope_errs = [], []
         lines = []
         intercept = []
         intercept_errs = []
+        if joblib_kws is None:
+            joblib_kws = dict(n_jobs=-1)
         import joblib
-        with joblib.Parallel(n_jobs=-1) as p:
+        with joblib.Parallel(**joblib_kws) as p:
             res: List[SingleCLSResult] = p(
                 joblib.delayed(self.single_cls)(t, **cls_args) for t in self.t)
         for c in res:
             r = c.reg_result
             slopes.append(r.params[1])
             slope_errs.append(r.bse[1])
-            lines += [np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, r.predict()))]
+            arr = np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, r.predict()))
+            lines += [arr]
             intercept.append(r.params[0])
             intercept_errs.append(r.bse[0])
         ret = CLSResult(wt=self.t,

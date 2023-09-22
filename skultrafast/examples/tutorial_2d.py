@@ -231,6 +231,33 @@ for m in methods:
 
 ax.legend()
 
+# %% We can also determine the nodal slope with the same method. The nodal slope
+# is the slope the nodal points, which is the point where the spectrum crosses
+# zero. The nodal line is calculated by fitting the region near the
+# zero-crossing with a thrid degree polynomial and calculating the zero-crossing
+# of the polynomial for each pump-slice.
+
+fig, ax = plt.subplots()
+cls_result_nodal = ds.cls(pr_range=5, pu_range=10, method='nodal')
+
+fr_fit = cls_result_nodal.exp_fit(tau_estimate, use_const=True, use_weights=True)
+data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
+
+artists = ds.plot.contour(1)
+ax = artists[0]['ax']
+cls_at_1ps = cls_result_nodal.lines[ds.t_idx(1)]
+x_cls, y_cls, x_fit = cls_at_1ps[:, 1], cls_at_1ps[:, 0], cls_at_1ps[:, 3]
+ax.plot(
+    x_cls,
+    y_cls,
+    marker='o',
+    markersize=3,
+    lw=0,
+    color='green',
+)
+ax.plot(x_fit, y_cls, c='purple', lw=1)
+
+
 # %%
 # What is often more problematic is the sensitivity to the chosen region.
 # It is often suggested taking only a small region around the peak, but this

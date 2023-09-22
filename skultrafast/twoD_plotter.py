@@ -41,7 +41,7 @@ class TwoDimPlotter:
                 contour_params: Dict[str, Any] = {},
                 scale: Literal['firstmax', 'fullmax', 'eachmax'] = "firstmax",
                 average=None,
-                fig_kws: dict = {}) -> Dict[str, Any]:
+                fig_kws: dict = {}) -> Dict[Union[str, int], Any]:
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
@@ -81,19 +81,19 @@ class TwoDimPlotter:
             else:
                 ax = ax[0, :]
 
-        if scale == 'fullmax':
-            m = abs(ds.spec2d).max()
-        elif scale == 'firstmax':
-            m = abs(ds.spec2d[idx[0], ...]).max()
-        elif scale == 'eachmax':
-            m = None
-        else:
-            raise ValueError("scale must be either fullmax or firstmax")
-
         if average is not None:
             s2d = uniform_filter1d(ds.spec2d, average, 0, mode="nearest")
         else:
             s2d = ds.spec2d
+
+        if scale == 'fullmax':
+            m = abs(s2d).max()
+        elif scale == 'firstmax':
+            m = abs(s2d[idx[0], ...]).max()
+        elif scale == 'eachmax':
+            m = None
+        else:
+            raise ValueError("scale must be either fullmax or firstmax")
 
         if isinstance(ax, plt.Axes):
             ax = [ax]
@@ -274,8 +274,8 @@ class TwoDimPlotter:
             ds.pump_wn,
             ds.probe_wn,
         ),
-                                           d[::, ::],
-                                           bounds_error=False)
+            d[::, ::],
+            bounds_error=False)
         m = abs(d).max()
         ax.pcolormesh(ds.probe_wn, ds.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
 
