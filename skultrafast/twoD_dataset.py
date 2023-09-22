@@ -2,7 +2,7 @@ from collections import defaultdict
 from lmfit.minimizer import MinimizerResult
 import os
 from pathlib import Path
-from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union, Any
+from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union, Any, overload
 
 import attr
 import lmfit
@@ -221,7 +221,13 @@ class TwoDim:
         cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
 
-    def t_idx(self, t: Union[float, Iterable[float]]) -> Union[int, List[int]]:
+    @overload
+    def t_idx(self, t: float) -> int: ...
+
+    @overload
+    def t_idx(self, t: Iterable[float]) -> List[int]: ...
+
+    def t_idx(self, t):
         """Return nearest idx to nearest time value"""
         return dv.fi(self.t, t)
 
