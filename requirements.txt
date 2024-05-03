@@ -8,7 +8,6 @@ matplotlib
 pytest
 sympy
 wrapt
-zipfile_deflate64
 h5py 
 joblib
 statsmodels
