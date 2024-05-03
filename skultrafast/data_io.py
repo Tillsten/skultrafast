@@ -6,16 +6,11 @@ Created on Wed Nov 28 18:34:30 2012
 """
 from __future__ import print_function
 
-import hashlib
-import json
-import os
-import pathlib
-import re
-import urllib.request
-from pathlib import Path
 
+import re
+from pathlib import Path
+import pooch
 import numpy as np
-import zipfile_deflate64
 
 
 def save_txt_das(name, fitter):
@@ -113,42 +108,17 @@ def get_example_path(kind):
     return root + file_dict[kind]
 
 
+POOCH = pooch.create(
+    path=pooch.os_cache("skultrafast"),
+    # Use the figshare DOI
+    base_url="doi:10.6084/m9.figshare.25745715",
+    registry={
+        "MeSCN_2D_data.zip": "md5:6ca0942395a8b1be17b57a2b3c27ac5b",
+    },
+)
+
+
 def get_twodim_dataset():
-    """Checks if the two-dim example data is in the skultrafast folder,
-       if not, downloads it from figshare. Returns the path to file zip-file"""
-    p = pathlib.Path.home() / 'skultrafast_data'
-    if not p.exists():
-        p.mkdir()
-    if len(list(p.glob('MeSCN_2D_data.zip'))) == 0:
-        article_id = 15156528
-        ans = urllib.request.urlopen(
-            f'https://api.figshare.com/v2/articles/{article_id}/files')
-        if ans.status == 200:
-            d = json.loads(ans.read())[0]
-            name = d['name']
-            durl = d['download_url']
-        else:
-            raise IOError("Downloading example data failed")
-        ans = urllib.request.urlopen(durl)
-        if ans.status == 200:
-            content = ans.read()
-            md5 = hashlib.md5(content)
-            if md5.hexdigest() == 'daa0562d3d0f1518f3e2952d98082591':
-                with (p / 'MeSCN_2D_data.zip').open('wb') as f:
-                    f.write(content)
-            else:
-                raise IOError('MD5-hash of download not correct')
-        else:
-            raise IOError("Figshare ans != 200, %s instead" % ans.status)
-    data_dir = (p / 'MeSCN_2D_data')
-    if not data_dir.exists():
-        if os.name == 'nt':
-            # Somehow the file only works under windows
-            zipfile_deflate64.ZipFile(
-                (p / 'MeSCN_2D_data.zip')).extractall(p / 'MeSCN_2D_data')
-        else:
-            cmd = 'unzip %s -d %s' % (p / 'MeSCN_2D_data.zip', p / 'MeSCN_2D_data/')
-            output = os.popen(cmd).read()
-    if len(list(data_dir.glob('*.*'))) != 1106:
-        raise IOError("Extraction failed")
-    return p / 'MeSCN_2D_data'
+    data = POOCH.fetch("MeSCN_2D_data.zip", processor=pooch.Unzip())
+    p = Path(data[0]).parent
+    return p
