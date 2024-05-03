@@ -1,7 +1,5 @@
 import pytest
-import tempfile
 import zipfile
-import zipfile_deflate64
 from pathlib import Path
 
 from skultrafast.quickcontrol import QC1DSpec, QC2DSpec, parse_str, QCFile
