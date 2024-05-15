@@ -207,6 +207,8 @@ class TwoDim:
         self.pump_wn = self.pump_wn.copy()
         self.t = self.t.copy()
 
+        # Sort the axes, so the order is always ascending
+
         i1 = np.argsort(self.pump_wn)
         self.pump_wn = self.pump_wn[i1]
         i2 = np.argsort(self.probe_wn)
@@ -220,6 +222,36 @@ class TwoDim:
         cpy = TwoDim(self.t, self.pump_wn, self.probe_wn, self.spec2d)
         cpy.plot = TwoDimPlotter(cpy)  # typing: ignore
         return cpy
+
+    def save_numpy(self, fname: PathLike):
+        """
+        Saves the dataset as a numpy file.
+
+        Parameters
+        ----------
+        fname: PathLike
+            The file name.
+        """
+        np.savez_compressed(fname, t=self.t, pump_wn=self.pump_wn,
+                            probe_wn=self.probe_wn, spec2d=self.spec2d)
+
+    @classmethod
+    def load_numpy(cls, fname: PathLike) -> 'TwoDim':
+        """
+        Loads a dataset from a numpy file.
+
+        Parameters
+        ----------
+        fname: PathLike
+            The file name.
+
+        Returns
+        -------
+        TwoDim
+            The dataset.
+        """
+        with np.load(fname) as f:
+            return cls(f['t'], f['pump_wn'], f['probe_wn'], f['spec2d'])
 
     @overload
     def t_idx(self, t: float) -> int: ...
@@ -475,7 +507,7 @@ class TwoDim:
             r = c.reg_result
             slopes.append(r.params[1])
             slope_errs.append(r.bse[1])
-            arr = np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, r.predict()))
+            arr = np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, c.linear_fit))
             lines += [arr]
             intercept.append(r.params[0])
             intercept_errs.append(r.bse[0])
