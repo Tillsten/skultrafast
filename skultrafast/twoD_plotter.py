@@ -80,6 +80,8 @@ class TwoDimPlotter:
                 ax = ax[:, 0]
             else:
                 ax = ax[0, :]
+        else:
+            fig = ax[0].get_figure()
 
         if average is not None:
             s2d = uniform_filter1d(ds.spec2d, average, 0, mode="nearest")
@@ -111,6 +113,7 @@ class TwoDimPlotter:
             if scale == 'eachmax':
                 m = np.abs(s2d[k, ...]).max()
             if isinstance(contour_ops['levels'], int):
+                assert m is not None
                 levels = np.linspace(-m, m, contour_ops['levels'])
             else:
                 levels = np.array(contour_ops['levels'])
@@ -154,18 +157,23 @@ class TwoDimPlotter:
     def single_contour(self, t, co: ContourOptions = ContourOptions(), ax=None) -> dict:
         if ax is None:
             ax = plt.gca()
-
+        contour_ops: ContourOptions = ContourOptions(levels=20,
+                                                     cmap='bwr',
+                                                     linewidth=0.5,
+                                                     add_lines=True,
+                                                     add_diag=True)
+        contour_ops.update(co)
         ds = self.ds
         s2d = ds.spec2d[ds.t_idx(t)]
         m = abs(s2d).max()
-        levels = np.linspace(-m, m, co.levels)
+        levels = np.linspace(-m, m, contour_ops.levels)
         out = {"ax": ax}
         c = ax.contourf(
             ds.probe_wn,
             ds.pump_wn,
             s2d.T,
             levels=levels,
-            cmap=co.cmap,
+            cmap=contour_ops.cmap,
         )
         out = {"contourf": c}
         if co.add_line:
@@ -187,7 +195,8 @@ class TwoDimPlotter:
     def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
 
-        c, ax = self.contour(self.ds.t[0], **subplots_kw)
+        out = self.single_contour(self.ds.t[0], **subplots_kw)
+        ax = out['ax']
         fig = ax.get_figure()
         frames = self.ds.t
         std_kws = {}
