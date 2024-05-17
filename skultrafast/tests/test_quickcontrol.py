@@ -45,6 +45,7 @@ def test_1d(datadir):
     ds.plot.spec(1)
 
 
+@pytest.mark.skip(reason="Tested by test_twodim.py")
 def test_2d(datadir2d):
     infos = list(Path(datadir2d).glob('*320.info'))
     ds = QC2DSpec(infos[0])

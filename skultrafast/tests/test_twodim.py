@@ -21,6 +21,12 @@ def two_d(datadir2d) -> TwoDim:
     return ds
 
 
+def test_saveload(two_d, tmp_path_factory):
+    path = tmp_path_factory.mktemp('data') / 'test.npz'
+    two_d.save_numpy(path)
+    TwoDim.load_numpy(path)
+
+
 def test_select(two_d):
     two_d = two_d.copy()
     two_d = two_d.select_range((2030, 2200), (2030, 2200))
