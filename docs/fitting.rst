@@ -47,7 +47,7 @@ since the function is a sum of term where only the coefficients are unknown.
 Therefore we use our nonlinear functions as a basis matrix :math:`A_{ij} =
 y(t_i, \tau_j)`. The linear least-squares problem can be written as :math:`min_x
 |Ax-b|_2` and can be directly solved. The separation of the linear and
-non-linear parameters is also know as variable projection.
+non-linear parameters is also known as variable projection.
 
 Since the exponential function basis is numerically unstable, skultrafast uses
 L2-regularization by default. This is also called Tikhonov regularization or
