@@ -70,11 +70,10 @@ class QCFile:
 
     @cached_property
     def info(self) -> dict[str, Any]:
-        h = []
         d = {}
         with (self.path / self.prefix).with_suffix(".info").open() as info_file:
-            for l in info_file:
-                key, val = l.split("\t")
+            for line in info_file:
+                key, val = line.split("\t")
                 val = val[:-1].strip()
                 d[key] = parse_str(val)
         return d
@@ -188,6 +187,8 @@ class QC2DSpec(QCBaseTimeRes):
         for t in range(len(self.t)):
             T = "_T%02d" % (t + 1)
             pol_scans = self.path.glob(self.prefix + T + f"_{which}*.scan")
+            if not pol_scans:
+                raise FileNotFoundError(f"No files found for {which} polarization")
             data = []
             for s in pol_scans:
                 d = np.loadtxt(s)
@@ -201,7 +202,7 @@ class QC2DSpec(QCBaseTimeRes):
                 break
         return data_dict
 
-    def __attrs__post_init__(self):
+    def __attrs_post_init__(self):
         self.par_data = self._loader("PAR")
         self.per_data = self._loader("PER")
         self.pump_freq = self._calc_freqs()

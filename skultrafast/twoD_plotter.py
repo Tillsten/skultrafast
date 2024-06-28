@@ -46,7 +46,7 @@ class TwoDimPlotter:
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
             if aspect is None:
-                aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
+                aspect = np.ptp(ds.probe_wn) / np.ptp(ds.pump_wn)
             if direction[0] == 'v':
                 nrows = len(idx)
                 ncols = 1

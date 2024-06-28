@@ -1,3 +1,4 @@
+
 from collections import defaultdict
 from lmfit.minimizer import MinimizerResult
 import os
@@ -10,15 +11,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial import Polynomial
 from scipy.interpolate import RegularGridInterpolator
+from scipy.integrate import simpson
 from scipy.ndimage import gaussian_filter, uniform_filter
 from scipy.stats import linregress
 from statsmodels.api import OLS, WLS, add_constant
 
-from skultrafast import dv, plot_helpers
-from skultrafast.dataset import TimeResSpec
-from skultrafast.twoD_plotter import TwoDimPlotter
-from skultrafast.utils import inbetween, LinRegResult
+
 from skultrafast.base_funcs.lineshapes import gauss2d, two_gauss2D_shared, two_gauss2D
+from skultrafast.utils import inbetween, LinRegResult
+from skultrafast.twoD_plotter import TwoDimPlotter
+from skultrafast.dataset import TimeResSpec
+from skultrafast import dv, plot_helpers
+
+num_integration = simpson
+
 
 PathLike = Union[str, bytes, os.PathLike]
 
@@ -330,7 +336,7 @@ class TwoDim:
         """
         Calculate and return 1D Time-resolved spectra for given range.
 
-        Uses trapezoidal integration.
+        Uses Simpson’s Rule for integration.
 
         Parameters
         ----------
@@ -345,7 +351,7 @@ class TwoDim:
             The corresponding 1D Dataset
         """
         pu_idx = inbetween(self.pump_wn, lower, upper)
-        data = np.trapz(self.spec2d[:, :, pu_idx], self.pump_wn[pu_idx], axis=-1)
+        data = num_integration(self.spec2d[:, :, pu_idx], x=self.pump_wn[pu_idx], axis=-1)
         return TimeResSpec(self.probe_wn, self.t, data, freq_unit='cm')
 
     def single_cls(
@@ -427,7 +433,7 @@ class TwoDim:
             if method == 'fit':
                 mod = lmfit.models.GaussianModel()
                 mod.set_param_hint('center', min=pr[pr_idx].min(), max=pr[pr_idx].max())
-                amp = np.trapz(s[pr_idx], pr[pr_idx])
+                amp = num_integration(s[pr_idx], x=pr[pr_idx])
                 result = mod.fit(s[pr_idx],
                                  sigma=3,
                                  center=cen_of_m,
@@ -448,7 +454,7 @@ class TwoDim:
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'skew_fit':
                 mod = lmfit.models.GaussianModel() + lmfit.models.LinearModel()
-                amp = np.trapz(s[pr_idx], pr[pr_idx])
+                amp = num_integration(s[pr_idx], x=pr[pr_idx])
                 result = mod.fit(s[pr_idx],
                                  sigma=3,
                                  center=cen_of_m,
@@ -710,7 +716,7 @@ class TwoDim:
                       pump_range: Tuple[float, float],
                       probe_range: Tuple[float, float] = None) -> np.ndarray:
         """
-        Integrates the 2D spectra over a given range, using the trapezoidal
+        Integrates the 2D spectra over a given range, using Simpson's
         rule.
 
         Parameters
@@ -733,8 +739,8 @@ class TwoDim:
         reg = self.spec2d[:, pr, :]
         pu = inbetween(self.pump_wn, min(pump_range), max(pump_range))
         reg = reg[:, :, pu]
-        s = np.trapz(reg, self.pump_wn[pu], axis=2)
-        s = np.trapz(s, self.probe_wn[pr], axis=1)
+        s = num_integration(reg, x=self.pump_wn[pu], axis=2)
+        s = num_integration(s, x=self.probe_wn[pr], axis=1)
         return s
 
     def fit_taus(self, taus: np.ndarray):
