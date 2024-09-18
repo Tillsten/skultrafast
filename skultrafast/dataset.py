@@ -3,7 +3,7 @@ import typing
 import warnings
 from collections import namedtuple
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
+from typing import Callable, Dict, Iterable, List, Literal, Optional, Type, Union, cast
 
 import attr
 import lmfit
@@ -112,12 +112,12 @@ class LDMResult:
 class TimeResSpec:
     def __init__(
         self,
-        wl,
-        t,
-        data,
-        err=None,
+        wl: np.ndarray,
+        t: np.ndarray,
+        data: np.ndarray,
+        err: np.ndarray | None = None,
         name=None,
-        freq_unit="nm",
+        freq_unit: Literal["nm", "cm"] = "nm",
         disp_freq_unit=None,
         auto_plot=True,
     ):
