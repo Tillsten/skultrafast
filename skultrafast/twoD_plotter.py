@@ -4,6 +4,8 @@ from typing import (TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, Ty
 
 import attr
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.patches import Rectangle
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import uniform_filter1d
@@ -217,6 +219,8 @@ class TwoDimPlotter:
                     symlog: bool = True,
                     ax: Optional[plt.Axes] = None,
                     mode: Literal['trapz', 'sum', 'ptp', 'min', 'max'] = 'trapz',
+                    normalize: Optional[Union[float, Literal['max']]] = None,
+                    draw_rect_axis: Optional[plt.Axes] = None,
                     **plot_kws):
         """
         Plot the integrated signal of given region over the waiting time.
@@ -234,8 +238,12 @@ class TwoDimPlotter:
             The axes to plot on. If None, the current axes is used.
         mode: str
             The mode of signal calculation. Can be either 'trapz' or 'ptp'.
-
-
+        normalize: Optional[Union[float, Literal['max']]
+            Whether to normalize the signal. If a float is given, the signal is
+            divided by the value at that time. If 'max' is given, the signal is
+            divided by its maximum value.
+        draw_rect_axis: Optional[plt.Axes]
+            If not None, a rectangle indicating the region is drawn on this axes.
         Returns
         -------
         l: plt.Line2D
@@ -271,6 +279,13 @@ class TwoDimPlotter:
         if symlog:
             ax.set_xscale("symlog", linthresh=1.0, linscale=1)
         plot_helpers.lbl_trans(ax, symlog)
+        if draw_rect_axis is not None:
+            rect = Rectangle((min(probe_range), min(pump_range)),
+                             np.ptp(probe_range),
+                             np.ptp(pump_range),
+                             edgecolor=l.get_color(),
+                             facecolor='none')
+            draw_rect_axis.add_patch(rect)
         return l
 
     def elp(self, t, offset=None, p=None):
@@ -323,9 +338,10 @@ class TwoDimPlotter:
         bg_correct : bool, optional
             Whether to subtract a constant background, by default True.
         normalize : Optional[Union[float, Literal['max']]], optional
-            Whether to normalize the spectrum. If a float is given, the spectrum is divided by
-            the value at that pump frequency. If 'max' is given, the spectrum is divided by its
-            maximum value, by default not normalized.
+            Whether to normalize the spectrum. If a float is given, the spectrum
+            is divided by the value at that pump frequency. If 'max' is given,
+            the spectrum is divided by its maximum value, by default not
+            normalized.
         ax : Optional[matplotlib.axes.Axes], optional
             The axes to plot on. If None, the current axes is used.
         """
@@ -454,6 +470,7 @@ class TwoDimPlotter:
               probe_wn: Union[float, list[float]],
               ax: Optional[plt.Axes] = None,
               symlog=True,
+              normalize: Optional[Union[float, Literal['max']]] = None,
               **kwargs) -> List[plt.Line2D]:
         """
         Plot the 2D signal of single point over the waiting time.
@@ -461,15 +478,21 @@ class TwoDimPlotter:
         Parameters
         ----------
         pump_wn : float or list of float
-            The pump frequency. Also takes a list. If a list is given, the length
-            of the list must be the same as the length of probe_wn or of length 1.
+            The pump frequency. Also takes a list. If a list is given, the
+            length of the list must be the same as the length of probe_wn or of
+            length 1.
         probe_wn : float or list of float
-            The probe frequency. Also takes a list. If a list is given, the length
-            of the list must be the same as the length of pump_wn or of length 1.
+            The probe frequency. Also takes a list. If a list is given, the
+            length of the list must be the same as the length of pump_wn or of
+            length 1.
         ax : matplotlib.axes.Axes, optional
             The axes to plot on. If None, the current axes is used.
         symlog : bool, optional
             If True, apply symlog scaling to the plot.
+        normalize : Optional[Union[float, Literal['max']], optional
+            Whether to normalize the transients. If a float is given, the
+            transients are divided by the value at that time. If 'max' is given,
+            the transients are divided by its maximum value, by default not normalized.
         kwargs : dict
             Additional keyword arguments are passed to the plot function.
         Returns
@@ -496,6 +519,12 @@ class TwoDimPlotter:
         l = []
         for x, y in zip(pump_wn, probe_wn):
             dat = self.ds.data_at(pump_wn=x, probe_wn=y)
+            if normalize is None:
+                pass
+            elif normalize == 'max':
+                dat = dat / dat.max()
+            else:
+                dat = dat / dat[self.ds.t_idx(normalize)]
             l += ax.plot(self.ds.t, dat, label='%.1f, %.1f' % (x, y), **kwargs)
         if symlog:
             ax.set_xscale('symlog', linthresh=1)
