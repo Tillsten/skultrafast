@@ -49,4 +49,4 @@ def test_1d(datadir):
 def test_2d(datadir2d):
     infos = list(Path(datadir2d).glob('*320.info'))
     ds = QC2DSpec(infos[0])
-    ds.make_ds()
+    out = ds.make_ds()

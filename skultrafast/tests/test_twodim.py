@@ -1,5 +1,4 @@
 from pathlib import Path
-from numpy.testing import assert_almost_equal
 import pytest
 
 from skultrafast.data_io import get_twodim_dataset
