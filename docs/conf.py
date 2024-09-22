@@ -11,7 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-from skultrafast._version import get_versions
+
 import sys
 import os
 
@@ -66,8 +66,7 @@ copyright = u'2022, Till Stensitzki'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-release = get_versions()['version']
-del get_versions
+from skultrafast import __version__ as release
 
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
@@ -270,7 +269,7 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+
 autoclass_content = 'both'
 autodoc_member_order = 'bysource'
 autosummary_generate = True
