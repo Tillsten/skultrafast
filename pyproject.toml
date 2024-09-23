@@ -22,6 +22,7 @@ dependencies = [
   "sympy",
   "wrapt",
 ]
+
 description = "Python package for analyzing time-resolved spectra."
 dynamic = ["version"]
 keywords = [
@@ -36,10 +37,20 @@ license = "BSD-3-Clause"
 license-file = "LICENSE.txt"
 name = "skultrafast"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.urls]
 Homepage = "http://github.com/tillsten/skultrafast"
+
+[project.optional-dependencies]
+doc = [
+  "sphinx >= 4",
+  "sphinx-gallery",
+  "pytest",
+  "docutils",
+  "sphinx-autoapi",
+  "furo",
+]
 
 [tool.hatch.version]
 path = "skultrafast/__init__.py"
@@ -48,6 +59,8 @@ path = "skultrafast/__init__.py"
 include = [
   "/skultrafast",
 ]
+
+
 
 [tool.hatch.envs.doc]
 dependencies = [
@@ -62,6 +75,3 @@ dependencies = [
 [tool.hatch.envs.doc.scripts]
 build = "cd docs && make html"
 
-[tool.ruff]
-docstring-code-format = true
-docstring-code-line-length = "dynamic"
