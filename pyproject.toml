@@ -33,8 +33,7 @@ keywords = [
   "spectroscopy",
   "time-resolved",
 ]
-license = "BSD-3-Clause"
-license-file = "LICENSE.txt"
+license = {file = "LICENSE.txt"}
 name = "skultrafast"
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -60,18 +59,6 @@ include = [
   "/skultrafast",
 ]
 
-
-
-[tool.hatch.envs.doc]
-dependencies = [
-  "sphinx >= 4",
-  "sphinx-gallery",
-  "pytest",
-  "docutils",
-  "sphinx-autoapi",
-  "furo",
-]
-
 [tool.hatch.envs.doc.scripts]
 build = "cd docs && make html"
-
+features = ["doc"]

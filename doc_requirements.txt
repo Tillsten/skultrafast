@@ -1,6 +1,0 @@
-sphinx >= 4
-sphinx-gallery
-pytest
-docutils
-sphinx-autoapi
-furo
