@@ -9,7 +9,7 @@ import math
 sq2 = math.sqrt(2)
 
 
-@jit(cache=True, nogil=True)
+@njit(cache=True)
 def _coh_gaussian(ta, w, tz):
     """
     Models coherent artifacts proportional to a gaussian and it's first three derivatives.
