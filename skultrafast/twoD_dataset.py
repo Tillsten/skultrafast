@@ -371,7 +371,7 @@ class TwoDim:
             Delay time of the spectrum to analyse
         pr_range : float or float, optional
             How many wavenumbers away from the maximum to use for
-            determining the exact position, by default 9, resulting 
+            determining the exact position, by default 9, resulting
             a total range of 18 wavenumbers. Also accepts a tuple,
             which is interpreted as (lower, upper) range.
         pu_range : float, optional
@@ -496,7 +496,7 @@ class TwoDim:
     def cls(self, joblib_kws=None, **cls_args) -> CLSResult:
         """Calculates the CLS for all 2d-spectra. The arguments are given
         to the single cls function, except joblib_kw, which is forwarded to
-        joblib.Parallel. 
+        joblib.Parallel.
 
         Returns as `CLSResult`."""
         slopes, slope_errs = [], []
@@ -680,9 +680,24 @@ class TwoDim:
 
     def get_minmax(self, t: float, com: int = 3) -> Dict[str, float]:
         """
-        Returns the position of the minimum and maximum of the dataset at time t. If com > 0,
-        it return the center of mass around the minimum and maximum. The com argument gives
-        the number of points to be used for the center of mass.
+        Returns the position of the minimum and maximum of the dataset at time
+        t. If com > 0, it return the center of mass around the minimum and
+        maximum. The com argument gives the number of points to be used for the
+        center of mass.
+
+        Parameters
+        ----------
+        t: float
+            The waiting time.
+        com: int
+            Number of points for the center of mass.
+
+        Returns
+        -------
+        Dict[str, float]
+            Dictionary with the positions of the minimum and maximum.
+            Has the keys 'ProbeMin', 'ProbeMax', 'PSAMax', 'PumpMin', 'PumpMax',
+            'Anh'.
         """
         from scipy.ndimage import maximum_position, minimum_position
         spec_i = self.spec2d[self.t_idx(t), :, :]

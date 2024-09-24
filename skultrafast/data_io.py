@@ -4,6 +4,7 @@ Created on Wed Nov 28 18:34:30 2012
 
 @author: tillsten
 """
+
 from __future__ import print_function
 
 
@@ -27,12 +28,12 @@ def save_txt_das(name, fitter):
     np.savetxt(name, arr)
 
 
-def save_txt(name, wls, t, dat, fmt='%.3f'):
+def save_txt(name, wls, t, dat, fmt="%.3f"):
     try:
         tmp = np.vstack((wls[None, :], dat))
         arr = np.hstack((np.vstack((0, t[:, None])), tmp))
     except ValueError:
-        print('Shapes wl:', wls.shape, 't', t.shape, 'd', dat.shape)
+        print("Shapes wl:", wls.shape, "t", t.shape, "d", dat.shape)
         raise IndexError
     np.savetxt(name, arr, fmt=fmt)
 
@@ -42,13 +43,12 @@ def extract_freqs_from_gaussianlog(fname):
     fr, ir, raman = [], [], []
 
     for line in f:
-        if line.lstrip().startswith('Frequencies --'):
-
-            fr += (map(float, re.sub(r'[^\d,.\d\d\d\d]', ' ', line).split()))
-        elif line.lstrip().startswith('IR Inten'):
-            ir += (map(float, re.sub(r'[^\d,.d\d\d\d]', ' ', line).split()))
-        elif line.lstrip().startswith('Raman Activities'):
-            raman += (map(float, re.sub(r'[^\d,.\d\d\d\d ]', ' ', line).split()))
+        if line.lstrip().startswith("Frequencies --"):
+            fr += map(float, re.sub(r"[^\d,.\d\d\d\d]", " ", line).split())
+        elif line.lstrip().startswith("IR Inten"):
+            ir += map(float, re.sub(r"[^\d,.d\d\d\d]", " ", line).split())
+        elif line.lstrip().startswith("Raman Activities"):
+            raman += map(float, re.sub(r"[^\d,.\d\d\d\d ]", " ", line).split())
 
     arrs = [fr]
     if ir:
@@ -70,9 +70,10 @@ def load_example():
         Tuple with wavelengths, t and data-array.
     """
     import skultrafast
-    a = np.load(skultrafast.__path__[0] + '/examples/data/test.npz')
-    wl, data, t = a['wl'], a['data'], a['t']
-    return wl, t*1000 - 2, data / 3.
+
+    a = np.load(skultrafast.__path__[0] + "/examples/data/test.npz")
+    wl, data, t = a["wl"], a["data"], a["t"]
+    return wl, t * 1000 - 2, data / 3.0
 
 
 def messpy_example_path():
@@ -85,7 +86,8 @@ def messpy_example_path():
         The full path
     """
     import skultrafast
-    return skultrafast.__path__[0] + '/examples/data/messpyv1_data.npz'
+
+    return skultrafast.__path__[0] + "/examples/data/messpyv1_data.npz"
 
 
 def get_example_path(kind):
@@ -97,13 +99,14 @@ def get_example_path(kind):
         Which path to return.
     """
     import skultrafast
-    root = skultrafast.__path__[0] + '/examples/data/'
+
+    root = skultrafast.__path__[0] + "/examples/data/"
     file_dict = {
-        "messpy": 'messpyv1_data.npz',
-        "sys_response": 'germanium.npz',
-        "vapor": 'ir_waterabs.npy',
+        "messpy": "messpyv1_data.npz",
+        "sys_response": "germanium.npz",
+        "vapor": "ir_waterabs.npy",
         "ir_polyfilm": "PolystyreneFilm_spectrum.npz",
-        "quickcontrol": "quickcontrol.zip"
+        "quickcontrol": "quickcontrol.zip",
     }
     return root + file_dict[kind]
 
@@ -122,3 +125,23 @@ def get_twodim_dataset():
     data = POOCH.fetch("MeSCN_2D_data.zip", processor=pooch.Unzip())
     p = Path(data[0]).parent
     return p
+
+
+def get_processed_twodim_dataset(force_processing=False):
+    cache = pooch.os_cache("skultrafast")
+    import pickle
+    if not (cache / "MeSCN_2D_data.pickle").exists() or force_processing:
+        data = POOCH.fetch("MeSCN_2D_data.zip", processor=pooch.Unzip())
+        p = Path(data[0]).parent
+        info = list(Path(p).glob('*320.info'))
+        from skultrafast.quickcontrol import QC2DSpec
+        qc = QC2DSpec(info[0], probe_filter=1, upsampling=4)
+        ds = qc.make_ds()["iso"]
+        ds.background_correction((2170, 2100), 2)
+        ds = ds.select_range((2130, 2200), (2100, 2200))
+        with open(cache / "MeSCN_2D_data.pickle", "wb") as f:
+            pickle.dump(ds, f)
+    else:
+        with open(cache / "MeSCN_2D_data.pickle", "rb") as f:
+            ds = pickle.load(f)
+    return ds
