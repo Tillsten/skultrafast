@@ -1,8 +1,8 @@
-from dataclasses import dataclass
 from typing import (TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, TypedDict,
                     Union)
 
 import attr
+
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.patches import Rectangle
@@ -14,7 +14,7 @@ from skultrafast import plot_helpers
 from skultrafast.utils import inbetween
 
 if TYPE_CHECKING:
-    from skultrafast.twoD_dataset import TwoDim
+    from skultrafast.twoD_dataset import TwoDim, CLSResult
 
 
 class ContourOptions(TypedDict):
@@ -43,7 +43,11 @@ class TwoDimPlotter:
                 contour_params: Dict[str, Any] = {},
                 scale: Literal['firstmax', 'fullmax', 'eachmax'] = "firstmax",
                 average=None,
-                fig_kws: dict = {}) -> Dict[Union[str, int], Any]:
+                fig_kws: dict = {},
+                cls_result: Optional['CLSResult'] = None,
+                cls_plot_kws: dict = {},
+                cls_fit_plot_kws: dict = {},
+                ) -> Dict[Union[str, int], Any]:
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
@@ -99,7 +103,7 @@ class TwoDimPlotter:
         else:
             raise ValueError("scale must be either fullmax or firstmax")
 
-        if isinstance(ax, plt.Axes):
+        if isinstance(ax, Axes):
             ax = [ax]
 
         contour_ops: ContourOptions = ContourOptions(levels=20,
@@ -107,7 +111,7 @@ class TwoDimPlotter:
                                                      linewidth=0.5,
                                                      add_lines=True,
                                                      add_diag=True)
-        contour_ops.update(contour_params)
+        contour_ops.update(contour_params)  # type: ignore
         out = {'fig': fig, 'axs': ax}
         for i, k in enumerate(idx):
             out_i = {'ax': ax[i]}
@@ -141,7 +145,8 @@ class TwoDimPlotter:
                 out_i['contour'] = cl
             if contour_ops['add_diag']:
                 start = max(ds.probe_wn.min(), ds.pump_wn.min())
-                out_i['diag_line'] = ax[i].axline((start, start), slope=1, c='k', lw=0.5)
+                out_i['diag_line'] = ax[i].axline(
+                    (start, start), slope=1, c='k', lw=0.5)
             if ds.t[k] < 1:
                 title = '%.0f fs' % (ds.t[k] * 1000)
             else:
@@ -153,6 +158,23 @@ class TwoDimPlotter:
                                         va='top',
                                         ha='left',
                                         transform=ax[i].transAxes)
+            if cls_result is not None:
+                if not len(cls_result.lines) == len(ds.t):
+                    raise ValueError(
+                        "The number of lines in cls_results must be the same as the number of waiting times."
+                        "The CLS results must be calculated for the same waiting times as the 2D data."
+                    )
+                cls_line = cls_result.lines[k].T
+                kwargs = dict(markersize=3, marker='o', color='w', mec='k')
+                kwargs.update(cls_plot_kws)
+                ls = ax[i].plot(cls_line[1], cls_line[0], **kwargs)
+                out_i['cls values'] = ls
+
+                kwargs = dict(linewidth=1, color='y')
+                kwargs.update(cls_fit_plot_kws)
+                lf = ax[i].plot(cls_line[-1], cls_line[0], **kwargs)
+                out_i['cls fit'] = lf
+
             out[i] = out_i
         return out
 
@@ -218,7 +240,8 @@ class TwoDimPlotter:
                     probe_range: Optional[Tuple[float, float]] = None,
                     symlog: bool = True,
                     ax: Optional[plt.Axes] = None,
-                    mode: Literal['trapz', 'sum', 'ptp', 'min', 'max'] = 'trapz',
+                    mode: Literal['trapz', 'sum',
+                                  'ptp', 'min', 'max'] = 'trapz',
                     normalize: Optional[Union[float, Literal['max']]] = None,
                     draw_rect_axis: Optional[plt.Axes] = None,
                     **plot_kws):
@@ -301,7 +324,8 @@ class TwoDimPlotter:
             d[::, ::],
             bounds_error=False)
         m = abs(d).max()
-        ax.pcolormesh(ds.probe_wn, ds.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
+        ax.pcolormesh(ds.probe_wn, ds.pump_wn, d,
+                      cmap='seismic', vmin=-m, vmax=m)
 
         ax.set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()),
                xlim=(ds.probe_wn.min(), ds.probe_wn.max()))
@@ -392,8 +416,10 @@ class TwoDimPlotter:
         l = []
         for ti in t:
             diag_data = self.ds.diag_and_antidiag(ti, offset)
-            l += ax.plot(diag_data.diag_coords, diag_data.diag, label='%.1f ps' % ti)
-        ax.set(xlabel=plot_helpers.freq_label, ylabel='Diagonal Amplitude [AU]')
+            l += ax.plot(diag_data.diag_coords,
+                         diag_data.diag, label='%.1f ps' % ti)
+        ax.set(xlabel=plot_helpers.freq_label,
+               ylabel='Diagonal Amplitude [AU]')
         return l
 
     def anti_diagonal(self,
@@ -435,7 +461,8 @@ class TwoDimPlotter:
             l += ax.plot(diag_data.antidiag_coords,
                          diag_data.antidiag,
                          label='%.1f ps' % ti)
-        ax.set(xlabel=plot_helpers.freq_label, ylabel='Anti-diagonal Amplitude [AU]')
+        ax.set(xlabel=plot_helpers.freq_label,
+               ylabel='Anti-diagonal Amplitude [AU]')
         return l
 
     def mark_minmax(self,
@@ -493,6 +520,7 @@ class TwoDimPlotter:
             Whether to normalize the transients. If a float is given, the
             transients are divided by the value at that time. If 'max' is given,
             the transients are divided by its maximum value, by default not normalized.
+
         kwargs : dict
             Additional keyword arguments are passed to the plot function.
         Returns
@@ -523,6 +551,10 @@ class TwoDimPlotter:
                 pass
             elif normalize == 'max':
                 dat = dat / dat.max()
+            elif normalize == 'absmax':
+                dat = dat / abs(dat).max()
+            elif normalize == 'min':
+                dat = dat / dat.min()
             else:
                 dat = dat / dat[self.ds.t_idx(normalize)]
             l += ax.plot(self.ds.t, dat, label='%.1f, %.1f' % (x, y), **kwargs)

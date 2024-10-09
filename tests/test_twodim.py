@@ -69,8 +69,10 @@ def test_all_cls(two_d_processed: TwoDim):
     cls_result = two_d_processed.cls()
     for use_const in [True, False]:
         for use_weights in [True, False]:
-            cls_result.exp_fit([1], use_const=use_const, use_weights=use_weights)
-            cls_result.exp_fit([1, 10], use_const=use_const, use_weights=use_weights)
+            cls_result.exp_fit([1], use_const=use_const,
+                               use_weights=use_weights)
+            cls_result.exp_fit([1, 10], use_const=use_const,
+                               use_weights=use_weights)
             assert cls_result.exp_fit_result_ is not None
             cls_result.plot_cls()
 
@@ -88,6 +90,11 @@ def test_twodplot_contour(two_d_processed):
     two_d_processed.plot.contour(1)
     two_d_processed.plot.contour(1, 3, 5, )
     two_d_processed.plot.elp(1)
+
+
+def test_contour_with_cls(two_d_processed):
+    cls_result = two_d_processed.cls()
+    two_d_processed.plot.contour(1, 10, 30, cls_result=cls_result)
 
 
 def test_bg_correct(two_d_processed: TwoDim):

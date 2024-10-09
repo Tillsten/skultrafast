@@ -120,9 +120,8 @@ class CLSResult(FFCFResult):
     intercept_errors: Optional[np.ndarray]
     """Errors of the intercepts"""
     lines: List[np.ndarray]
-    """Contains the x and y, yerr-values used for the linear fit"""
-
-    exp_fit_result_: Optional[lmfit.model.ModelResult] = None
+    """Contains the pump_wn, probe_wn,  probe_wn-erroprs used for the linear fit,
+       as well as the linear fit itself."""
 
 
 @attr.s(auto_attribs=True)
@@ -351,7 +350,8 @@ class TwoDim:
             The corresponding 1D Dataset
         """
         pu_idx = inbetween(self.pump_wn, lower, upper)
-        data = num_integration(self.spec2d[:, :, pu_idx], x=self.pump_wn[pu_idx], axis=-1)
+        data = num_integration(
+            self.spec2d[:, :, pu_idx], x=self.pump_wn[pu_idx], axis=-1)
         return TimeResSpec(self.probe_wn, self.t, data, freq_unit='cm')
 
     def single_cls(
@@ -422,7 +422,8 @@ class TwoDim:
             if isinstance(pr_range, tuple):
                 pr_idx = inbetween(pr, pr_range[0], pr_range[1])
             elif method == 'nodal':
-                between_range = inbetween(pr, min(pr[m], pr[m1]), max(pr[m], pr[m1]))
+                between_range = inbetween(
+                    pr, min(pr[m], pr[m1]), max(pr[m], pr[m1]))
                 center = pr[between_range][np.argmin(np.abs(s)[between_range])]
                 pr_idx = (pr < center + pr_range) & (pr > center - pr_range)
             else:
@@ -432,19 +433,22 @@ class TwoDim:
             cen_of_m = np.average(pr[pr_idx], weights=s[pr_idx])
             if method == 'fit':
                 mod = lmfit.models.GaussianModel()
-                mod.set_param_hint('center', min=pr[pr_idx].min(), max=pr[pr_idx].max())
+                mod.set_param_hint(
+                    'center', min=pr[pr_idx].min(), max=pr[pr_idx].max())
                 amp = num_integration(s[pr_idx], x=pr[pr_idx])
                 result = mod.fit(s[pr_idx],
                                  sigma=3,
                                  center=cen_of_m,
                                  amplitude=amp,
                                  x=pr[pr_idx])
-                val, err = (result.params['center'].value, result.params['center'].stderr)
+                val, err = (result.params['center'].value,
+                            result.params['center'].stderr)
                 if err is None:
                     err = np.nan
                 l.append((val, err))
             elif method == 'quad':
-                p: Polynomial = Polynomial.fit(pr[pr_idx], s[pr_idx], 2)  # type: ignore
+                p: Polynomial = Polynomial.fit(
+                    pr[pr_idx], s[pr_idx], 2)  # type: ignore
                 l.append((p.deriv().roots()[0], 1))
             elif method == 'log_quad':
                 s_min = s[m]
@@ -462,7 +466,8 @@ class TwoDim:
                                  x=pr[pr_idx],
                                  slope=0,
                                  intercept=0)
-                val, err = (result.params['center'].value, result.params['center'].stderr)
+                val, err = (result.params['center'].value,
+                            result.params['center'].stderr)
                 if err is None:
                     err = np.nan
                 l.append((val, err))
@@ -513,7 +518,8 @@ class TwoDim:
             r = c.reg_result
             slopes.append(r.params[1])
             slope_errs.append(r.bse[1])
-            arr = np.column_stack((c.pump_wn, c.max_pos, c.max_pos_err, c.linear_fit))
+            arr = np.column_stack(
+                (c.pump_wn, c.max_pos, c.max_pos_err, c.linear_fit))
             lines += [arr]
             intercept.append(r.params[0])
             intercept_errs.append(r.bse[0])
@@ -568,7 +574,8 @@ class TwoDim:
 
         ts = self.t[spec_i] * np.ones_like(y_diag)
         diag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_diag)))
-        antidiag = self.interpolator_(np.column_stack((ts, self.probe_wn, y_antidiag)))
+        antidiag = self.interpolator_(
+            np.column_stack((ts, self.probe_wn, y_antidiag)))
 
         res = DiagResult(
             diag=diag,
@@ -612,7 +619,8 @@ class TwoDim:
         if kind == 'uniform':
             filtered.spec2d = uniform_filter(self.spec2d, size, mode='nearest')
         if kind == 'gaussian':
-            filtered.spec2d = gaussian_filter(self.spec2d, size, mode='nearest')
+            filtered.spec2d = gaussian_filter(
+                self.spec2d, size, mode='nearest')
         return filtered
 
     def save_txt(self, pname: PathLike, **kwargs):
@@ -646,7 +654,8 @@ class TwoDim:
         kwargs:
             Additional arguments for the `np.savetxt` function.
         """
-        arr = np.block([[0, self.pump_wn], [self.probe_wn[:, None], self.spec2d[i]]])
+        arr = np.block(
+            [[0, self.pump_wn], [self.probe_wn[:, None], self.spec2d[i]]])
         np.savetxt(fname,
                    arr,
                    **kwargs,
@@ -670,7 +679,8 @@ class TwoDim:
         -------
         None
         """
-        wn_range = ~inbetween(self.probe_wn, excluded_range[0], excluded_range[1])
+        wn_range = ~inbetween(
+            self.probe_wn, excluded_range[0], excluded_range[1])
         for ti in range(self.spec2d.shape[0]):
             for pi in range(self.spec2d.shape[2]):
                 s = self.spec2d[ti, :, pi]
@@ -705,13 +715,17 @@ class TwoDim:
         max_pos = maximum_position(spec_i)
         if com > 0:
             idx = slice(min_pos[0] - com, min_pos[0] + com + 1)
-            probe_min = np.average(self.probe_wn[idx], weights=spec_i.min(1)[idx])
+            probe_min = np.average(
+                self.probe_wn[idx], weights=spec_i.min(1)[idx])
             idx = slice(max_pos[0] - com, max_pos[0] + com + 1)
-            probe_max = np.average(self.probe_wn[idx], weights=spec_i.max(1)[idx])
+            probe_max = np.average(
+                self.probe_wn[idx], weights=spec_i.max(1)[idx])
             idx = slice(min_pos[1] - com, min_pos[1] + com + 1)
-            pump_min = np.average(self.pump_wn[idx], weights=spec_i.min(0)[idx])
+            pump_min = np.average(
+                self.pump_wn[idx], weights=spec_i.min(0)[idx])
             idx = slice(max_pos[1] - com, max_pos[1] + com + 1)
-            pump_max = np.average(self.pump_wn[idx], weights=spec_i.max(0)[idx])
+            pump_max = np.average(
+                self.pump_wn[idx], weights=spec_i.max(0)[idx])
         else:
             probe_min = self.probe_wn[min_pos[0]]
             probe_max = self.probe_wn[max_pos[0]]
@@ -783,7 +797,8 @@ class TwoDim:
             params['tau%d' % i].vary = False
 
         def fcn(params, res_only=True):
-            tau_arr = np.array([params[f'tau{i}'].value for i in range(len(taus))])
+            tau_arr = np.array(
+                [params[f'tau{i}'].value for i in range(len(taus))])
             fit_res = self.fit_taus(tau_arr)
             if res_only:
                 return fit_res[2]
@@ -829,14 +844,16 @@ class TwoDim:
         mod.set_param_hint('k', min=0, value=1, vary=False)
         mod.set_param_hint('ah', min=0, value=mm['Anh'])
         mod.set_param_hint('sigma_pu', min=0, value=gres.params['sigma'].value)
-        mod.set_param_hint('sigma_pr', min=0, value=gres.params['sigma'].value / 2)
+        mod.set_param_hint('sigma_pr', min=0,
+                           value=gres.params['sigma'].value / 2)
         mod.set_param_hint('corr', value=0.4, min=0, max=1)
 
         last_params: Union[dict, lmfit.Parameters] = {'k': 1, 'offset': 0}
 
         for i, t in enumerate(self.t):
             spec = self.data_at(t=t)
-            res = mod.fit(spec, pu=self.pump_wn, pr=self.probe_wn, **last_params)
+            res = mod.fit(spec, pu=self.pump_wn,
+                          pr=self.probe_wn, **last_params)
             results.append(res)
             p = res.params
             for pname in p:
