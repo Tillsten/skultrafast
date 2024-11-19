@@ -261,10 +261,12 @@ class TwoDimPlotter:
             The axes to plot on. If None, the current axes is used.
         mode: str
             The mode of signal calculation. Can be either 'trapz' or 'ptp'.
-        normalize: Optional[Union[float, Literal['max']]
+        normalize: Optional[Union[float, Literal['max', 'absmax', 'min']]]
             Whether to normalize the signal. If a float is given, the signal is
             divided by the value at that time. If 'max' is given, the signal is
-            divided by its maximum value.
+            divided by its maximum value. If 'absmax' is given, the signal is
+            divided by the absolute maximum value. If 'min' is given, the signal
+            is divided by the minimum value.
         draw_rect_axis: Optional[plt.Axes]
             If not None, a rectangle indicating the region is drawn on this axes.
         Returns
@@ -298,6 +300,16 @@ class TwoDimPlotter:
             s = np.max(reg, axis=2)
             s = np.max(s, axis=1)
         assert ax is not None
+        if normalize is None:
+            pass
+        elif normalize == 'max':
+            s = s / s.max()
+        elif normalize == 'absmax':
+            s = s / np.abs(s).max()
+        elif normalize == 'min':
+            s = s / s.min()
+        else:
+            s = s / s[self.ds.t_idx(normalize)]
         l, = ax.plot(self.ds.t, s, **plot_kws)
         if symlog:
             ax.set_xscale("symlog", linthresh=1.0, linscale=1)
@@ -561,4 +573,58 @@ class TwoDimPlotter:
         if symlog:
             ax.set_xscale('symlog', linthresh=1)
         plot_helpers.lbl_trans(ax, use_symlog=symlog)
+        return l
+
+    def pump_slice(self, pump_wn: float, *t, ax: Optional[plt.Axes] = None, **kwargs) -> list[plt.Line2D]:
+        """
+        Plot a slice along the probe axis for a given pump frequency.
+
+        Parameters
+        ----------
+        pump_wn : float
+            The pump frequency.
+        t : float
+            The waiting time, can be multiple.
+        ax : matplotlib.axes.Axes, optional
+            The axes to plot on. If None, the current axes is used.
+
+        Returns
+        -------
+        plt.Line2D
+            The plotted line object.
+        """
+        if ax is None:
+            ax = plt.gca()
+        l = []
+        for ti in t:
+            dat = self.ds.data_at(pump_wn=pump_wn, t=ti)
+            l += ax.plot(self.ds.probe_wn, dat, label='%.1f ps' % ti, **kwargs)
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Signal')
+        return l
+
+    def probe_slice(self, probe_wn: float, *t, ax: Optional[plt.Axes] = None, **kwargs) -> list[plt.Line2D]:
+        """
+        Plot a slice along the pump axis for a given probe frequency.
+
+        Parameters
+        ----------
+        probe_wn : float
+            The probe frequency.
+        t : float
+            The waiting time, can be multiple.
+        ax : matplotlib.axes.Axes, optional
+            The axes to plot on. If None, the current axes is used.
+
+        Returns
+        -------
+        plt.Line2D
+            The plotted line object.
+        """
+        if ax is None:
+            ax = plt.gca()
+        l = []
+        for ti in t:
+            dat = self.ds.data_at(probe_wn=probe_wn, t=ti)
+            l += ax.plot(self.ds.pump_wn, dat, label='%.1f ps' % ti, **kwargs)
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Signal')
         return l

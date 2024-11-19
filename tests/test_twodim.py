@@ -151,3 +151,10 @@ def test_plot_trans(two_d_processed: TwoDim):
 def test_gaussfit(two_d_processed: TwoDim):
     fr = two_d_processed.fit_gauss()
     fr.plot_cls()
+
+
+def test_slice_plots(two_d_processed: TwoDim):
+    l = two_d_processed.plot.probe_slice(2150, 0.2, 0.5)
+    assert len(l) == 2
+    l = two_d_processed.plot.pump_slice(2150, 0.2, 0.5)
+    assert len(l) == 2
