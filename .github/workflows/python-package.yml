@@ -32,4 +32,5 @@ jobs:
         if [ -f doc_requirements.txt ]; then pip install -r doc_requirements.txt; fi
     - name: Test with pytest
       run: |
+        python -m pip install -e .
         pytest
