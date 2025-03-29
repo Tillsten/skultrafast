@@ -68,7 +68,8 @@ class Polybase:
     r: np.ndarray = dc.field(init=False)
     om: np.ndarray = dc.field(init=False)
     polybase: np.ndarray = dc.field(init=False)
-    val_dict: dict[tuple[int, int], np.ndarray] = dc.field(init=False)
+    val_dict: dict[tuple[int, int], int] = dc.field(init=False)
+
     _polycache: np.ndarray = dc.field(init=False)
     _expcache: np.ndarray = dc.field(init=False)
 
@@ -84,15 +85,15 @@ class Polybase:
     def make_base(self):
         l = []
         l.append(np.where(self.r < 1, 1.0, np.nan))
-        self.val_dict[(0, 0)] = l[0]
+        self.val_dict[(0, 0)] = 0
         for n in range(1, self.n + 1):
             for m in range(0, n + 1):
                 arr = self._V(n, m)
                 l.append(arr.real)
-                self.val_dict[(n, m)] = arr.real
+                self.val_dict[(n, m)] = len(l) - 1
                 if m > 0:
                     l.append(arr.imag)
-                    self.val_dict[(n, -m)] = arr.imag
+                    self.val_dict[(n, -m)] = len(l) - 1
         return np.array(l)
 
     def _R(self, n, m):
@@ -111,7 +112,7 @@ class Polybase:
     def _V(self, n, m):
         assert n >= 0
         assert n - abs(m) >= 0
-        a = (n+1)/np.pi*self._R(n, m) * self._expcache[m]
+        a = self._R(n, m) * self._expcache[m]
         return a
 
     def plot_pz(self, n, m, mode="real", offset=(0, 0)):
