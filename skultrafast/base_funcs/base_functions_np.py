@@ -31,11 +31,12 @@ def _fold_exp(tt, w, tz, tau):
        Folded exponentials for given taus.
 
     """
+    if w == 0:
+        k = -1 / tau
+        return np.exp((tt.reshape(tt.shape[0], tt.shape[1], 1), -tz) * k.reshape(1, 1, -1))
     ws = w
     k = 1 / (tau[..., None, None])
     t = (tt + tz).T[None, ...]
-    if w == 0:
-        return np.exp(-k * t).T
     y = np.exp(k * (ws * ws * k / (4.0) - t))
     y *= 0.5 * erfc(-t / ws + ws * k / (2.0))
     return y.T
@@ -76,5 +77,5 @@ def _coh_gaussian(t, w, tz):
     tt = tt[idx]
     y[idx, ..., 1] *= (-tt * exp_half / w)
     y[idx, ..., 2] *= (tt*tt/w/w - 1)
-    # y[idx,..., 2] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
+    #y[idx,..., 2] *= (-tt ** 3 / w ** 6 + 3 * tt / w ** 4)
     return y

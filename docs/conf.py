@@ -11,7 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-
+from skultrafast._version import get_versions
 import sys
 import os
 
@@ -66,7 +66,8 @@ copyright = u'2022, Till Stensitzki'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-from skultrafast import __version__ as release
+release = get_versions()['version']
+del get_versions
 
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
@@ -111,11 +112,17 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'furo'
-html_logo = '_static/skultrafast_logo_v1.svg'
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {}
+html_theme_options = {'logo_name': 'false',
+                      'logo': 'skultrafast_logo_v1.svg',
+                      'github_button': 'true',
+                      'github_repo': 'skultrafast',
+                      'github_user': 'tillsten',
+                      'font_size': '12pt',
+                      }
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -263,7 +270,7 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-
+intersphinx_mapping = {'http://docs.python.org/': None}
 autoclass_content = 'both'
 autodoc_member_order = 'bysource'
 autosummary_generate = True

@@ -1,0 +1,9 @@
+include versioneer.py
+include skultrafast/_version.py
+include skultrafast/examples/*
+include skultrafast/examples/data/*
+# added by check_manifest.py
+include *.txt
+include *.yaml
+include *.yml
+include LICENSE

@@ -44,9 +44,7 @@ def simulate_binning(wrapped=None, *, fac=5):
     return wrapper(wrapped)
 
 
-def sigma_clip(data, sigma: float = 3, max_iter: int = 5, axis: int = -1,
-               use_mad: bool = False, mean_func=np.ma.mean, full_return=False,
-               ) -> np.ma.MaskedArray | tuple[np.ma.MaskedArray, np.ndarray, np.ndarray]:
+def sigma_clip(data, sigma: float = 3, max_iter: int = 5, axis: int = -1, use_mad: bool = False):
     """Masks outliers by iteratively removing points outside given
     standard deviations.
 
@@ -59,9 +57,6 @@ def sigma_clip(data, sigma: float = 3, max_iter: int = 5, axis: int = -1,
     max_iter : int
         How many iterations are done. If a new iteration does not mask new
         values, the function will break the loop.
-    mean_func : callable
-        Function to calculate the mean. Default is np.ma.mean, which is 
-        masked array aware.
 
     Returns
     -------
@@ -71,7 +66,7 @@ def sigma_clip(data, sigma: float = 3, max_iter: int = 5, axis: int = -1,
     data = np.ma.masked_invalid(data)
     num_masked = 0
     for _ in range(max_iter):
-        median = mean_func(data, axis, keepdims=1)
+        median = np.ma.median(data, axis, keepdims=1)
         if use_mad:
             std = median_abs_deviation(data, axis=1)
         else:
@@ -85,10 +80,7 @@ def sigma_clip(data, sigma: float = 3, max_iter: int = 5, axis: int = -1,
             break
         else:
             num_masked = n
-    if not full_return:
-        return data
-    else:
-        return data, median, std
+    return data
 
 
 def gauss_step(x, amp: float, center: float, sigma: float):
@@ -268,8 +260,7 @@ class LinRegResult:
             bstd[:, i] = np.sqrt(np.diag(bvar[i]))
 
         bstd, bvar, r2, bstd, sol = linreg_std_errors(A, y)
-        return cls(data=y, fit=fit, residuals=resi, sol=sol, r2=r2,
-                   var=bvar, stderr=bstd, rel_err=bstd/abs(sol), weights=weights)
+        return cls(y, fit, resi, sol, r2, bvar, bstd, bstd/abs(sol))
 
 
 def linreg_std_errors(A, y):

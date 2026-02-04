@@ -52,11 +52,6 @@ def nm2cm(nm):
 
 
 @make_doc
-def nm2eV(nm):
-    return cm2eV(nm2cm(nm))
-
-
-@make_doc
 def cm2nm(cm):
     return 1e7 / cm
 
@@ -85,11 +80,6 @@ def THz2eV(THz):
 def eV2THz(eV):
     eV_Hertz = physical_constants['electron volt-hertz relationship'][0]
     return eV * eV_Hertz * 1e-12
-
-
-@make_doc
-def eV2nm(eV):
-    return cm2nm(eV2cm(eV))
 
 
 @make_doc

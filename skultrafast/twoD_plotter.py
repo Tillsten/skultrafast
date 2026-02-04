@@ -1,11 +1,9 @@
+from dataclasses import dataclass
 from typing import (TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, TypedDict,
                     Union)
 
 import attr
-
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.patches import Rectangle
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import uniform_filter1d
@@ -14,7 +12,7 @@ from skultrafast import plot_helpers
 from skultrafast.utils import inbetween
 
 if TYPE_CHECKING:
-    from skultrafast.twoD_dataset import TwoDim, CLSResult
+    from skultrafast.twoD_dataset import TwoDim
 
 
 class ContourOptions(TypedDict):
@@ -43,16 +41,12 @@ class TwoDimPlotter:
                 contour_params: Dict[str, Any] = {},
                 scale: Literal['firstmax', 'fullmax', 'eachmax'] = "firstmax",
                 average=None,
-                fig_kws: dict = {},
-                cls_result: Optional['CLSResult'] = None,
-                cls_plot_kws: dict = {},
-                cls_fit_plot_kws: dict = {},
-                ) -> Dict[Union[str, int], Any]:
+                fig_kws: dict = {}) -> Dict[Union[str, int], Any]:
         ds = self.ds
         idx = [ds.t_idx(i) for i in times]
         if ax is None:
             if aspect is None:
-                aspect = np.ptp(ds.probe_wn) / np.ptp(ds.pump_wn)
+                aspect = ds.probe_wn.ptp() / ds.pump_wn.ptp()
             if direction[0] == 'v':
                 nrows = len(idx)
                 ncols = 1
@@ -86,8 +80,6 @@ class TwoDimPlotter:
                 ax = ax[:, 0]
             else:
                 ax = ax[0, :]
-        else:
-            fig = ax[0].get_figure()
 
         if average is not None:
             s2d = uniform_filter1d(ds.spec2d, average, 0, mode="nearest")
@@ -103,7 +95,7 @@ class TwoDimPlotter:
         else:
             raise ValueError("scale must be either fullmax or firstmax")
 
-        if isinstance(ax, Axes):
+        if isinstance(ax, plt.Axes):
             ax = [ax]
 
         contour_ops: ContourOptions = ContourOptions(levels=20,
@@ -111,7 +103,7 @@ class TwoDimPlotter:
                                                      linewidth=0.5,
                                                      add_lines=True,
                                                      add_diag=True)
-        contour_ops.update(contour_params)  # type: ignore
+        contour_ops.update(contour_params)
         out = {'fig': fig, 'axs': ax}
         for i, k in enumerate(idx):
             out_i = {'ax': ax[i]}
@@ -119,7 +111,6 @@ class TwoDimPlotter:
             if scale == 'eachmax':
                 m = np.abs(s2d[k, ...]).max()
             if isinstance(contour_ops['levels'], int):
-                assert m is not None
                 levels = np.linspace(-m, m, contour_ops['levels'])
             else:
                 levels = np.array(contour_ops['levels'])
@@ -145,8 +136,7 @@ class TwoDimPlotter:
                 out_i['contour'] = cl
             if contour_ops['add_diag']:
                 start = max(ds.probe_wn.min(), ds.pump_wn.min())
-                out_i['diag_line'] = ax[i].axline(
-                    (start, start), slope=1, c='k', lw=0.5)
+                out_i['diag_line'] = ax[i].axline((start, start), slope=1, c='k', lw=0.5)
             if ds.t[k] < 1:
                 title = '%.0f fs' % (ds.t[k] * 1000)
             else:
@@ -158,46 +148,24 @@ class TwoDimPlotter:
                                         va='top',
                                         ha='left',
                                         transform=ax[i].transAxes)
-            if cls_result is not None:
-                if not len(cls_result.lines) == len(ds.t):
-                    raise ValueError(
-                        "The number of lines in cls_results must be the same as the number of waiting times."
-                        "The CLS results must be calculated for the same waiting times as the 2D data."
-                    )
-                cls_line = cls_result.lines[k].T
-                kwargs = dict(markersize=3, marker='o', color='w', mec='k')
-                kwargs.update(cls_plot_kws)
-                ls = ax[i].plot(cls_line[1], cls_line[0], **kwargs)
-                out_i['cls values'] = ls
-
-                kwargs = dict(linewidth=1, color='y')
-                kwargs.update(cls_fit_plot_kws)
-                lf = ax[i].plot(cls_line[-1], cls_line[0], **kwargs)
-                out_i['cls fit'] = lf
-
             out[i] = out_i
         return out
 
     def single_contour(self, t, co: ContourOptions = ContourOptions(), ax=None) -> dict:
         if ax is None:
             ax = plt.gca()
-        contour_ops: ContourOptions = ContourOptions(levels=20,
-                                                     cmap='bwr',
-                                                     linewidth=0.5,
-                                                     add_lines=True,
-                                                     add_diag=True)
-        contour_ops.update(co)
+
         ds = self.ds
         s2d = ds.spec2d[ds.t_idx(t)]
         m = abs(s2d).max()
-        levels = np.linspace(-m, m, contour_ops.levels)
+        levels = np.linspace(-m, m, co.levels)
         out = {"ax": ax}
         c = ax.contourf(
             ds.probe_wn,
             ds.pump_wn,
             s2d.T,
             levels=levels,
-            cmap=contour_ops.cmap,
+            cmap=co.cmap,
         )
         out = {"contourf": c}
         if co.add_line:
@@ -219,8 +187,7 @@ class TwoDimPlotter:
     def movie_contour(self, fname, contour_kw={}, subplots_kw={}):
         from matplotlib.animation import FuncAnimation
 
-        out = self.single_contour(self.ds.t[0], **subplots_kw)
-        ax = out['ax']
+        c, ax = self.contour(self.ds.t[0], **subplots_kw)
         fig = ax.get_figure()
         frames = self.ds.t
         std_kws = {}
@@ -240,10 +207,7 @@ class TwoDimPlotter:
                     probe_range: Optional[Tuple[float, float]] = None,
                     symlog: bool = True,
                     ax: Optional[plt.Axes] = None,
-                    mode: Literal['trapz', 'sum',
-                                  'ptp', 'min', 'max'] = 'trapz',
-                    normalize: Optional[Union[float, Literal['max']]] = None,
-                    draw_rect_axis: Optional[plt.Axes] = None,
+                    mode: Literal['trapz', 'sum', 'ptp', 'min', 'max'] = 'trapz',
                     **plot_kws):
         """
         Plot the integrated signal of given region over the waiting time.
@@ -261,14 +225,8 @@ class TwoDimPlotter:
             The axes to plot on. If None, the current axes is used.
         mode: str
             The mode of signal calculation. Can be either 'trapz' or 'ptp'.
-        normalize: Optional[Union[float, Literal['max', 'absmax', 'min']]]
-            Whether to normalize the signal. If a float is given, the signal is
-            divided by the value at that time. If 'max' is given, the signal is
-            divided by its maximum value. If 'absmax' is given, the signal is
-            divided by the absolute maximum value. If 'min' is given, the signal
-            is divided by the minimum value.
-        draw_rect_axis: Optional[plt.Axes]
-            If not None, a rectangle indicating the region is drawn on this axes.
+
+
         Returns
         -------
         l: plt.Line2D
@@ -300,27 +258,10 @@ class TwoDimPlotter:
             s = np.max(reg, axis=2)
             s = np.max(s, axis=1)
         assert ax is not None
-        if normalize is None:
-            pass
-        elif normalize == 'max':
-            s = s / s.max()
-        elif normalize == 'absmax':
-            s = s / np.abs(s).max()
-        elif normalize == 'min':
-            s = s / s.min()
-        else:
-            s = s / s[self.ds.t_idx(normalize)]
         l, = ax.plot(self.ds.t, s, **plot_kws)
         if symlog:
             ax.set_xscale("symlog", linthresh=1.0, linscale=1)
         plot_helpers.lbl_trans(ax, symlog)
-        if draw_rect_axis is not None:
-            rect = Rectangle((min(probe_range), min(pump_range)),
-                             np.ptp(probe_range),
-                             np.ptp(pump_range),
-                             edgecolor=l.get_color(),
-                             facecolor='none')
-            draw_rect_axis.add_patch(rect)
         return l
 
     def elp(self, t, offset=None, p=None):
@@ -336,8 +277,7 @@ class TwoDimPlotter:
             d[::, ::],
             bounds_error=False)
         m = abs(d).max()
-        ax.pcolormesh(ds.probe_wn, ds.pump_wn, d,
-                      cmap='seismic', vmin=-m, vmax=m)
+        ax.pcolormesh(ds.probe_wn, ds.pump_wn, d, cmap='seismic', vmin=-m, vmax=m)
 
         ax.set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()),
                xlim=(ds.probe_wn.min(), ds.probe_wn.max()))
@@ -374,10 +314,9 @@ class TwoDimPlotter:
         bg_correct : bool, optional
             Whether to subtract a constant background, by default True.
         normalize : Optional[Union[float, Literal['max']]], optional
-            Whether to normalize the spectrum. If a float is given, the spectrum
-            is divided by the value at that pump frequency. If 'max' is given,
-            the spectrum is divided by its maximum value, by default not
-            normalized.
+            Whether to normalize the spectrum. If a float is given, the spectrum is divided by
+            the value at that pump frequency. If 'max' is given, the spectrum is divided by its
+            maximum value, by default not normalized.
         ax : Optional[matplotlib.axes.Axes], optional
             The axes to plot on. If None, the current axes is used.
         """
@@ -428,10 +367,8 @@ class TwoDimPlotter:
         l = []
         for ti in t:
             diag_data = self.ds.diag_and_antidiag(ti, offset)
-            l += ax.plot(diag_data.diag_coords,
-                         diag_data.diag, label='%.1f ps' % ti)
-        ax.set(xlabel=plot_helpers.freq_label,
-               ylabel='Diagonal Amplitude [AU]')
+            l += ax.plot(diag_data.diag_coords, diag_data.diag, label='%.1f ps' % ti)
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Diagonal Amplitude [AU]')
         return l
 
     def anti_diagonal(self,
@@ -473,8 +410,7 @@ class TwoDimPlotter:
             l += ax.plot(diag_data.antidiag_coords,
                          diag_data.antidiag,
                          label='%.1f ps' % ti)
-        ax.set(xlabel=plot_helpers.freq_label,
-               ylabel='Anti-diagonal Amplitude [AU]')
+        ax.set(xlabel=plot_helpers.freq_label, ylabel='Anti-diagonal Amplitude [AU]')
         return l
 
     def mark_minmax(self,
@@ -509,7 +445,6 @@ class TwoDimPlotter:
               probe_wn: Union[float, list[float]],
               ax: Optional[plt.Axes] = None,
               symlog=True,
-              normalize: Optional[Union[float, Literal['max']]] = None,
               **kwargs) -> List[plt.Line2D]:
         """
         Plot the 2D signal of single point over the waiting time.
@@ -517,22 +452,15 @@ class TwoDimPlotter:
         Parameters
         ----------
         pump_wn : float or list of float
-            The pump frequency. Also takes a list. If a list is given, the
-            length of the list must be the same as the length of probe_wn or of
-            length 1.
+            The pump frequency. Also takes a list. If a list is given, the length
+            of the list must be the same as the length of probe_wn or of length 1.
         probe_wn : float or list of float
-            The probe frequency. Also takes a list. If a list is given, the
-            length of the list must be the same as the length of pump_wn or of
-            length 1.
+            The probe frequency. Also takes a list. If a list is given, the length
+            of the list must be the same as the length of pump_wn or of length 1.
         ax : matplotlib.axes.Axes, optional
             The axes to plot on. If None, the current axes is used.
         symlog : bool, optional
             If True, apply symlog scaling to the plot.
-        normalize : Optional[Union[float, Literal['max']], optional
-            Whether to normalize the transients. If a float is given, the
-            transients are divided by the value at that time. If 'max' is given,
-            the transients are divided by its maximum value, by default not normalized.
-
         kwargs : dict
             Additional keyword arguments are passed to the plot function.
         Returns
@@ -559,72 +487,8 @@ class TwoDimPlotter:
         l = []
         for x, y in zip(pump_wn, probe_wn):
             dat = self.ds.data_at(pump_wn=x, probe_wn=y)
-            if normalize is None:
-                pass
-            elif normalize == 'max':
-                dat = dat / dat.max()
-            elif normalize == 'absmax':
-                dat = dat / abs(dat).max()
-            elif normalize == 'min':
-                dat = dat / dat.min()
-            else:
-                dat = dat / dat[self.ds.t_idx(normalize)]
             l += ax.plot(self.ds.t, dat, label='%.1f, %.1f' % (x, y), **kwargs)
         if symlog:
             ax.set_xscale('symlog', linthresh=1)
         plot_helpers.lbl_trans(ax, use_symlog=symlog)
-        return l
-
-    def pump_slice(self, pump_wn: float, *t, ax: Optional[plt.Axes] = None, **kwargs) -> list[plt.Line2D]:
-        """
-        Plot a slice along the probe axis for a given pump frequency.
-
-        Parameters
-        ----------
-        pump_wn : float
-            The pump frequency.
-        t : float
-            The waiting time, can be multiple.
-        ax : matplotlib.axes.Axes, optional
-            The axes to plot on. If None, the current axes is used.
-
-        Returns
-        -------
-        plt.Line2D
-            The plotted line object.
-        """
-        if ax is None:
-            ax = plt.gca()
-        l = []
-        for ti in t:
-            dat = self.ds.data_at(pump_wn=pump_wn, t=ti)
-            l += ax.plot(self.ds.probe_wn, dat, label='%.1f ps' % ti, **kwargs)
-        ax.set(xlabel=plot_helpers.freq_label, ylabel='Signal')
-        return l
-
-    def probe_slice(self, probe_wn: float, *t, ax: Optional[plt.Axes] = None, **kwargs) -> list[plt.Line2D]:
-        """
-        Plot a slice along the pump axis for a given probe frequency.
-
-        Parameters
-        ----------
-        probe_wn : float
-            The probe frequency.
-        t : float
-            The waiting time, can be multiple.
-        ax : matplotlib.axes.Axes, optional
-            The axes to plot on. If None, the current axes is used.
-
-        Returns
-        -------
-        plt.Line2D
-            The plotted line object.
-        """
-        if ax is None:
-            ax = plt.gca()
-        l = []
-        for ti in t:
-            dat = self.ds.data_at(probe_wn=probe_wn, t=ti)
-            l += ax.plot(self.ds.pump_wn, dat, label='%.1f ps' % ti, **kwargs)
-        ax.set(xlabel=plot_helpers.freq_label, ylabel='Signal')
         return l

@@ -6,37 +6,29 @@ from sklearn import linear_model as lm
 from skultrafast.base_funcs.base_functions_np import _fold_exp, _coh_gaussian
 
 
-def _make_base(
-    tup,
-    taus: np.ndarray,
-    w=0.1,
-    add_coh: bool = True,
-    add_const: bool = False,
-    norm: bool = False,
-):
+def _make_base(tup, taus:np.ndarray, w=0.1, add_coh:bool =True, add_const: bool=False, norm: bool =False):
     if add_const:
-        taus = np.hstack((taus, 1000000))  # type: ignore
+        taus = np.hstack((taus, 1000000)) #type: ignore
     out: np.ndarray = _fold_exp(tup.t.T[:, None], w, 0, taus[None, :]).squeeze()
     if add_const:
         out[:, -1] *= 1000
     if add_coh:
-        out = np.hstack((out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) * 10  # type: ignore
+        out = np.hstack(
+            (out, _coh_gaussian(tup.t.T[:, None], w, 0).squeeze())) * 10  #type: ignore
     if norm:
         out = out / np.abs(out).max(0)
 
     return out.squeeze()
 
 
-def start_ltm(
-    tup,
-    taus,
-    w=0.1,
-    add_coh=False,
-    use_cv=False,
-    add_const=False,
-    verbose=False,
-    **kwargs,
-):
+def start_ltm(tup,
+              taus,
+              w=0.1,
+              add_coh=False,
+              use_cv=False,
+              add_const=False,
+              verbose=False,
+              **kwargs):
     """Calculate the lifetime density map for given data.
 
     Parameters
@@ -81,11 +73,11 @@ def start_ltm(
 
     for i in range(tup.data.shape[1]):
         if verbose:
-            print(i, "ha", end=";")
+            print(i, 'ha', end=';')
         mod.fit(X, tup.data[:, i])
         coefs[:, i] = mod.coef_.copy()
         fit[:, i] = mod.predict(X)
-        if hasattr(mod, "alpha_"):
+        if hasattr(mod, 'alpha_'):
             alphas[i] = mod.alpha_
     return mod, coefs, fit, alphas
 

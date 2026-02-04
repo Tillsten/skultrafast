@@ -1,0 +1,58 @@
+
+{% set name = "skultrafast" %}
+{% set version = "2.0.5" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
+  sha256: ec7a96f457742d7f706556eecc559222da1637c37cc9bc4ddd267cf107dc9f36
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  host:
+    - attrs
+    - lmfit
+    - matplotlib
+    - numba
+    - numpy
+    - pip
+    - pytest
+    - python
+    - scikit-learn
+    - scipy
+    - sympy
+  run:
+    - attrs
+    - lmfit
+    - matplotlib
+    - numba
+    - numpy
+    - pytest
+    - python
+    - scikit-learn
+    - scipy
+    - sympy
+
+test:
+  imports:
+    - skultrafast
+    - skultrafast.base_funcs
+
+about:
+  home: "http://github.com/tillsten/skultrafast"
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: "Python package for analyzing time-resolved spectra."
+  doc_url: https://skultrafast.readthedocs.io/
+  dev_url: http://github.com/tillsten/skultrafast
+
+extra:
+  recipe-maintainers:
+    - tillsten

@@ -6,12 +6,9 @@ import os
 import attr
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
-from scipy.signal import savgol_filter
 from scipy.stats import trim_mean
-from typing import Callable, Literal, Tuple, Union, Optional, no_type_check, Dict, Any
+from typing import Callable, Literal, Tuple, Union, Optional, no_type_check, Dict
 import h5py
-
-from joblib import Parallel, delayed
 
 from skultrafast.dataset import TimeResSpec, PlotterMixin, PolTRSpec
 from skultrafast.twoD_dataset import TwoDim
@@ -57,8 +54,7 @@ class MessPy2File:
             para_idx = (abs(np.round(rot) - para_angle) < 3)
         else:
             n_ir_cwl = data_file['wl_Remote IR 32x2'].shape[0]
-            para_idx = np.repeat(
-                np.array([False, True], dtype='bool'), n_ir_cwl)
+            para_idx = np.repeat(np.array([False, True], dtype='bool'), n_ir_cwl)
 
         dpm = sigma_clip(d[para_idx, ...], axis=0, sigma=sigma, max_iter=10)
         dsm = sigma_clip(d[~para_idx, ...], axis=0, sigma=sigma, max_iter=10)
@@ -67,10 +63,8 @@ class MessPy2File:
         ds = dsm.mean(0)
         dss = dsm.std(0)
 
-        para = TimeResSpec(wls, t, dp[0, :, 0, ...],
-                           freq_unit='nm', disp_freq_unit='nm')
-        perp = TimeResSpec(wls, t, ds[0, :, 0, ...],
-                           freq_unit='nm', disp_freq_unit='nm')
+        para = TimeResSpec(wls, t, dp[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
+        perp = TimeResSpec(wls, t, ds[0, :, 0, ...], freq_unit='nm', disp_freq_unit='nm')
         pol = PolTRSpec(para, perp)
 
         pol = pol.cut_freq(*vis_range, invert_sel=True)
@@ -141,8 +135,7 @@ class MessPyFile:
         fname,
         invert_data=False,
         is_pol_resolved=False,
-        pol_first_scan: Literal['magic', 'para',
-                                'perp', 'unknown'] = "unknown",
+        pol_first_scan: Literal['magic', 'para', 'perp', 'unknown'] = "unknown",
         valid_channel=None,
     ):
         """Class for working with data files from MessPy v1.
@@ -228,8 +221,7 @@ class MessPyFile:
         kwargs = dict(disp_freq_unit=disp_freq_unit)
 
         if not self.is_pol_resolved:
-            data = sigma_clip(sub_data, sigma=sigma,
-                              max_iter=max_iter, axis=-1)
+            data = sigma_clip(sub_data, sigma=sigma, max_iter=max_iter, axis=-1)
             mean = data.mean(-1)
             std = data.std(-1)
             err = std / np.sqrt((~data.mask).sum(-1))
@@ -471,7 +463,7 @@ class MessPyPlotter(PlotterMixin):
 
 
 def _get_group_arr(grp: h5py.Group):
-    """Get array from group of datasets, assuming they are named 0, 1, 2, ...
+    """Get array from group of datasets, assuming they are named 0, 1, 2, ... 
     and have the same shape"""
     keys = list(grp.keys())
     n = len(keys)
@@ -482,43 +474,8 @@ def _get_group_arr(grp: h5py.Group):
     return out
 
 
-def _compute_means_and_stderr(t2_index, ifr, use_clip) -> Tuple[dict, dict]:
-    """Compute the means and standard errors of the interferograms at a given
-    t2 index. If `use_clip` is True, use sigma clipping to filter outliers.
-    Not part of class to be used with joblib.
-
-    Parameters
-    ----------
-    t2_index : int
-        The index of the t2 array to use.
-    ifr : dict
-        Dictionary containing the interferogram data.
-    use_clip : bool
-        If True, use sigma clipping to filter outliers.
-
-    """
-    means = {}
-    stderr = {}
-    for name in ifr:
-        if not use_clip:
-            m = np.mean(ifr[name][str(t2_index)], 0)
-            s = np.std(ifr[name][str(t2_index)], 0)
-        else:
-            masked_arr, m, s = sigma_clip(ifr[name][str(t2_index)],
-                                          axis=0, max_iter=4, sigma=2.5,
-                                          full_return=True)
-            m = m.data[0, ...]
-            s = s.data[0, ...]
-        means[name] = m
-        stderr[name] = s
-    return means, stderr
-
-
 @attr.define
 class Messpy25File:
-    """
-    Class for working with MessPy2D 2D-IR files.
-    """
     h5_file: Union[h5py.File, Path] = attr.ib(init=True)
     'h5py file object containing the 2D dataset, the only required parameter'
     is_para_array: Literal['Probe1', 'Probe2'] = 'Probe1'
@@ -547,8 +504,7 @@ class Messpy25File:
         self.rot_frame = self.h5_file['t1'].attrs['rot_frame']
         self.probe_wn = self.h5_file['wn'][:]
         i: np.ndarray = self.h5_file['ifr_data/Probe1/0/0']
-        self.pump_wn = THz2cm(np.fft.rfftfreq(
-            2 * i.shape[1], (self.t1[1] - self.t1[0])))
+        self.pump_wn = THz2cm(np.fft.rfftfreq(2 * i.shape[1], (self.t1[1] - self.t1[0])))
         self.pump_wn += self.rot_frame
 
     def get_means(self):
@@ -566,94 +522,64 @@ class Messpy25File:
         perp_means = np.stack(means[perp], 0)
         return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
-    def get_all_ifr(self, scan_selection: Optional[Any] = None) -> dict[str, dict[str, list[np.ndarray]]]:
-        """
-        Retrieves and organizes interferogram (ifr) data from an HDF5 file.
-
-        This method iterates over the 'ifr_data' group in the HDF5 file, and for each item,
-        it creates a nested dictionary structure in Python. The outer dictionary's keys are
-        the names of the items in 'ifr_data', and the values are inner dictionaries. The
-        inner dictionaries' keys are the string representations of the indices in the range
-        of the size of 'self.t2', and the values are lists of data from the datasets in the
-        HDF5 file.
-
-        Returns:
-            dict: A nested dictionary containing the organized ifr data.
-        """
+    def get_all_ifr(self):
         ifr = {}
-
         for name, l in self.h5_file['ifr_data'].items():
             ifr[name] = {}
             for i in range(self.t2.size):
                 li = []
-                scans = [int(s) for s in l[str(i)].keys() if s !=
-                         'mean']
-                if scan_selection is not None:
-                    scans = [s for s in scans if s in list(scan_selection)]
+                scans = [int(s) for s in l[str(i)].keys() if s != 'mean']
                 scans.sort()
                 for scan in scans:
-                    li.append(
-                        self.h5_file[f'ifr_data/{name}/{str(i)}/{scan}'][:])
+                    li.append(self.h5_file[f'ifr_data/{name}/{str(i)}/{scan}'][:])
                 ifr[name][str(i)] = li
         return ifr
 
-    def ifr_means_and_stderr(self, use_clip=True, scan_selection=None):
-        ifr = self.get_all_ifr(scan_selection)
-
-        results = Parallel(n_jobs=-1)(delayed(_compute_means_and_stderr)
-                                      (t2_index, ifr, use_clip) for t2_index in range(self.t2.size))
-        means = {name: [] for name in ifr}
-        stderr = {name: [] for name in ifr}
-        for mean, err in results:
-            for name in mean:
-                means[name].append(mean[name])
-                stderr[name].append(err[name])
+    def ifr_means_and_stderr(self):
+        ifr = self.get_all_ifr()
+        means = {}
+        stderr = {}
+        for name in ifr:
+            for i in ifr[name]:
+                means[name] = []
+                stderr[name] = []
+                for i in range(self.t2.size):
+                    means[name].append(np.mean(ifr[name][str(i)], 0))
+                    stderr[name].append(
+                        np.std(ifr[name][str(i)], 0) / np.sqrt(len(ifr[name][str(i)])))
         return means, stderr
 
-    def get_ifr(self, probe_filter=None, bg_correct=None, ch_shift: int = 0,
-                use_clip=True, scan_selection=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_ifr(self, probe_filter=None, bg_correct=None, ch_shift: int = 0):
         """
-        Returns the interferograms. If necessary, apply probefilter and
-        background correction.
+        Returns the interferograms. If necessary, apply probefilter and background correction.
 
         Parameters
         ----------
-        probe_filter: float or tuple or None
-            The probe filter width in channels. (Gaussian filter) If a tuple of
-            length two is given, apply savgol filter with the given parameters
-            window and polynomial degree. If None, no filter is applied.
+        probe_filter: float
+            The probe filter width in channels. (Gaussian filter)
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
         ch_shift: int
-            Number of o shift the Probe2 data. Corrects for
-            missaligned channels.
-        use_clip: bool
-            If true, use sigma clipping to filter outliers.
-        scan_selection: list or None
-            If not None, only use the scans in the list.
+            Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         Returns
         -------
         ifr: Tuple[np.ndarray, np.ndarray, np.ndarray]
-            The interferograms for paralllel, perpendicular and isotropic
-            polarisation. The shape of each array is (n_t2, n_probe_wn, n_t1).
+            The interferograms for paralllel, perpendicular and isotropic polarisation.
+            The shape of each array is (n_t2, n_probe_wn, n_t1).
         """
-
-        means, stderr = self.ifr_means_and_stderr(
-            use_clip=use_clip, scan_selection=scan_selection)
+        ifr = {}
+        for name, l in self.h5_file['ifr_data'].items():
+            ifr[name] = []
+            for i in range(self.t2.size):
+                ifr[name].append(l[str(i)]['mean'])
         para = self.is_para_array
         perp = "Probe2" if self.is_para_array == "Probe1" else "Probe1"
 
-        para_means = np.stack(means[para], 0)
-        perp_means = np.stack(means[perp], 0)
+        para_means = np.stack(ifr[para], 0)
+        perp_means = np.stack(ifr[perp], 0)
         if probe_filter is not None:
-            if isinstance(probe_filter, tuple):
-                para_means = savgol_filter(para_means, *probe_filter, axis=1)
-                perp_means = savgol_filter(perp_means, *probe_filter, axis=1)
-            elif isinstance(probe_filter, float):
-                para_means = gaussian_filter1d(
-                    para_means, probe_filter, 1, mode='nearest')
-                perp_means = gaussian_filter1d(
-                    perp_means, probe_filter, 1, mode='nearest')
+            para_means = gaussian_filter1d(para_means, probe_filter, 1, mode='nearest')
+            perp_means = gaussian_filter1d(perp_means, probe_filter, 1, mode='nearest')
         if ch_shift > 0:
             para_means = para_means[:, :-ch_shift, :]
             perp_means = perp_means[:, ch_shift:, :]
@@ -666,12 +592,10 @@ class Messpy25File:
             wn = self.probe_wn
         if bg_correct is not None:
             for i in range(para_means.shape[0]):
-                poly_bg_correction(
-                    wn, para_means[i].T, bg_correct[0], bg_correct[1])
-                poly_bg_correction(
-                    wn, perp_means[i].T, bg_correct[0], bg_correct[1])
-        iso_means = 2/3*perp_means + 1/3*para_means
-        return para_means, perp_means, iso_means
+                poly_bg_correction(wn, para_means[i].T, bg_correct[0], bg_correct[1])
+                poly_bg_correction(wn, perp_means[i].T, bg_correct[0], bg_correct[1])
+
+        return para_means, perp_means, 2/3*perp_means + 1/3*para_means
 
     def make_two_d(self,
                    upsample: int = 4,
@@ -679,11 +603,7 @@ class Messpy25File:
                    ch_shift: int = 1,
                    probe_filter: Optional[float] = None,
                    bg_correct: Optional[Tuple[int, int]] = None,
-                   use_clip: bool = False,
-                   t0_factor: float = 0.5,
-                   scan_selection: Optional[list] = None,
-                   subtract_ifr_mean: bool = False
-                   ) -> Dict[str, TwoDim]:
+                   t0_factor: float = 0.5) -> Dict[str, TwoDim]:
         """
         Calculates the 2D spectra from the interferograms and returns it as a
         dictionary. The dictorary contains messpy 2D-objects for paralllel,
@@ -702,30 +622,19 @@ class Messpy25File:
             Number of channels to shift the Probe2 data. Corrects for missaligned channels.
         bg_correct: Tuple[int, int]
             Number of left and right channels to use for background correction.
-        use_clip: bool
-            If true, use sigma clipping to filter outliers.
         t0_factor: float
-            Factor to multiply the first t1 point (zero-delay between the pumps) to
+            Factor to multiply the first t1 point (zero-delay between the pumps) to 
             correct for the integration. In general, the default should not be touched.
-        scan_selection: list or None
-            If not None, only use the scans in the list. Useful for filtering out
-            bad scans.
-        subtract_ifr_mean: bool
-            If True, subtract the mean of the interferograms before FFT.
         """
         means = self.get_ifr(probe_filter=probe_filter,
                              bg_correct=bg_correct,
-                             ch_shift=ch_shift,
-                             use_clip=use_clip,
-                             scan_selection=scan_selection)
+                             ch_shift=ch_shift)
         data = {pol: means[i] for i, pol in enumerate(['para', 'perp', 'iso'])}
         out = {}
         for k, v in data.items():
             v[:, :, 0] *= t0_factor
             if window_fcn is not None:
                 v = v * window_fcn(v.shape[2] * 2)[None, None, v.shape[2]:]
-            if subtract_ifr_mean:
-                v -= v.mean(2, keepdims=True)
             sig = np.fft.rfft(v, axis=2, n=v.shape[2] * upsample).real
             self.pump_wn = THz2cm(
                 np.fft.rfftfreq(upsample * v.shape[2],

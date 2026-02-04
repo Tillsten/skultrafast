@@ -3,7 +3,7 @@ import typing
 import warnings
 from collections import namedtuple
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Literal, Optional, Type, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 
 import attr
 import lmfit
@@ -12,7 +12,6 @@ import numpy as np
 from lmfit.minimizer import MinimizerResult
 from matplotlib.lines import Line2D
 from scipy.interpolate import UnivariateSpline, interp1d
-from scipy.integrate import trapezoid
 
 import skultrafast.dv as dv
 import skultrafast.plot_helpers as ph
@@ -112,12 +111,12 @@ class LDMResult:
 class TimeResSpec:
     def __init__(
         self,
-        wl: np.ndarray,
-        t: np.ndarray,
-        data: np.ndarray,
-        err: np.ndarray | None = None,
+        wl,
+        t,
+        data,
+        err=None,
         name=None,
-        freq_unit: Literal["nm", "cm"] = "nm",
+        freq_unit="nm",
         disp_freq_unit=None,
         auto_plot=True,
     ):
@@ -262,7 +261,7 @@ class TimeResSpec:
         x = self.wavenumbers[sl]
         y = self.data[:, sl]
         if method == 'trapz':
-            return trapezoid(x=x, y=y, axis=1)
+            return np.trapz(x=x, y=y, axis=1)
         elif method == 'spline':
             sp = UnivariateSpline(x, y)
             return sp.antiderivative(1)(x)
@@ -1474,7 +1473,7 @@ class TimeResSpecPlotter(PlotterMixin):
         for (a, b) in args:
             a, b = sorted([a, b])
             idx = (a < ds.wavenumbers) & (ds.wavenumbers < b)
-            dat = trapezoid(-ds.data[:, idx], ds.wavenumbers[idx], axis=1)
+            dat = np.trapz(-ds.data[:, idx], ds.wavenumbers[idx], axis=1)
 
             if norm is True:
                 dat = np.sign(dat[np.argmax(abs(dat))]) * dat / abs(dat).max()
