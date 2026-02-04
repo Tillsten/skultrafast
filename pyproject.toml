@@ -1,0 +1,67 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+authors = [
+  {name = "Till Stensitzki", email = "mail.till@gmx.de"},
+]
+dependencies = [
+  "attrs",
+  "h5py",
+  "joblib",
+  "lmfit",
+  "matplotlib",
+  "numba",
+  "numpy",
+  "pooch",
+  "pytest",
+  "scikit-learn",
+  "scipy",
+  "statsmodels",
+  "sympy",
+  "wrapt",
+]
+
+description = "Python package for analyzing time-resolved spectra."
+dynamic = ["version"]
+keywords = [
+  "chemistry",
+  "physics",
+  "pump-probe",
+  "science",
+  "spectroscopy",
+  "time-resolved",
+]
+license = {file = "LICENSE.txt"}
+name = "skultrafast"
+readme = "README.rst"
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "http://github.com/tillsten/skultrafast"
+
+[project.optional-dependencies]
+doc = [
+  "sphinx >= 4",
+  "sphinx-gallery",
+  "pytest",
+  "docutils",
+  "sphinx-autoapi",
+  "furo",
+]
+
+[tool.hatch.version]
+path = "skultrafast/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/skultrafast",
+]
+
+[tool.hatch.envs.doc.scripts]
+build = "cd docs && make html"
+features = ["doc"]
+
+[tool.ruff.lint]
+ignore = []
