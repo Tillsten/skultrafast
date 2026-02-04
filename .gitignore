@@ -13,3 +13,6 @@ docs/api/*
 skultrafast/.mypy_cache/*
 __pycache__/
 
+# pixi environments
+.pixi/*
+!.pixi/config.toml

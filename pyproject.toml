@@ -70,3 +70,25 @@ features = ["doc"]
 
 [tool.ruff.lint]
 ignore = []
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tool.pixi.pypi-dependencies]
+skultrafast = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+accel-numba = { features = ["accel_numba"], solve-group = "default" }
+accel-pytorch = { features = ["accel_pytorch"], solve-group = "default" }
+doc = { features = ["doc"], solve-group = "default" }
+
+[tool.pixi.dependencies]
+make = ">=4.4.1,<5"
+
+[tool.pixi.feature.doc.tasks]
+build-docs = { cmd = "{% if pixi.is_win %}./make.bat{% else %}./make {% endif %} html",  cwd = "docs" }
+
+[package.build.config]
+ignore-pypi-mapping = false
