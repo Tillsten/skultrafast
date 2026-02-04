@@ -39,7 +39,7 @@ p = get_twodim_dataset()
 # Lets look at the content of the folder. For measurements with quickcontrol, we
 # are looking for `.info` files which contain all necessary information.
 
-infos = list(p.glob('*.info'))
+infos = list(p.glob("*.info"))
 infos
 
 # %% Loading data
@@ -57,9 +57,8 @@ infos
 
 plot_helpers.enable_style()
 
-data2d_info_path = list(p.glob('*#320.info'))[0]
-qc_file = QC2DSpec(data2d_info_path, upsampling=4,
-                   probe_filter=1)
+data2d_info_path = list(p.glob("*#320.info"))[0]
+qc_file = QC2DSpec(data2d_info_path, upsampling=4, probe_filter=1)
 
 # %%
 # To create a dataset to work with form the raw data, we call the `make_ds`
@@ -68,9 +67,9 @@ qc_file = QC2DSpec(data2d_info_path, upsampling=4,
 # select the isotropic dataset.
 
 ds_all = qc_file.make_ds()
-ds_all['para'].integrate_pump().plot.spec(15, add_legend=True)
-ds_all['perp'].integrate_pump().plot.spec(15, add_legend=True)
-ds_iso = ds_all['iso']
+ds_all["para"].integrate_pump().plot.spec(15, add_legend=True)
+ds_all["perp"].integrate_pump().plot.spec(15, add_legend=True)
+ds_iso = ds_all["iso"]
 ds_iso.background_correction((2100, 2200), deg=1)
 ds_iso.pump_wn *= 2162.5 / 2159.35  # correct pump calibration
 
@@ -97,7 +96,7 @@ ds_iso.plot.contour(1, 2, 4)
 # time-points, 0.5, 1 and 7 ps.
 
 ds = ds_iso.select_range((2140, 2180), (2120, 2180))
-artists = ds.plot.contour(0.5, 1, 7, direction='h')
+artists = ds.plot.contour(0.5, 1, 7, direction="h")
 
 # %%
 # There is also a `.select_t_range` method.
@@ -146,7 +145,7 @@ minmax
 # Simliary we can also mark the positions in a contour plot.
 
 ds.plot.contour(1)
-ds.plot.mark_minmax(1, color='white', markersize=9)
+ds.plot.mark_minmax(1, color="white", markersize=9)
 
 # %%
 # Center line slope analysis
@@ -167,15 +166,16 @@ single_cls = ds.single_cls(1, pr_range=10, pu_range=10)
 
 # Plot the result
 artists = ds.plot.contour(1)
-ax = artists[0]['ax']
+ax = artists[0]["ax"]
 
 # First plot the maxima
-ax.plot(single_cls.max_pos, single_cls.pump_wn,
-        color='w', marker='o', markersize=3, lw=0)
+ax.plot(
+    single_cls.max_pos, single_cls.pump_wn, color="w", marker="o", markersize=3, lw=0
+)
 
 # Plot the resulting fit. Since the slope is a function of the pump frequencies,
 # we have to use y-values as x-coordinatetes for the slope.
-ax.plot(single_cls.linear_fit, single_cls.pump_wn, color='r', lw=1)
+ax.plot(single_cls.linear_fit, single_cls.pump_wn, color="r", lw=1)
 
 # %% To determine the full CLS-decay, we can use the `cls`-method. It takes the
 # same arguments as `single_cls`, except the single waiting time. The
@@ -189,32 +189,29 @@ cls_result = ds.cls(pr_range=10, pu_range=10)
 
 ti = ds.t_idx(1)
 artists = ds.plot.contour(0.2, 5, cls_result=cls_result)
-ax = artists[0]['ax']
+ax = artists[0]["ax"]
 
 # %%
 # Lets look at the time-dependence of the slope.
 
 fig, ax = plt.subplots()
 ax.plot(cls_result.wt, cls_result.slopes)
-ax.set(xlabel='Waiting Time', ylabel='Slope')
+ax.set(xlabel="Waiting Time", ylabel="Slope")
 
 # %%
 # The ClsResult class also offers a convenience function to the fit cls with
 # exponential functions.
 
-tau_estimate = [5.]
+tau_estimate = [5.0]
 fr = cls_result.exp_fit(tau_estimate, use_const=True, use_weights=True)
 
 fig, ax = plt.subplots()
 cls_result.plot_cls(ax=ax)
-text = '(%.1f ± %.1f) ps' % (
-    fr.params['a_decay'].value, fr.params['a_decay'].stderr)
-ax.annotate(text, (0.98, 0.98),
-            xycoords='axes fraction',
-            ha='right',
-            va='top',
-            fontsize='large')
-ax.set_xscale('log')
+text = "(%.1f ± %.1f) ps" % (fr.params["a_decay"].value, fr.params["a_decay"].stderr)
+ax.annotate(
+    text, (0.98, 0.98), xycoords="axes fraction", ha="right", va="top", fontsize="large"
+)
+ax.set_xscale("log")
 
 # %%
 # Notice that there a multiple methods to calculate the extrema position for
@@ -224,11 +221,10 @@ ax.set_xscale('log')
 # below.
 
 fig, ax = plt.subplots()
-methods = 'log_quad', 'quad', 'fit', 'com'
+methods = "log_quad", "quad", "fit", "com"
 for m in methods:
     cls_result_fit = ds.cls(pr_range=12, pu_range=10, method=m)
-    fr_fit = cls_result_fit.exp_fit(
-        tau_estimate, use_const=True, use_weights=True)
+    fr_fit = cls_result_fit.exp_fit(tau_estimate, use_const=True, use_weights=True)
     data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
     data_line.set_label(m)
 
@@ -241,10 +237,9 @@ ax.legend()
 # of the polynomial for each pump-slice.
 
 fig, ax = plt.subplots()
-cls_result_nodal = ds.cls(pr_range=5, pu_range=10, method='nodal')
+cls_result_nodal = ds.cls(pr_range=5, pu_range=10, method="nodal")
 
-fr_fit = cls_result_nodal.exp_fit(
-    tau_estimate, use_const=True, use_weights=True)
+fr_fit = cls_result_nodal.exp_fit(tau_estimate, use_const=True, use_weights=True)
 data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
 
 # Contour to display the nodal line at 1 ps
@@ -259,9 +254,14 @@ artists = ds.plot.contour(1, cls_result=cls_result_nodal)
 # factor of two for oversampling.
 
 fig, ax = plt.subplots()
-pump_range = 5, 7, 10, 12,
+pump_range = (
+    5,
+    7,
+    10,
+    12,
+)
 for r in pump_range:
-    cls_result_fit = ds.cls(pr_range=r, pu_range=r, method='fit')
+    cls_result_fit = ds.cls(pr_range=r, pu_range=r, method="fit")
     data_line, _ = cls_result_fit.plot_cls(ax=ax, symlog=True)
     data_line.set_label(r)
 
@@ -281,24 +281,31 @@ fr = ds.fit_gauss()
 # the fit parameters and the correlation factors. First we look at the fit
 # results.
 
-fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(7, 2.5),
-                                    constrained_layout=True,
-                                    subplot_kw=dict(aspect=1))
-ax0.contourf(ds.probe_wn, ds.pump_wn,
-             ds.spec2d[ds.t_idx(1), :, :].T, 20, cmap='seismic')
+fig, (ax0, ax1, ax2) = plt.subplots(
+    1, 3, figsize=(7, 2.5), constrained_layout=True, subplot_kw=dict(aspect=1)
+)
+ax0.contourf(
+    ds.probe_wn, ds.pump_wn, ds.spec2d[ds.t_idx(1), :, :].T, 20, cmap="seismic"
+)
 ds_fit = fr.fit_out
-ax1.contourf(ds.probe_wn, ds.pump_wn,
-             ds_fit.spec2d[ds.t_idx(1), :, :].T, 20, cmap='seismic')
-ax2.contourf(ds.probe_wn, ds.pump_wn, ds_fit.spec2d[ds.t_idx(1), :, :].T - ds.spec2d[ds.t_idx(1), :, :].T,
-             20, cmap='seismic')
-ax0.set_title('Data at 1 ps')
-ax1.set_title('Gaussian Fit')
-ax2.set_title('Residual')
+ax1.contourf(
+    ds.probe_wn, ds.pump_wn, ds_fit.spec2d[ds.t_idx(1), :, :].T, 20, cmap="seismic"
+)
+ax2.contourf(
+    ds.probe_wn,
+    ds.pump_wn,
+    ds_fit.spec2d[ds.t_idx(1), :, :].T - ds.spec2d[ds.t_idx(1), :, :].T,
+    20,
+    cmap="seismic",
+)
+ax0.set_title("Data at 1 ps")
+ax1.set_title("Gaussian Fit")
+ax2.set_title("Residual")
 # %%
 # We can also plot the correlation factors.
 
 res_gauss = fr.exp_fit([1, 5], use_const=False)
-cls_result_fit = ds.cls(pr_range=6, pu_range=6, method='fit')
+cls_result_fit = ds.cls(pr_range=6, pu_range=6, method="fit")
 fr.plot_cls(symlog=True)
 res_cls = cls_result_fit.exp_fit([1, 5], use_const=False)
 cls_result_fit.plot_cls(symlog=True)
@@ -315,14 +322,14 @@ res_cls
 # %%
 # Amp ratios
 
-r1 = res_gauss.params['a_decay'].value / res_gauss.params['b_decay'].value
-r2 = res_cls.params['a_decay'].value / res_cls.params['b_decay'].value
+r1 = res_gauss.params["a_decay"].value / res_gauss.params["b_decay"].value
+r2 = res_cls.params["a_decay"].value / res_cls.params["b_decay"].value
 # %%
 # Both ratios and and time-constants are in good agreement. The absolute
 # amplitudes are not, but this is expected, since the gaussian fit ignores
 # motional narrowing since it kind of ignores the lorentzian part of the
 # lineshape.
-print('Gauss: %.2f, Cls: %.2f' % (r1, r2))
+print("Gauss: %.2f, Cls: %.2f" % (r1, r2))
 
 # %%
 # Diagonal
@@ -351,23 +358,24 @@ plot_helpers.lbl_spec(ax)
 # %%
 # The additional attributes of the result-object can be used to draw lines in the spectrum.
 
-fig, ax = plt.subplot_mosaic('AABB', figsize=(5, 2), constrained_layout=True)
+fig, ax = plt.subplot_mosaic("AABB", figsize=(5, 2), constrained_layout=True)
 
-pm = ax['A'].pcolormesh(ds.probe_wn,
-                        ds.pump_wn,
-                        ds.spec2d[ds.t_idx(1), :, :].T,
-                        shading='auto',
-                        cmap='seismic')
-ax['A'].plot(ds.probe_wn, diag_result.diag_coords, lw=1, c="y", ls='--')
-ax['A'].plot(ds.probe_wn, diag_result.antidiag_coords, lw=1, c="c", ls='--')
-ax['A'].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()),
-            ylabel=plot_helpers.freq_label)
-ax['A'].set_xlabel(plot_helpers.freq_label)
-fig.colorbar(pm, ax=ax['A'], shrink=0.69, pad=0)
+pm = ax["A"].pcolormesh(
+    ds.probe_wn,
+    ds.pump_wn,
+    ds.spec2d[ds.t_idx(1), :, :].T,
+    shading="auto",
+    cmap="seismic",
+)
+ax["A"].plot(ds.probe_wn, diag_result.diag_coords, lw=1, c="y", ls="--")
+ax["A"].plot(ds.probe_wn, diag_result.antidiag_coords, lw=1, c="c", ls="--")
+ax["A"].set(ylim=(ds.pump_wn.min(), ds.pump_wn.max()), ylabel=plot_helpers.freq_label)
+ax["A"].set_xlabel(plot_helpers.freq_label)
+fig.colorbar(pm, ax=ax["A"], shrink=0.69, pad=0)
 
-ax['B'].plot(ds.probe_wn, diag_result.diag, c='y')
-ax['B'].plot(ds.probe_wn, diag_result.antidiag, c='c')
-ax['B'].set_xlabel(plot_helpers.freq_label)
+ax["B"].plot(ds.probe_wn, diag_result.diag, c="y")
+ax["B"].plot(ds.probe_wn, diag_result.antidiag, c="c")
+ax["B"].set_xlabel(plot_helpers.freq_label)
 
 # %%
 # As an alternative, the pump-slice-amplitude method is also supported. Here we
@@ -398,9 +406,8 @@ exp_result.minimizer
 n = len(exp_result.taus)
 fig, ax = plt.subplots(1, n, sharex=True, sharey=True, figsize=(n * 2, 2.5))
 for i, tau in enumerate(exp_result.taus):
-    ax[i].set_title(rf'$\tau_{i}$={tau:.1f} ps')
-    ax[i].contourf(ds.probe_wn, ds.pump_wn,
-                   exp_result.das[i].T, 20, cmap='seismic')
+    ax[i].set_title(rf"$\tau_{i}$={tau:.1f} ps")
+    ax[i].contourf(ds.probe_wn, ds.pump_wn, exp_result.das[i].T, 20, cmap="seismic")
     ax[i].set_aspect(1)
     ax[i].set_xlabel("Probe Frequency [cm$^{-1}$]")
     ax[i].set_ylabel("Pump Frequency [cm$^{-1}$]")
@@ -410,7 +417,7 @@ for i, tau in enumerate(exp_result.taus):
 
 fig, ax = plt.subplots()
 ds.plot.trans(2165, [2162, 2130], symlog=True, ax=ax)
-exp_result.model.plot.trans(2165, [2162, 2130], symlog=True, ax=ax, c='k')
+exp_result.model.plot.trans(2165, [2162, 2130], symlog=True, ax=ax, c="k")
 
 # %%
 # Exporting
@@ -428,10 +435,13 @@ exp_result.model.plot.trans(2165, [2162, 2130], symlog=True, ax=ax, c='k')
 
 def movie_contour(self, fname, contour_kw={}, subplots_kw={}, ax_size=3):
     from matplotlib.animation import FuncAnimation
+
     ratio = np.ptp(self.ds.pump_wn) / np.ptp(self.ds.probe_wn)
-    fig, ax = plt.subplots(subplot_kw=subplots_kw,
-                           figsize=(ax_size, ax_size * ratio),
-                           constrained_layout=True)
+    fig, ax = plt.subplots(
+        subplot_kw=subplots_kw,
+        figsize=(ax_size, ax_size * ratio),
+        constrained_layout=True,
+    )
     frames = self.ds.t
 
     ax.set_aspect(1)
@@ -441,16 +451,39 @@ def movie_contour(self, fname, contour_kw={}, subplots_kw={}, ax_size=3):
     def func(x):
         ax.cla()
 
-        ax.contourf(self.ds.probe_wn, self.ds.pump_wn,  self.ds.data_at(x).T,
-                    levels=levels, cmap='bwr', **contour_kw, algorithm='threaded')
-        ax.plot(cls_result.lines[ds.t_idx(x)][:, 1],
-                cls_result.lines[ds.t_idx(x)][:, 0], c='w', lw=1)
-        ax.set(xlabel='Probe Frequency [cm$^{-1}$]',
-               ylabel='Pump Frequency [cm$^{-1}$]')
-        ax.annotate(f'{x:.1f} ps', (0.98, 0.98), xycoords='axes fraction', ha='right', va='top',
-                    color='k', fontsize='large')
+        ax.contour(
+            self.ds.probe_wn,
+            self.ds.pump_wn,
+            self.ds.data_at(x).T,
+            levels=levels,
+            cmap="bwr",
+            **contour_kw,
+            algorithm="threaded",
+        )
+        ax.plot(
+            cls_result.lines[ds.t_idx(x)][:, 1],
+            cls_result.lines[ds.t_idx(x)][:, 0],
+            c="w",
+            lw=1,
+        )
+        ax.set(
+            xlabel="Probe Frequency [cm$^{-1}$]", ylabel="Pump Frequency [cm$^{-1}$]"
+        )
+        ax.annotate(
+            f"{x:.1f} ps",
+            (0.98, 0.98),
+            xycoords="axes fraction",
+            ha="right",
+            va="top",
+            color="k",
+            fontsize="large",
+        )
+
     ani = FuncAnimation(fig=fig, func=func, frames=frames)
     ani.save(fname, dpi=300)
 
 
-movie_contour(ds.plot, 'test.mp4')
+movie_contour(ds.plot, "test.webp")
+
+
+# %%
