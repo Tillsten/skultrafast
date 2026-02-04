@@ -7,13 +7,6 @@ import typing as T
 from skultrafast.dataset import TimeResSpec, PolTRSpec
 from skultrafast.unit_conversions import dichro2angle, angle2dichro
 
-import numba
-
-
-@numba.vectorize
-def mexp(x):
-    return np.exp(x)
-
 
 @dataclass
 class PFID_Fitter:
@@ -23,7 +16,7 @@ class PFID_Fitter:
     alpha: float = 0
 
     def start_fit(self):
-        if 't0' not in self.params:
+        if "t0" not in self.params:
             self.params.add("t0", 0, vary=False)
         mini = lmfit.Minimizer(self.eval, self.params.copy())
 
@@ -34,7 +27,7 @@ class PFID_Fitter:
         return fr
 
     def add_pfid(
-            self, A: float, x0: float, T2: float, angle: float, B: float, shift: float
+        self, A: float, x0: float, T2: float, angle: float, B: float, shift: float
     ):
         i = self.num_peaks
         items = zip("A x0 T2 angle B shift".split(" "), (A, x0, T2, angle, B, shift))
@@ -46,10 +39,10 @@ class PFID_Fitter:
             if name == "angle":
                 minval = 0
                 maxval = 90
-            if name == 'B':
+            if name == "B":
                 minval = 0
                 maxval = 1
-            if name == 'A':
+            if name == "A":
                 maxval = 0
             self.params.add(f"{name}_{i}", val, min=minval, max=maxval)
 
@@ -62,8 +55,8 @@ class PFID_Fitter:
 
         if t is None:
             t = self.ds.t
-        if 't0' in params:
-            t = t - params['t0'].value
+        if "t0" in params:
+            t = t - params["t0"].value
         if wn is None:
             wn = self.ds.wavenumbers
         vals = np.array(list(params.valuesdict().values()), dtype="f")
