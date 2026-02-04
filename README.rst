@@ -14,9 +14,9 @@
 
 What is skultrafast?
 --------------------
-skultrafast is a Python package for ultrafast spectroscopy data analysis. It provides tools
-for analyzing various types of time-resolved spectroscopy data, including
-pump-probe, transient absorption, and two-dimensional infrared (2D-IR)
+skultrafast is a Python package for ultrafast spectroscopy data analysis. It
+provides tools for analyzing various types of time-resolved spectroscopy data,
+including pump-probe, transient absorption, and two-dimensional infrared (2D-IR)
 spectroscopy. The package includes functionality for data import, visualization,
 processing, and fitting. It is built on top of the scientific Python ecosystem,
 including NumPy, SciPy, and Matplotlib.
@@ -40,8 +40,13 @@ Group <https://www.uni-potsdam.de/usd>`_ in Potsdam under Müller-Werkmeister.
 
 Scope of the project
 --------------------
+
 I like to include any kind of algorithm or data structure which comes up in
-ultrafast spectropy. I am also open to add a graphical interface to the package,
+ultrafast spectropy. Since I am mostly doing pump-probe and 2D-IR spectroscopy,
+the current focus is on these two techniques. However, I am open to include any
+other technique.
+
+I am also open to add a graphical interface to the package,
 but as experience shows, a GUI brings in a lot of maintenance burden. Hence, the
 first target is a interactive data-explorer for the jupyter notebook.
 
@@ -59,8 +64,8 @@ The current releases centers around working with time-resolved spectra:
   *  Analyze polarization-resolved datasets.
   *  Easily process data by selecting, filtering, and recalibrating it.
   *  Correct dispersion automatically in the case of chirped spectra.
-  *  Obtain accurate error estimates for fitting results using lmfit
-     <http://lmfit.github.io/lmfit-py/>_.
+  *  Obtain accurate error estimates for fitting results using 
+     `lmfit<http://lmfit.github.io/lmfit-py/>`_.
   *  Analyze lifetime-density using regularized regression.
   *  Analyze 2D spectroscopy data, including CLS-decay, diagonal extraction,
      pump-slice-amplitude spectrum, integration, and Gaussian fitting.

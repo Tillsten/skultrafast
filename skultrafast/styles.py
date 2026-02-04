@@ -4,7 +4,7 @@ Created on Thu Sep 17 21:33:24 2015
 
 @author: Tillsten
 """
-import matplotlib
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -38,34 +38,3 @@ out_ticks = {'xtick.direction': 'out',
              'axes.titleweight': 'semibold',
              }
 
-
-plt.figure(figsize=(6,4))
-
-with plt.style.context(out_ticks):
-    ax = plt.subplot(111)
-    x = np.linspace(0, 7, 1000)
-    y = np.exp(-x/1.5)*np.cos(x/1*(2*np.pi))#*np.cos(x/0.05*(2*np.pi))
-    l, = plt.plot(x, np.exp(-x/1.5), lw=0.5, color='grey')
-    l, = plt.plot(x, -np.exp(-x/1.5), lw=0.5, color='grey')
-    l, = plt.plot(x, y, lw=1.1)
-    #l.set_clip_on(0)
-    plt.tick_params(which='both', top=False, right=False)
-    plt.margins(0.01)
-    ax.text(7, 1, r'$y(t)=\exp\left(-t/1.5\right)\cos(\omega_1t)\cos(\omega_2t)$',
-             fontsize=18, va='top', ha='right')
-    #plt.title("Hallo")
-    plt.setp(plt.gca(), xlabel='Time [s]', ylabel='Amplitude')
-    ax = plt.axes([0.57, 0.25, 0.3, .2])
-    #ax.plot(np.fft.fftfreq(x.size)[:y.size/2], abs(np.fft.fft(y))[:y.size/2])
-    ax.fill_between(np.fft.fftfreq(x.size, x[1]-x[0])[:y.size/2],
-                    abs(np.fft.fft(y))[:y.size/2], alpha=0.2, color='r')
-    ax.set_xlim(0, 10)
-    ax.set_xlabel("Frequency")
-    ax.xaxis.labelpad = 1
-
-    plt.locator_params(nbins=4)
-    plt.tick_params(which='both', top=False, right=False)
-    plt.tick_params(which='minor', bottom=False, left=False)
-
-    #plt.grid(1, axis='y', linestyle='-', alpha=0.3, lw=.5)
-plt.show()

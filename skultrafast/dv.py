@@ -10,7 +10,7 @@ import scipy.stats as st
 import scipy.signal as sig
 from collections import namedtuple
 from scipy.constants import c, physical_constants
-from typing import Union, List, overload
+from typing import Iterable, Union, List, overload
 
 tup = namedtuple('tup', 'wl t data')
 
@@ -117,7 +117,7 @@ def fi(w: np.ndarray, x: float) -> int:
 
 
 @overload
-def fi(w: np.ndarray, x: List[float]) -> List[int]:
+def fi(w: np.ndarray, x: Iterable[float]) -> List[int]:
     ...
 
 
@@ -212,7 +212,8 @@ def calc_error(args):
     p, cov, info, mesg, success = args
     chisq = sum(info["fvec"] * info["fvec"])
     dof = len(info["fvec"]) - len(p)
-    sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof) for i in range(len(p))])
+    sigma = np.array([np.sqrt(cov[i, i]) * np.sqrt(chisq / dof)
+                     for i in range(len(p))])
     return p, sigma
 
 

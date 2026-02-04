@@ -9,11 +9,10 @@ import scipy.linalg as linalg
 from . import dv, zero_finding
 from .base_functions import _fold_exp, _fold_exp_and_coh
 
-posv = linalg.get_lapack_funcs(
-    ('posv'
-     ))
+posv = linalg.get_lapack_funcs(("posv"))
 
 LinAlgError = np.linalg.LinAlgError
+
 
 def direct_solve(a, b):
     c, x, info = posv(a, b, lower=False, overwrite_a=True, overwrite_b=False)
@@ -23,53 +22,54 @@ def direct_solve(a, b):
 alpha = 0.001
 
 
-def solve_mat(A, b_mat, method='ridge'):
+def solve_mat(A, b_mat, method="ridge"):
     """
     Returns the solution for the least squares problem |Ax - b_i|^2.
     """
-    if method == 'fast':
-        #return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
+    if method == "fast":
+        # return linalg.solve(A.T.dot(A), A.T.dot(b_mat), sym_pos=True)
         return direct_solve(A.T.dot(A), A.T.dot(b_mat))
 
-    elif method == 'ridge':
-
+    elif method == "ridge":
         X = np.dot(A.T, A)
-        X.flat[::A.shape[1] + 1] += alpha
+        X.flat[:: A.shape[1] + 1] += alpha
         Xy = np.dot(A.T, b_mat)
-        #return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
+        # return linalg.solve(X, Xy, sym_pos=True, overwrite_a=True)
         return direct_solve(X, Xy)
 
-    elif method == 'qr':
+    elif method == "qr":
         cq, r = linalg.qr_multiply(A, b_mat)
         return linalg.solve_triangular(r, cq)
 
-    elif method == 'cho':
+    elif method == "cho":
         c, l = linalg.cho_factor(A.T.dot(A))
         return linalg.cho_solve((c, l), A.T.dot(b_mat))
 
-    elif method == 'lstsq':
+    elif method == "lstsq":
         return np.linalg.lstsq(A, b_mat)[0]
 
-    elif method == 'lasso':
+    elif method == "lasso":
         import sklearn.linear_model as lm
-        s = lm.Lasso(fit_intercept=False)
-        s.alpha = alpha
+
+        s = lm.Lasso(fit_intercept=False, alpha=alpha)
+
         s.fit(A, b_mat)
         return s.coef_.T
 
-    elif method == 'enet':
+    elif method == "enet":
         import sklearn.linear_model as lm
-        s = lm.ElasticNet(fit_intercept=False, l1_ratio=0.2)
-        s.alpha = alpha
+
+        s = lm.ElasticNet(fit_intercept=False, l1_ratio=0.2, alpha=alpha)
+
         s.fit(A, b_mat)
         return s.coef_.T
 
     else:
-        raise ValueError('Unknow lsq method, use ridge, qr, fast or lasso')
+        raise ValueError("Unknow lsq method, use ridge, qr, fast or lasso")
 
 
 class Fitter(object):
-    """ The fit object, takes all the need data and allows to fit it.
+    """The fit object, takes all the need data and allows to fit it.
 
     There a two different methods to fit the data. The fast one
     assumes, that the data has no dispersion, so the base vectors
@@ -100,7 +100,6 @@ class Fitter(object):
     """
 
     def __init__(self, tup, model_coh=False, model_disp=1):
-
         wl, t, data = tup
         self.t = t
         self.wl = wl
@@ -108,7 +107,7 @@ class Fitter(object):
         self.verbose = False
         self.model_coh = model_coh
         self.model_disp = model_disp
-        self.lsq_method = 'ridge'
+        self.lsq_method = "ridge"
 
         self.num_exponentials = -1
         self.weights = None
@@ -140,10 +139,10 @@ class Fitter(object):
         self.last_para = np.asarray(para)
         if self._chk_for_disp_change(para):
             # Only calculate interpolated data if necessary:
-            self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
+            self.tn = np.poly1d(para[: self.model_disp])(self.disp_x)
             tup = dv.tup(self.wl, self.t, self.org)
             self.data = zero_finding.interpol(tup, self.tn)[2]
-            self.used_disp[:] = para[:self.model_disp]
+            self.used_disp[:] = para[: self.model_disp]
 
         self.num_exponentials = self.last_para.size - self.model_disp - 1
         if self.model_disp <= 1:
@@ -155,7 +154,7 @@ class Fitter(object):
 
     def _chk_for_disp_change(self, para):
         if self.model_disp > 1:
-            if np.any(para[:self.model_disp] != self.used_disp):
+            if np.any(para[: self.model_disp] != self.used_disp):
                 return True
         return False
 
@@ -168,31 +167,31 @@ class Fitter(object):
             print(para)
 
         try:
-            idx = (para != self._last)
+            idx = para != self._last
         except AttributeError:
-            #self._l
+            # self._l
             idx = [True] * len(para)
 
         if self.model_disp == 1:
             x0, w, taus = para[0], para[1], para[2:]
             tau_idx = idx[2:]
         else:
-            x0, w, taus = 0., para[0], para[1:]
+            x0, w, taus = 0.0, para[0], para[1:]
             tau_idx = idx[1:]
 
         if any(idx[:2]) or self.model_disp or True:
             if self.model_coh:
                 x_vec = np.zeros((self.t.size, self.num_exponentials + 3))
-                #print(taus)
+                # print(taus)
                 a, b = _fold_exp_and_coh(self.t[:, None], w, x0, taus)
-                #print(a.shape, b.shape)
+                # print(a.shape, b.shape)
                 x_vec[:, -3:] = b[..., 0, :]
                 x_vec[:, :-3] = a[..., 0, :]
 
             else:
                 x_vec = _fold_exp(self.t[:, None], w, x0, taus).squeeze()
             self.x_vec = np.nan_to_num(x_vec)
-            #self.x_vec /= np.max(self.x_vec, 0)
+            # self.x_vec /= np.max(self.x_vec, 0)
             self._last = para.copy()
         else:
             self.x_vec[:, tau_idx] = _fold_exp(self.t, w, x0, taus[tau_idx]).T
@@ -203,7 +202,7 @@ class Fitter(object):
         basevector for each channel. See make_model for para format.
         """
         self.make_model(para)
-        self.residuals = (self.model - self.data)
+        self.residuals = self.model - self.data
         if self.weights is not None:
             self.residuals *= self.weights
         return self.residuals.ravel()
@@ -214,7 +213,7 @@ class Fitter(object):
         channel for it own.
         """
         self.make_full_model(para)
-        self.residuals = (self.model - self.data)
+        self.residuals = self.model - self.data
         if self.weights is not None:
             self.residuals *= self.weights
         return self.residuals.ravel()
@@ -246,10 +245,10 @@ class Fitter(object):
         self.last_para = para
 
         if self.model_disp != 0 and is_disp_changed or True:
-            self.tn = np.poly1d(para[:self.model_disp])(self.disp_x)
+            self.tn = np.poly1d(para[: self.model_disp])(self.disp_x)
             self.t_mat = self.t[:, None] - self.tn[None, :]
 
-        self._build_xmat(para[self.model_disp:], is_disp_changed)
+        self._build_xmat(para[self.model_disp :], is_disp_changed)
 
         for i in range(self.data.shape[1]):
             A = self.xmat[:, i, :]
@@ -264,25 +263,25 @@ class Fitter(object):
         """
         para = np.array(para)
         try:
-            idx = (para != self._last)
+            idx = para != self._last
         except AttributeError:
             idx = [True] * len(para)
 
         w = para[0]
         taus = para[1:]
-        x0 = 0.
+        x0 = 0.0
 
-        #Only calculate what is necessary.
+        # Only calculate what is necessary.
         if idx[0] or is_disp_changed or True:
             exps, coh = _fold_exp_and_coh(self.t_mat, w, x0, taus)
             if self.model_coh:
-                #print('test')
+                # print('test')
                 self.xmat[:, :, -3:] = coh
             num_exp = self.num_exponentials
             self.xmat[:, :, :num_exp] = exps
         elif any(idx):
             self.xmat[:, :, idx[1:]] = _fold_exp(self.t_mat, w, x0, taus[idx[1:]])
-        #self.xmat = np.nan_to_num(self.xmat)
+        # self.xmat = np.nan_to_num(self.xmat)
         self._last = para
 
     def _check_num_expontials(self, para):
@@ -301,26 +300,28 @@ class Fitter(object):
 
     def res_sum(self, para):
         """Returns the squared sum of the residuals for given parameters"""
-        return np.sum(self.res(para)**2)
+        return np.sum(self.res(para) ** 2)
 
-    def start_lmfit(self,
-                    x0,
-                    fixed_names=[],
-                    lower_bound=0.3,
-                    fix_long=True,
-                    fix_disp=False,
-                    full_model=1):
+    def start_lmfit(
+        self,
+        x0,
+        fixed_names=[],
+        lower_bound=0.3,
+        fix_long=True,
+        fix_disp=False,
+        full_model=1,
+    ):
         p = lmfit.Parameters()
         for i in range(self.model_disp):
-            p.add('p' + str(i), x0[i])
+            p.add("p" + str(i), x0[i])
             if fix_disp:
-                p['p' + str(i)].vary = False
-        x0 = x0[self.model_disp:]
+                p["p" + str(i)].vary = False
+        x0 = x0[self.model_disp :]
 
-        p.add('w', x0[0], min=0)
+        p.add("w", x0[0], min=0)
         num_exp = len(x0) - 1
         for i, tau in enumerate(x0[1:]):
-            name = 't' + str(i)  #
+            name = "t" + str(i)  #
             #
             p.add(name, tau, vary=True)
             if name not in fixed_names:
@@ -331,7 +332,7 @@ class Fitter(object):
         for i in fixed_names:
             p[i].vary = False
         if fix_long:
-            p['t' + str(num_exp - 1)].vary = False
+            p["t" + str(num_exp - 1)].vary = False
 
         def res(p):
             x = [k.value for k in p.values()]
