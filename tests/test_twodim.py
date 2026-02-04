@@ -1,5 +1,4 @@
 from pathlib import Path
-from numpy.testing import assert_almost_equal
 import pytest
 
 from skultrafast.data_io import get_twodim_dataset
@@ -19,6 +18,12 @@ def two_d(datadir2d) -> TwoDim:
     qc = QC2DSpec(info[0])
     ds = qc.make_ds()["iso"]
     return ds
+
+
+def test_saveload(two_d, tmp_path_factory):
+    path = tmp_path_factory.mktemp('data') / 'test.npz'
+    two_d.save_numpy(path)
+    TwoDim.load_numpy(path)
 
 
 def test_select(two_d):
@@ -64,8 +69,10 @@ def test_all_cls(two_d_processed: TwoDim):
     cls_result = two_d_processed.cls()
     for use_const in [True, False]:
         for use_weights in [True, False]:
-            cls_result.exp_fit([1], use_const=use_const, use_weights=use_weights)
-            cls_result.exp_fit([1, 10], use_const=use_const, use_weights=use_weights)
+            cls_result.exp_fit([1], use_const=use_const,
+                               use_weights=use_weights)
+            cls_result.exp_fit([1, 10], use_const=use_const,
+                               use_weights=use_weights)
             assert cls_result.exp_fit_result_ is not None
             cls_result.plot_cls()
 
@@ -83,6 +90,11 @@ def test_twodplot_contour(two_d_processed):
     two_d_processed.plot.contour(1)
     two_d_processed.plot.contour(1, 3, 5, )
     two_d_processed.plot.elp(1)
+
+
+def test_contour_with_cls(two_d_processed):
+    cls_result = two_d_processed.cls()
+    two_d_processed.plot.contour(1, 10, 30, cls_result=cls_result)
 
 
 def test_bg_correct(two_d_processed: TwoDim):
@@ -139,3 +151,10 @@ def test_plot_trans(two_d_processed: TwoDim):
 def test_gaussfit(two_d_processed: TwoDim):
     fr = two_d_processed.fit_gauss()
     fr.plot_cls()
+
+
+def test_slice_plots(two_d_processed: TwoDim):
+    l = two_d_processed.plot.probe_slice(2150, 0.2, 0.5)
+    assert len(l) == 2
+    l = two_d_processed.plot.pump_slice(2150, 0.2, 0.5)
+    assert len(l) == 2

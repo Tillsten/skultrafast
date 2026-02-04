@@ -1,7 +1,5 @@
 import pytest
-import tempfile
 import zipfile
-import zipfile_deflate64
 from pathlib import Path
 
 from skultrafast.quickcontrol import QC1DSpec, QC2DSpec, parse_str, QCFile
@@ -47,7 +45,8 @@ def test_1d(datadir):
     ds.plot.spec(1)
 
 
+@pytest.mark.skip(reason="Tested by test_twodim.py")
 def test_2d(datadir2d):
     infos = list(Path(datadir2d).glob('*320.info'))
     ds = QC2DSpec(infos[0])
-    ds.make_ds()
+    out = ds.make_ds()

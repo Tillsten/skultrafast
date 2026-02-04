@@ -21,4 +21,4 @@ def test_2d_load():
 
 def test_2d_webload():
     a = data_io.get_twodim_dataset()
-
+    assert isinstance(a, Path)
