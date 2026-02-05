@@ -39,3 +39,15 @@ Release notes
     * Background subtraction
 
 - Support for messpy 2D-files
+
+5.0 2022-09-24
+--------------
+- Mostly internal changes, now uses the hatchling build system
+- Small improvements to the 2D functions
+- Added a few more tests
+
+6.0 2026-02-05
+--------------
+- lots of internal changes, now uses pixi as build system
+- make some dependencies now optional
+- more 2D IR working

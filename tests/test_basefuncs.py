@@ -8,7 +8,14 @@ Created on Sun Apr 21 20:34:15 2013
 from skultrafast.base_funcs.base_functions_numba import fast_erfc, _fold_exp, _exp
 
 import skultrafast.base_funcs.base_functions_np as bnp
-import skultrafast.base_funcs.base_functions_numba as bnb
+
+try:
+    import skultrafast.base_funcs.base_functions_numba as bnb
+
+    HAS_NUMBA = True
+except (ImportError, ModuleNotFoundError):
+    HAS_NUMBA = False
+
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -17,13 +24,14 @@ import pytest
 
 def test_fast_erfc():
     from scipy.special import erfc as erfc_s
+
     x = np.linspace(-3, 3, 200)
     y = np.array([fast_erfc(i) for i in x])
     assert_array_almost_equal(erfc_s(x), y, 3)
 
 
 def test_exp():
-    taus = np.array([1., 20., 30.])
+    taus = np.array([1.0, 20.0, 30.0])
     t_array = np.subtract.outer(np.linspace(0, 50, 300), np.linspace(0, 0, 400))
     w = 0.1
     y = _exp(t_array, w, 0, taus)
@@ -34,7 +42,7 @@ def test_folded_equals_exp():
     """
     For t>>w exp==folded exp
     """
-    taus = np.array([1., 20., 30.])
+    taus = np.array([1.0, 20.0, 30.0])
     t_array = np.subtract.outer(np.linspace(40, 50, 300), np.linspace(3, 3, 400))
     w = 0.1
     y = _fold_exp(t_array, w, 0, taus)
@@ -44,7 +52,7 @@ def test_folded_equals_exp():
 
 
 def test_compare_fold_funcs():
-    taus = np.array([1., 20., 30.])
+    taus = np.array([1.0, 20.0, 30.0])
     t_array = np.subtract.outer(np.linspace(-2, 50, 300), np.linspace(-1, 3, 400))
     w = 0.1
     y1 = bnp._fold_exp(t_array, w, 0, taus)
@@ -56,15 +64,15 @@ def test_compare_fold_funcs():
 def test_compare_coh_funcs():
     t_array = np.subtract.outer(np.linspace(-4, 4, 300), np.linspace(3, 3, 400))
     w = 0.1
-    y1 = bnb._coh_gaussian(t_array, w, 0.)
-    y2 = bnp._coh_gaussian(t_array, w, 0.)
+    y1 = bnb._coh_gaussian(t_array, w, 0.0)
+    y2 = bnp._coh_gaussian(t_array, w, 0.0)
     np.testing.assert_array_almost_equal(y1, y2, 4)
 
 
-if __name__ == '__main__':
-    print('jo1')
+if __name__ == "__main__":
+    print("jo1")
     test_compare_coh_funcs()
-    print('jo')
+    print("jo")
 #     import matplotlib.pyplot as plt
 
 #     a = test_fold_exp()
