@@ -5,12 +5,11 @@ Created on Sun Apr 21 20:34:15 2013
 @author: Tillsten
 """
 
-from skultrafast.base_funcs.base_functions_numba import fast_erfc, _fold_exp, _exp
-
 import skultrafast.base_funcs.base_functions_np as bnp
 
 try:
     import skultrafast.base_funcs.base_functions_numba as bnb
+    from skultrafast.base_funcs.base_functions_numba import fast_erfc, _fold_exp, _exp
 
     HAS_NUMBA = True
 except (ImportError, ModuleNotFoundError):
@@ -22,7 +21,9 @@ import numpy as np
 import pytest
 
 
+@pytest.mark.skipif(not HAS_NUMBA, reason="Numba is not available")
 def test_fast_erfc():
+
     from scipy.special import erfc as erfc_s
 
     x = np.linspace(-3, 3, 200)
@@ -30,6 +31,7 @@ def test_fast_erfc():
     assert_array_almost_equal(erfc_s(x), y, 3)
 
 
+@pytest.mark.skipif(not HAS_NUMBA, reason="Numba is not available")
 def test_exp():
     taus = np.array([1.0, 20.0, 30.0])
     t_array = np.subtract.outer(np.linspace(0, 50, 300), np.linspace(0, 0, 400))
@@ -38,6 +40,7 @@ def test_exp():
     np.testing.assert_almost_equal(np.exp(-t_array[:, 0]), y[:, 0, 0])
 
 
+@pytest.mark.skipif(not HAS_NUMBA, reason="Numba is not available")
 def test_folded_equals_exp():
     """
     For t>>w exp==folded exp
@@ -51,6 +54,7 @@ def test_folded_equals_exp():
     np.testing.assert_array_almost_equal(y, exp_y)
 
 
+@pytest.mark.skipif(not HAS_NUMBA, reason="Numba is not available")
 def test_compare_fold_funcs():
     taus = np.array([1.0, 20.0, 30.0])
     t_array = np.subtract.outer(np.linspace(-2, 50, 300), np.linspace(-1, 3, 400))
