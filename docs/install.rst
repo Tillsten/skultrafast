@@ -26,7 +26,6 @@ Needs Python 3.6 or higher. Requires the following packages,
 which are automatically installed when using pip:
 
 * numpy
-* numba
 * scipy
 * lmfit
 * matplotlib
