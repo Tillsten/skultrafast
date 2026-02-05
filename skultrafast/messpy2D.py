@@ -73,6 +73,8 @@ class Messpy25File:
 
     h5_file: Union[str, Path] = attr.ib(init=True)
     "h5py file object containing the 2D dataset, the only required parameter"
+    use_local_cache: bool = False
+    "If true, use local cache for faster access"
     is_para_array: Literal["Probe1", "Probe2"] = "Probe1"
     "which dataset has parallel polarisation"
     probe_wn: np.ndarray = attr.ib(init=False)
@@ -99,6 +101,21 @@ class Messpy25File:
                 "Directly passing an h5py.File is not supported "
                 "anymore, please pass a path to the file instead."
             )
+        if self.use_local_cache:
+            # Copy file to temp dir or open from there if already present
+            import tempfile
+            import shutil
+
+            tmp_dir = Path(tempfile.gettempdir() + "/messpy_cache").mkdir(exist_ok=True)
+            cached_file = tmp_dir / Path(self.h5_file).name
+            if not cached_file.exists():
+                shutil.copy2(self.h5_file, cached_file)
+            else:
+                cached_mtime = cached_file.stat().st_mtime
+                original_mtime = Path(self.h5_file).stat().st_mtime
+                if original_mtime > cached_mtime:
+                    shutil.copy2(self.h5_file, cached_file)
+            self.h5_file = str(cached_file)
 
         with h5py.File(self.h5_file, "r") as f:
             if "t1" in f:

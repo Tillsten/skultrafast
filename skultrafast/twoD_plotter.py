@@ -133,8 +133,9 @@ class TwoDimPlotter:
         if isinstance(ax, Axes):
             ax = [ax]
 
+        linewiths = 0.5 if mode == "filled" else 1.0
         contour_ops: ContourOptions = ContourOptions(
-            levels=20, cmap="bwr", linewidth=0.5, add_lines=True, add_diag=True
+            levels=20, cmap="bwr", linewidth=linewiths, add_lines=True, add_diag=True
         )
         contour_ops.update(contour_params)  # type: ignore
         out = {"fig": fig, "axs": ax}
